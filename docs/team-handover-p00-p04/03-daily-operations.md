@@ -51,7 +51,7 @@ Cwd `ctsv`:
 
 Build dành cho thay Java/resource/POM; package không chạy test hay migration. Sau khi sửa source, phải chạy test liên quan riêng theo Quality Gates; build này không thay kiểm thử. Sửa FE bình thường dùng HMR. Nếu package/lockfile thay đổi đã được duyệt: cwd `ctsv/frontend`, `npm.cmd ci`; không tự dùng `npm update`/sửa native binary.
 
-Chỉ chạy lại `setup` khi có việc setup/migration được giao và đã dừng process; không coi đó là start hằng ngày hay cách sửa lỗi login. Bản setup hiện có preset password là blocker bàn giao, xem [08](08-git-push-safety-audit.md).
+Chỉ chạy lại `setup` khi có việc setup/migration được giao và đã dừng process; không coi đó là start hằng ngày hay cách sửa lỗi login. Preset tài khoản DEV synthetic đã được owner chấp nhận; không áp ngoại lệ này cho khóa TLS/JWT/service hoặc credentials thật. Từ P05, setup áp thêm V8 có kiểm checksum; start vẫn chỉ check, không tự migrate. Xem [runbook DEV/P05](../../frontend/README.md).
 
 ## Tự kiểm liveness và xem log
 

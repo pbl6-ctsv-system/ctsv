@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {policyContent,roundContent,emptyPolicy,emptyRound} from '../src/features/mghp/configuration/model.mjs';
+test('policy write model strips server identities and retains nullable fields',()=>{const p=emptyPolicy();const result=policyContent({...p,id:'9',status:'locked',criteria:[{id:'11',code:'A',name:null}],documentGroups:[{id:'12',code:'G',documents:[{id:'13',code:'D'}]}]});assert(!('id' in result));assert(!('status' in result));assert(!('id' in result.criteria[0]));assert(!('id' in result.documentGroups[0].documents[0]));assert.equal(result.effectiveUntil,null);});
+test('round content retains only approved request keys',()=>{const r=roundContent({...emptyRound(),id:'99',status:'open',configLockedAt:'now'});assert(!('status' in r));assert(!('configLockedAt' in r));assert.equal(r.allowRetroactive,true);assert.equal(r.midSemesterMode,'khoang_ngay_chuyen_vien_xac_nhan');});

@@ -5,7 +5,7 @@
 - src/app: App, AuthProvider, AppShell và cấu hình tích hợp navigation/featureRegistry.
 - src/shared: auth-client, hooks API kỹ thuật, UI primitives và styles/tokens; không đặt nghiệp vụ riêng tại đây.
 - src/features/auth: đăng nhập và quản trị tài khoản; src/features/foundation: danh mục/sinh viên/xác minh/quyền.
-- src/features/mghp, drl, hocbong, shcn: pages/components/api/hooks/types/assets có .gitkeep. Chưa có menu hoặc nghiệp vụ giả.
+- src/features/mghp/configuration: quản lý chính sách và đợt xét P05 qua registry chung. drl, hocbong, shcn vẫn chỉ có vị trí kiến trúc, chưa có menu/nghiệp vụ giả.
 - Mỗi module xuất entry cần dùng từ index.ts. Khi tích hợp, phối hợp sửa hai file trong app/navigation; không sửa code module khác.
 - Auth implementation ở src/shared/auth/auth-client.mjs. Entry cũ src/shared/auth-client.mjs chỉ re-export để giữ tests/integrations tương thích.
 - CSS riêng dùng .module.css. Tokens ở src/shared/styles/tokens.css; không thêm CSS toàn cục cho module.
@@ -21,7 +21,7 @@ React19.2.0 / TypeScript5.9.3 / Vite7.1.12. Một frontend chung, không tạo f
 
 ## Chạy dev hằng ngày — từ 13/11/2026
 
-Không dùng `FoundationBrowserHarnessIT` làm server dev. Profile `dev` chạy application CTSV thật, Auth/Foundation chung datasource/transaction manager; không tự dừng sau30phút. P04 đã ACCEPTED WITH OWNER WAIVER, không nghiệm thu lại/G8 mới; chưa triển khai P05.
+Không dùng `FoundationBrowserHarnessIT` làm server dev. Profile `dev` chạy application CTSV thật, Auth/Foundation/P05 chung datasource/transaction manager; không tự dừng sau30phút. P04 đã ACCEPTED WITH OWNER WAIVER, không nghiệm thu lại/G8 mới. P05 DEV đã áp V8 và smoke API13/11/2026; xem mục P05 bên dưới. P05-99 vẫn chờ owner nghiệm thu.
 
 **Đích:** `localhost\DEV2022 / ctsv_dev` (Windows Authentication); FE **https://127.0.0.1:5173**, BE **https://127.0.0.1:8443**. Dùng đúng IP, không đổi sang `localhost` vì SAN/origin khác. Launcher lấy lại cổng TCP động DEV2022 mỗi lần chạy. JDBC giữ cách mã hóa/Windows-auth local đã kiểm chứng; HTTPS browser/proxy luôn xác minh chứng thư, không dùng TLS bypass.
 
@@ -36,7 +36,7 @@ Từ PowerShell, cwd `D:\7rd_semester\pbl6_src\ctsv`. `dev.ps1` nhận cả Wind
 .\dev.ps1 trust -ConfirmThumbprint ACFF6DDED84813899F4099D8E06D10EB8757D828
 ```
 
-Máy đã có JDK21/Maven Wrapper/Node và dependencies FE từ P04. Máy/checkout mới cần `cd frontend; npm ci`; không nâng version. Setup build không chạy test suite, migrate đúng V1–V7 hiện có và seed SYNTHETIC trên **ctsv_dev**. DB mới có compat160/collation Vietnamese_100_CI_AS_SC; DB tồn tại phải đúng owner/marker và history/checksum hợp lệ. DB không rỗng thiếu history hoặc không thuộc setup bị từ chối; không baseline/clean/drop/reset hay tự nhận dữ liệu cũ. Không đụng DB test.
+Máy đã có JDK21/Maven Wrapper/Node và dependencies FE từ P04. Máy/checkout mới cần `cd frontend; npm ci`; không nâng version. Setup build không chạy test suite, migrate đúng V1–V8 hiện có và seed SYNTHETIC tối thiểu trên **ctsv_dev**. DB mới có compat160/collation Vietnamese_100_CI_AS_SC; DB tồn tại phải đúng owner/marker và history/checksum hợp lệ. Setup dùng Flyway migrate với validateOnMigrate=true để vừa kiểm checksum đã áp vừa nhận migration pending; check/start vẫn từ chối pending. DB không rỗng thiếu history hoặc không thuộc setup bị từ chối; không baseline/clean/drop/reset hay tự nhận dữ liệu cũ. Không đụng DB test, không copy159hàng fixture P05 vào dev.
 
 **Quyết định mới13/11:** ba tài khoản DEV dùng mật khẩu cố định **`CtsvDev@2026!`**. Setup áp dụng preset riêng cho đúng danh tính SYNTHETIC trong `ctsv_dev`; password vẫn lưu Argon2id trong DB. Lần chuyển từ mật khẩu ngẫu nhiên sẽ đổi hash + tokenVersion nguyên tử, thu hồi refresh cũ và ghi audit. Setup lặp khi đã đúng preset là no-op về mật khẩu/version, không tạo mapping trùng. Nếu mật khẩu được quản trị đổi và không khớp secret local thì setup dừng, không âm thầm ghi đè. Start không reset password. Dữ liệu dev không phải dữ liệu SIS thật hay căn cứ nghiệp vụ đã xác minh.
 
@@ -63,7 +63,7 @@ Khi sửa Java/resource/POM: `stop` → `build` → `start`. `build` chỉ compi
 | Tài khoản | Mật khẩu DEV | Chức năng dev |
 |---|---|---|
 | `dev.sinhvien` | `CtsvDev@2026!` | SV giả `DEV-SV-001`, danh mục Foundation; không được tra SV khác |
-| `dev.chuyenvien` | `CtsvDev@2026!` | Quyền Auth CTSV_USER + quyền local mghp_chuyen_vien toàn trường; tra/xác minh P04 |
+| `dev.chuyenvien` | `CtsvDev@2026!` | Quyền Auth CTSV_USER + quyền local mghp_chuyen_vien toàn trường; tra/xác minh P04, quản lý chính sách/đợt P05 |
 | `dev.admin` | `CtsvDev@2026!` | AUTH_ADMIN + CTSV_USER; quyền local **ctsv.roles.manage** cấp riêng; không tự có quyền chuyên viên MGHP |
 
 Cứ nhập tài khoản/mật khẩu ở bảng trên vào form HTTPS. Đây là **preset dữ liệu DEV công khai**, không đặt password trong frontend hoặc bypass login. Preset đáp ứng validation tối thiểu12ký tự; tool DEV dùng AuthCredentials.hash hiện có, không có ngoại lệ mật khẩu ngắn và không đổi contract/logic Auth. Có thể dùng lệnh clipboard cũ nếu muốn:
@@ -114,4 +114,23 @@ Plan thực thi: (1) thêm profile/tool setup có guard + bootstrap/hash/mapping
 
 15/15 Browser E2E trên Chrome thật, HTTPS frontend/backend và SQL Server P04 thật: SV/CV/admin; cookie HttpOnly/Secure, CSRF/CORS, refresh hai tab, mất response, logout cookie-only; UI401/403/404/412/503 và recovery. Sáu Node unit là mô phỏng, được ghi riêng. Hai runner ở `e2e/https-p04.mjs` và `e2e/https-errors-p04.mjs`; `e2e` có lockfile Playwright riêng, dùng Chrome đã cài. [Plan/runbook](../../nghiepvu/09-trien-khai/p04-foundation-implementation-plan.md) ghi môi trường/lệnh/fixture và giới hạn.
 
-Chứng thư TEST thumbprint `228278928395FFD8ED2BF0FD049B5892E235458A` đã gỡ khỏi CurrentUser Root/My sau test; Smart App Control vẫn ON. Muốn chạy lại HTTPS phải chuẩn bị/trust chứng thư TEST theo sự cho phép của người dùng, không bỏ kiểm TLS. P04-99 **ACCEPTED WITH OWNER WAIVER**, G8 **WAIVED riêng P04**, không PASS; đã đủ điều kiện P05, chưa triển khai P05.
+Chứng thư TEST thumbprint `228278928395FFD8ED2BF0FD049B5892E235458A` đã gỡ khỏi CurrentUser Root/My sau test; Smart App Control vẫn ON. Muốn chạy lại HTTPS phải chuẩn bị/trust chứng thư TEST theo sự cho phép của người dùng, không bỏ kiểm TLS. P04-99 **ACCEPTED WITH OWNER WAIVER**, G8 **WAIVED riêng P04**, không PASS; đây là mốc lịch sử. Hiện trạng P05 DEV xem bên dưới.
+
+## P05 trên DEV — cập nhật13/11/2026
+
+`ctsv_dev` đã ở FlywayV8; executable JAR chứa P05, launcher Auth/Foundation/P05 chạy bình thường tại URL DEV ở trên. Chỉ `setup` chủ động được migrate, không start ngầm. V1–V7/checksum, account/password hash/tokenVersion, TLS/JWT keys được đối chiếu và giữ nguyên. Không reset/clean/drop, không copy fixture test159hàng; migration chỉ seed9M danh mục có nguồn.
+
+Đăng nhập `dev.chuyenvien` bằng mật khẩu DEV hiện hành, chọn **Chính sách MGHP** hoặc **Đợt xét MGHP**:
+
+- Chính sách **M9**, phiên bản1 đã xác nhận (`quy_uoc_do_an`) và phiên bản2 nháp để thử sửa/xác nhận. Tên/căn cứ đều ghi SYNTHETIC; tỷ lệ demo không là chính sách pháp lý.
+- Học kỳ **DEV-2026-1**, ID1: mốc giả lập01/09/2026–31/01/2027, xác minh qua API Foundation với evidence SYNTHETIC, không phải lịch chính thức.
+- Đợt **SYNTH-P05-20261113-SMOKE**, ID1: đã thử tạo/sửa/mở/đóng/hoàn tất, hiện completed; SV được đọc projection công khai.
+- Đợt **SYNTH-P05-20261113-DRAFT**, ID2: nháp đủ cấu hình để bạn thử sửa/mở/đóng/hoàn tất. Mở nhận cấu hình14/11/2026 lúc15:35 (UTC+7); có thể công khai trước nhưng chưa nhận hồ sơ trước opensAt. Chưa triển khai P06.
+- `dev.admin` chỉ có quyền quản trị Auth/role theo phân công, không tự có quyền quản lý MGHP. `dev.sinhvien` chỉ đọc đợt công khai, không đọc nháp hoặc ghi cấu hình.
+
+26HTTP smoke checks qua HTTPS Vite→executable Boot→SQL Server DEV PASS, gồm3login và13route P05. FE/module P05 trả200, TLS validation ON. **Kiểm UI tương tác trên DEV trong lượt này NOT VERIFIED**: công cụ Computer Use dừng vì không xác định được URL Chrome đủ tin cậy; không chuyển sang cách điều khiển browser khác hoặc bỏ kiểm TLS.7Browser E2E P05 đã PASS trước đó là bằng chứng trên DB P05 riêng, không tính thành kiểm UI DEV mới.
+
+[Evidence DEV và giới hạn](../../nghiepvu/.analysis/runtime/p05/20261113/dev/README.md). Không thay đổi nghiệp vụ/API; sửa duy nhất helper DEV để setup chấp nhận migration pending trong khi vẫn kiểm checksum. Start vẫn không migrate/seed. Không commit/push; P05-99 chưa tự ACCEPTED.
+### Nghiệm thu lại UI P05 bằng Playwright MCP —13/11/2026
+
+Đã tương tác UI thật: policy/round/quyền sinh viên. Lỗi danh sách version giữ nhãn nháp sau xác nhận đã được sửa và kiểm RED→GREEN; tạo→sửa→xác nhận hiển thị Đã xác nhận ngay, không reload tay, detail readonly/ETag giữ đúng.2test model và build/typecheck PASS; không chạy lại toàn P05. Giới hạn Computer Use trước đó đã được vượt qua bằng Playwright MCP được owner yêu cầu ở nhiệm vụ sau; không dùng bằng chứng API thay browser. [Evidence phần sửa](../../nghiepvu/.analysis/runtime/p05/20261113/dev/policy-confirmation-fix.json). Quy tắc nghiệm thu list/detail sau mutation tại SKILL.md §7; giữ test UI e2e/p05-policy-confirmation.mjs để chạy hồi quy đúng phạm vi.

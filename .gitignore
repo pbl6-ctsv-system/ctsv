@@ -35,6 +35,7 @@ build/
 ### Generated local runtime and private material (created by dev tools) ###
 .local/
 .runtime/
+.playwright-mcp/
 .env
 .env.*
 !.env.example

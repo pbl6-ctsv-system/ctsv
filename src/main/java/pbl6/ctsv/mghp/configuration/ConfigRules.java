@@ -1,0 +1,15 @@
+package pbl6.ctsv.mghp.configuration;
+import java.time.*;import java.util.*;import java.security.*;import java.nio.charset.StandardCharsets;import com.fasterxml.jackson.databind.*;
+final class ConfigRules {
+ static long id(String value){try{if(value==null||!value.matches("[1-9][0-9]{0,18}"))throw new IllegalArgumentException();return Long.parseLong(value);}catch(Exception e){throw ConfigFailure.invalid("id");}}
+ static int[] page(String p,String s){try{if(p!=null&&!p.matches("0|[1-9][0-9]*")||s!=null&&!s.matches("[1-9][0-9]*"))throw new IllegalArgumentException();int page=p==null?0:Integer.parseInt(p),size=s==null?20:Integer.parseInt(s);if(size<1||size>100||(long)page*size>100000)throw new IllegalArgumentException();return new int[]{page,size};}catch(Exception e){throw ConfigFailure.invalid("page");}}
+ static void shape(JsonNode n,String fields){var f=fields.split(",");if(n==null||!n.isObject()||n.size()!=f.length)throw ConfigFailure.invalid("body");for(var k:f)if(!n.has(k))throw ConfigFailure.invalid(k);}
+ static String text(JsonNode n,String key,int max,boolean required){var v=n.get(key);if(v==null)throw ConfigFailure.invalid(key);if(v.isNull()){if(required)throw ConfigFailure.invalid(key);return null;}if(!v.isTextual()||v.textValue().length()>max||required&&v.textValue().isBlank())throw ConfigFailure.invalid(key);return v.textValue();}
+ static void bool(JsonNode n,String key){if(!n.has(key)||!n.get(key).isNull()&&!n.get(key).isBoolean())throw ConfigFailure.invalid(key);}
+ static void integer(JsonNode n,String key,boolean nonnegative){var v=n.get(key);if(v==null||!v.isNull()&&(!v.isIntegralNumber()||!v.canConvertToInt()||nonnegative&&v.intValue()<0))throw ConfigFailure.invalid(key);}
+ static void allow(JsonNode n,String key,String...values){var v=n.get(key);if(v!=null&&!v.isNull()&&(!v.isTextual()||!Set.of(values).contains(v.textValue())))throw ConfigFailure.invalid(key);}
+ static LocalDate date(JsonNode n,String k){String s=text(n,k,10,false);try{if(s==null)return null;if(!s.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))throw new IllegalArgumentException();return LocalDate.parse(s);}catch(Exception e){throw ConfigFailure.invalid(k);}}
+ static Instant instant(JsonNode n,String k){String s=text(n,k,64,false);try{return s==null?null:OffsetDateTime.parse(s).toInstant();}catch(Exception e){throw ConfigFailure.invalid(k);}}
+ static String tag(String identity,byte[] fence,Object body,ObjectMapper json){try{var d=MessageDigest.getInstance("SHA-256");d.update((identity+"|application/json|identity|").getBytes(StandardCharsets.UTF_8));d.update(fence);return "\""+Base64.getUrlEncoder().withoutPadding().encodeToString(d.digest(json.writeValueAsBytes(body)))+"\"";}catch(Exception e){throw new IllegalStateException(e);}}
+ static void match(String actual,String supplied){if(supplied==null)throw new ConfigFailure(428,"PRECONDITION_REQUIRED");if(!supplied.matches("\"[A-Za-z0-9_-]+\""))throw ConfigFailure.invalid("If-Match");if(!actual.equals(supplied))throw new ConfigFailure(412,"VERSION_CONFLICT");}
+}
