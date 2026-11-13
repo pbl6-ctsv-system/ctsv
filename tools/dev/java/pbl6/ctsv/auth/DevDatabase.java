@@ -60,9 +60,11 @@ public final class DevDatabase {
         }
         boolean history=jdbc.queryForObject("SELECT COUNT(*) FROM sys.tables WHERE name='flyway_schema_history' AND schema_id=SCHEMA_ID('dbo')",Integer.class)==1;
         if(!history)require(setup&&jdbc.queryForObject("SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0",Integer.class)==0,"nonempty without Flyway history");
-        var flyway=Flyway.configure().dataSource(ds).cleanDisabled(true).baselineOnMigrate(false).load();
+        var flyway=Flyway.configure().dataSource(ds).cleanDisabled(true).baselineOnMigrate(false).validateOnMigrate(true).load();
         stage="Flyway validate existing history";
-        if(history)flyway.validate();
+        // Explicit setup lets migrate validate applied checksums and accept pending versions atomically.
+        // Read-only check/snapshot must still reject a pending migration instead of applying it.
+        if(history&&!setup)flyway.validate();
         if(setup){stage="approved migrations only";flyway.migrate();}
         flyway.validate();
         require(flyway.info().pending().length==0,"pending migration; run setup explicitly");

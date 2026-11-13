@@ -134,6 +134,7 @@ Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần
 - Mỗi màn hình có loading, empty, error, forbidden và success khi áp dụng. Phân biệt danh sách rỗng với chưa tải hoặc request lỗi; feedback lưu nằm gần thao tác, không chỉ một toast thoáng qua.
 - 401/thu hồi token đi qua xử lý Auth chung; 403 hiển thị thiếu quyền; lỗi validation gắn field nếu contract cung cấp; lỗi DB/integration không lộ stack trace. Không đổi mọi lỗi thành “không có dữ liệu”.
 - Giữ ETag/If-Match theo contract; version conflict yêu cầu đọc lại/đối chiếu, không tự ghi đè hoặc retry write mù. Client validation hỗ trợ người dùng, không thay validation server.
+- Sau lệnh ghi/chuyển trạng thái thành công, đồng bộ các vùng bị ảnh hưởng (chi tiết, danh sách, phiên bản, count/capability nếu có) từ Backend trước khi báo thành công. Giữ lựa chọn và ETag đúng representation; lỗi tải lại vẫn qua xử lý lỗi hiện có, không phát lại lệnh ghi. Test browser phải kiểm cả chi tiết lẫn dòng/nhãn danh sách ngay sau thao tác, không bấm tải lại để che state cũ. Hồi quy P05: `e2e/p05-policy-confirmation.mjs`.
 - Chỉ hiển thị dữ liệu cá nhân cần cho tác vụ/quyền; không log response hồ sơ, CCCD, minh chứng hoặc token. Không đưa dữ liệu thật vào fixtures/ảnh demo.
 
 ## 8. Quy ước code và kiểm chứng
