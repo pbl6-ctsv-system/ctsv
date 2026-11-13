@@ -1,0 +1,20 @@
+export const fieldLabels:Record<string,string>={
+  "id": "ID",
+  "code": "Mã",
+  "name": "Tên",
+  "newPassword": "Mật khẩu mới",
+  "reason": "Lý do",
+  "username": "Tên đăng nhập",
+  "password": "Mật khẩu",
+  "profileLinks": "Liên kết hồ sơ",
+  "sourceSystem": "Mã nguồn đã đăng ký",
+  "profileType": "Loại hồ sơ (student/staff)",
+  "sourceId": "Định danh hồ sơ nguồn",
+  "roles": "Vai trò",
+  "functions": "Chức năng",
+  "roleCode": "Mã vai trò",
+  "roleId": "ID vai trò",
+  "active": "Đang hoạt động",
+  "accountId": "ID tài khoản",
+  "message": "Thông báo"
+};

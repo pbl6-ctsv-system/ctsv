@@ -1,0 +1,4 @@
+.workspace{min-width:0}
+.toolbar{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.hint{color:var(--color-text-muted)}
+@media(max-width:650px){.toolbar>*{width:100%}}
