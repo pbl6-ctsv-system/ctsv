@@ -1,0 +1,15 @@
+Hãy đọc  toàn bộ hướng dẫn bắt đầu từ `ctsv/docs/team-handover-p00-p04/README.md`.
+
+Sau đó **trực tiếp thực hiện setup môi trường local theo đúng tài liệu**, bao gồm cài đặt dependencies, database, HTTPS, JWT, tài khoản DEV, khởi động BE/FE và kiểm tra Auth, Foundation, SIS → CTSV Full/Incremental Sync.
+
+Yêu cầu:
+
+- Làm đúng trình tự trong README và các tài liệu liên quan.
+- Tự kiểm tra môi trường máy hiện tại và điều chỉnh cấu hình local theo hướng dẫn.
+- Không tự ý sửa implementation P00–P04 hoặc thay đổi kiến trúc.
+- Không ghi vào database ngoài phạm vi dev, không commit/push.
+- Nếu gặp lỗi, ưu tiên xử lý theo `07-troubleshooting.md`; không tự ý bỏ các cơ chế bảo mật hoặc database guard.
+
+**Mục tiêu:** Setup và chạy thành công các chức năng đã bàn giao trên máy của tôi.
+
+Sau khi hoàn thành, báo cáo ngắn gọn các bước PASS/FAIL, lỗi gặp phải và những phần chưa kiểm chứng.

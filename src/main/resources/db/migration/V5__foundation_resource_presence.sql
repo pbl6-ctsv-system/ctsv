@@ -1,0 +1,12 @@
+-- Additive technical presence for legacy Foundation resources. Preserve local keys/history.
+ALTER TABLE dbo.[dan_toc] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_dan_toc_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[quoc_tich] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_quoc_tich_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[dia_phuong] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_dia_phuong_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[hoc_ky] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_hoc_ky_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[khoa_hoc] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_khoa_hoc_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[nganh_quoc_gia] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_nganh_quoc_gia_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[nganh_noi_bo] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_nganh_noi_bo_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[chuong_trinh_dao_tao] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_chuong_trinh_dao_tao_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[lop_sinh_hoat] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_lop_sinh_hoat_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[sinh_vien] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_sinh_vien_source_presence] DEFAULT(1);
+ALTER TABLE dbo.[du_lieu_hoc_vu_dong_bo] ADD dang_hien_dien_nguon bit NOT NULL CONSTRAINT [df_du_lieu_hoc_vu_dong_bo_source_presence] DEFAULT(1);

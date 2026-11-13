@@ -1,0 +1,1239 @@
+{
+  "classification": "SYNTHETIC ONLY; not actual student data",
+  "sourceDB": "p01_sis_fault_20261111",
+  "targetDB": "p02_ctsv_test_20261112",
+  "resources": [
+    {
+      "resource": "units",
+      "table": "DonVi",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100001,
+          "MaDV": "P02-units-1",
+          "TenDV": "SYNTHETIC-1",
+          "MaBP": "P02-units-1",
+          "LuuTru": "SYNTHETIC-1",
+          "IsUs": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100002,
+          "MaDV": "P02-units-2",
+          "TenDV": "SYNTHETIC-2",
+          "MaBP": "P02-units-2",
+          "LuuTru": "SYNTHETIC-2",
+          "IsUs": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100003,
+          "MaDV": "P02-units-3",
+          "TenDV": "SYNTHETIC-3",
+          "MaBP": "P02-units-3",
+          "LuuTru": "SYNTHETIC-3",
+          "IsUs": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100009,
+          "MaDV": "P02-units-4",
+          "TenDV": "SYNTHETIC-4",
+          "MaBP": "P02-units-4",
+          "LuuTru": "SYNTHETIC-4",
+          "IsUs": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "ethnicities",
+      "table": "DanToc",
+      "key": "DanTocID",
+      "identity": true,
+      "rows": [
+        {
+          "DanTocID": 1100101,
+          "MaDanToc": "P02-ethnicities-1",
+          "TenDanToc": "SYNTHETIC-1"
+        },
+        {
+          "DanTocID": 1100102,
+          "MaDanToc": "P02-ethnicities-2",
+          "TenDanToc": "SYNTHETIC-2"
+        },
+        {
+          "DanTocID": 1100103,
+          "MaDanToc": "P02-ethnicities-3",
+          "TenDanToc": "SYNTHETIC-3"
+        },
+        {
+          "DanTocID": 1100109,
+          "MaDanToc": "P02-ethnicities-4",
+          "TenDanToc": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "nationalities",
+      "table": "QuocTich",
+      "key": "QuocTichID",
+      "identity": true,
+      "rows": [
+        {
+          "QuocTichID": 1100201,
+          "MaQuocTich": "P02-nationalities-1",
+          "TenQuocTich": "SYNTHETIC-1"
+        },
+        {
+          "QuocTichID": 1100202,
+          "MaQuocTich": "P02-nationalities-2",
+          "TenQuocTich": "SYNTHETIC-2"
+        },
+        {
+          "QuocTichID": 1100203,
+          "MaQuocTich": "P02-nationalities-3",
+          "TenQuocTich": "SYNTHETIC-3"
+        },
+        {
+          "QuocTichID": 1100209,
+          "MaQuocTich": "P02-nationalities-4",
+          "TenQuocTich": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "localities",
+      "table": "DiaPhuong",
+      "key": "DiaPhuongID",
+      "identity": true,
+      "rows": [
+        {
+          "DiaPhuongID": 1100301,
+          "MaDP": "P02-localities-1",
+          "TenDP": "SYNTHETIC-1"
+        },
+        {
+          "DiaPhuongID": 1100302,
+          "MaDP": "P02-localities-2",
+          "TenDP": "SYNTHETIC-2"
+        },
+        {
+          "DiaPhuongID": 1100303,
+          "MaDP": "P02-localities-3",
+          "TenDP": "SYNTHETIC-3"
+        },
+        {
+          "DiaPhuongID": 1100309,
+          "MaDP": "P02-localities-4",
+          "TenDP": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "plans",
+      "table": "KeHoach",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100401,
+          "MaKH": "P02-plans-1",
+          "TenKH": "SYNTHETIC-1",
+          "NgayDay": "SYNTHETIC-1",
+          "TuanDau": "SYNTHETIC-1",
+          "SoTuan": "1.2500000000",
+          "NgayDau": "SYNTHETIC-1",
+          "MaNganh": "P02-plans-1",
+          "NamHoc": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100402,
+          "MaKH": "P02-plans-2",
+          "TenKH": "SYNTHETIC-2",
+          "NgayDay": "SYNTHETIC-2",
+          "TuanDau": "SYNTHETIC-2",
+          "SoTuan": "1.2500000000",
+          "NgayDau": "SYNTHETIC-2",
+          "MaNganh": "P02-plans-2",
+          "NamHoc": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100403,
+          "MaKH": "P02-plans-3",
+          "TenKH": "SYNTHETIC-3",
+          "NgayDay": "SYNTHETIC-3",
+          "TuanDau": "SYNTHETIC-3",
+          "SoTuan": "1.2500000000",
+          "NgayDau": "SYNTHETIC-3",
+          "MaNganh": "P02-plans-3",
+          "NamHoc": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100409,
+          "MaKH": "P02-plans-4",
+          "TenKH": "SYNTHETIC-4",
+          "NgayDay": "SYNTHETIC-4",
+          "TuanDau": "SYNTHETIC-4",
+          "SoTuan": "1.2500000000",
+          "NgayDau": "SYNTHETIC-4",
+          "MaNganh": "P02-plans-4",
+          "NamHoc": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "cohorts",
+      "table": "KhoaHoc",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100501,
+          "MaKH": "P02-cohorts-1",
+          "NamTuyenSinh": 7
+        },
+        {
+          "ID": 1100502,
+          "MaKH": "P02-cohorts-2",
+          "NamTuyenSinh": 7
+        },
+        {
+          "ID": 1100503,
+          "MaKH": "P02-cohorts-3",
+          "NamTuyenSinh": 7
+        },
+        {
+          "ID": 1100509,
+          "MaKH": "P02-cohorts-4",
+          "NamTuyenSinh": 7
+        }
+      ]
+    },
+    {
+      "resource": "national-majors",
+      "table": "NganhQG",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100601,
+          "MaNganhQG": "P02-national-majors-1",
+          "TenNganhQG": "SYNTHETIC-1",
+          "CapDT": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100602,
+          "MaNganhQG": "P02-national-majors-2",
+          "TenNganhQG": "SYNTHETIC-2",
+          "CapDT": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100603,
+          "MaNganhQG": "P02-national-majors-3",
+          "TenNganhQG": "SYNTHETIC-3",
+          "CapDT": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100609,
+          "MaNganhQG": "P02-national-majors-4",
+          "TenNganhQG": "SYNTHETIC-4",
+          "CapDT": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "internal-majors",
+      "table": "NganhTQ",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100701,
+          "MaNganhTQ": "P02-internal-majors-1",
+          "TenNganhTQ": "SYNTHETIC-1",
+          "NganhQGID": 1100601,
+          "CapDT": "SYNTHETIC-1",
+          "KhoiNganh": "SYNTHETIC-1",
+          "Huy": "SYNTHETIC-1",
+          "KyHieu": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100702,
+          "MaNganhTQ": "P02-internal-majors-2",
+          "TenNganhTQ": "SYNTHETIC-2",
+          "NganhQGID": 1100602,
+          "CapDT": "SYNTHETIC-2",
+          "KhoiNganh": "SYNTHETIC-2",
+          "Huy": "SYNTHETIC-2",
+          "KyHieu": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100703,
+          "MaNganhTQ": "P02-internal-majors-3",
+          "TenNganhTQ": "SYNTHETIC-3",
+          "NganhQGID": 1100603,
+          "CapDT": "SYNTHETIC-3",
+          "KhoiNganh": "SYNTHETIC-3",
+          "Huy": "SYNTHETIC-3",
+          "KyHieu": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100709,
+          "MaNganhTQ": "P02-internal-majors-4",
+          "TenNganhTQ": "SYNTHETIC-4",
+          "NganhQGID": 1100601,
+          "CapDT": "SYNTHETIC-4",
+          "KhoiNganh": "SYNTHETIC-4",
+          "Huy": "SYNTHETIC-4",
+          "KyHieu": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "programs",
+      "table": "Nganh",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100801,
+          "MaNganh": "P02-programs-1",
+          "TenNganh": "SYNTHETIC-1",
+          "NganhTQID": 1100701,
+          "NganhQGID": 1100601,
+          "CapDTSo": "SYNTHETIC-1",
+          "SoTinChi": "1.2500000000",
+          "SoHK": 7,
+          "NgonNguDT": "SYNTHETIC-1",
+          "BatDau": "SYNTHETIC-1",
+          "KetThuc": "SYNTHETIC-1",
+          "KyBDauID": 1100401,
+          "KyKThucID": 1100401,
+          "KyHieu": "SYNTHETIC-1",
+          "InUse": "SYNTHETIC-1",
+          "CapDT": "P02-programs-1",
+          "TenNganhMoi": "SYNTHETIC-1",
+          "LoaiCTDT": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100802,
+          "MaNganh": "P02-programs-2",
+          "TenNganh": "SYNTHETIC-2",
+          "NganhTQID": 1100702,
+          "NganhQGID": 1100602,
+          "CapDTSo": "SYNTHETIC-2",
+          "SoTinChi": "1.2500000000",
+          "SoHK": 7,
+          "NgonNguDT": "SYNTHETIC-2",
+          "BatDau": "SYNTHETIC-2",
+          "KetThuc": "SYNTHETIC-2",
+          "KyBDauID": 1100402,
+          "KyKThucID": 1100402,
+          "KyHieu": "SYNTHETIC-2",
+          "InUse": "SYNTHETIC-2",
+          "CapDT": "P02-programs-2",
+          "TenNganhMoi": "SYNTHETIC-2",
+          "LoaiCTDT": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100803,
+          "MaNganh": "P02-programs-3",
+          "TenNganh": "SYNTHETIC-3",
+          "NganhTQID": 1100703,
+          "NganhQGID": 1100603,
+          "CapDTSo": "SYNTHETIC-3",
+          "SoTinChi": "1.2500000000",
+          "SoHK": 7,
+          "NgonNguDT": "SYNTHETIC-3",
+          "BatDau": "SYNTHETIC-3",
+          "KetThuc": "SYNTHETIC-3",
+          "KyBDauID": 1100403,
+          "KyKThucID": 1100403,
+          "KyHieu": "SYNTHETIC-3",
+          "InUse": "SYNTHETIC-3",
+          "CapDT": "P02-programs-3",
+          "TenNganhMoi": "SYNTHETIC-3",
+          "LoaiCTDT": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100809,
+          "MaNganh": "P02-programs-4",
+          "TenNganh": "SYNTHETIC-4",
+          "NganhTQID": 1100701,
+          "NganhQGID": 1100601,
+          "CapDTSo": "SYNTHETIC-4",
+          "SoTinChi": "1.2500000000",
+          "SoHK": 7,
+          "NgonNguDT": "SYNTHETIC-4",
+          "BatDau": "SYNTHETIC-4",
+          "KetThuc": "SYNTHETIC-4",
+          "KyBDauID": 1100402,
+          "KyKThucID": 1100402,
+          "KyHieu": "SYNTHETIC-4",
+          "InUse": "SYNTHETIC-4",
+          "CapDT": "P02-programs-4",
+          "TenNganhMoi": "SYNTHETIC-4",
+          "LoaiCTDT": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "classes",
+      "table": "Lop",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1100901,
+          "MaLop": "P02-classes-1",
+          "TenLop": "SYNTHETIC-1",
+          "NganhID": 1100801,
+          "KhoaQLID": 1100001,
+          "HinhThuc": "SYNTHETIC-1",
+          "CapDT": "SYNTHETIC-1",
+          "KhoaHocID": 1100501,
+          "MaKhung": "P02-classes-1",
+          "LopGhep": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1100902,
+          "MaLop": "P02-classes-2",
+          "TenLop": "SYNTHETIC-2",
+          "NganhID": 1100802,
+          "KhoaQLID": 1100002,
+          "HinhThuc": "SYNTHETIC-2",
+          "CapDT": "SYNTHETIC-2",
+          "KhoaHocID": 1100502,
+          "MaKhung": "P02-classes-2",
+          "LopGhep": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1100903,
+          "MaLop": "P02-classes-3",
+          "TenLop": "SYNTHETIC-3",
+          "NganhID": 1100803,
+          "KhoaQLID": 1100003,
+          "HinhThuc": "SYNTHETIC-3",
+          "CapDT": "SYNTHETIC-3",
+          "KhoaHocID": 1100503,
+          "MaKhung": "P02-classes-3",
+          "LopGhep": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1100909,
+          "MaLop": "P02-classes-4",
+          "TenLop": "SYNTHETIC-4",
+          "NganhID": 1100801,
+          "KhoaQLID": 1100002,
+          "HinhThuc": "SYNTHETIC-4",
+          "CapDT": "SYNTHETIC-4",
+          "KhoaHocID": 1100502,
+          "MaKhung": "P02-classes-4",
+          "LopGhep": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "students",
+      "table": "HoSoSV",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101001,
+          "MaSV": "P02-students-1",
+          "HoTen": "SYNTHETIC-1",
+          "NgaySinh": "2026-11-12",
+          "GioiTinh": "SYNTHETIC-1",
+          "NoiSinhID": 1100301,
+          "DanTocID": 1100101,
+          "QuocTichID": 1100201,
+          "SoCCCD": "SYNTHETIC-1",
+          "SoDienThoai": "SYNTHETIC-1",
+          "Email": "SYNTHETIC-1",
+          "LopID": 1100901,
+          "KhoaQLID": 1100001,
+          "KhoaHocID": 1100501,
+          "NganhID": 1100801,
+          "TrangThaiHocTap": "SYNTHETIC-1",
+          "CapDT": "SYNTHETIC-1",
+          "HocKyApDungID": 1100401,
+          "HocKyBDID": 1100401,
+          "HocKyKTID": 1100401,
+          "MaHS": "P02-students-1",
+          "NgayNhapHoc": "SYNTHETIC-1",
+          "HeDT": "P02-students-1",
+          "NgayLuu": "SYNTHETIC-1",
+          "LoaiLuu": "SYNTHETIC-1",
+          "HocKyHanHocID": 1100401,
+          "CLC": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101002,
+          "MaSV": "P02-students-2",
+          "HoTen": "SYNTHETIC-2",
+          "NgaySinh": "2026-11-12",
+          "GioiTinh": "SYNTHETIC-2",
+          "NoiSinhID": 1100302,
+          "DanTocID": 1100102,
+          "QuocTichID": 1100202,
+          "SoCCCD": "SYNTHETIC-2",
+          "SoDienThoai": "SYNTHETIC-2",
+          "Email": "SYNTHETIC-2",
+          "LopID": 1100902,
+          "KhoaQLID": 1100002,
+          "KhoaHocID": 1100502,
+          "NganhID": 1100802,
+          "TrangThaiHocTap": "SYNTHETIC-2",
+          "CapDT": "SYNTHETIC-2",
+          "HocKyApDungID": 1100402,
+          "HocKyBDID": 1100402,
+          "HocKyKTID": 1100402,
+          "MaHS": "P02-students-2",
+          "NgayNhapHoc": "SYNTHETIC-2",
+          "HeDT": "P02-students-2",
+          "NgayLuu": "SYNTHETIC-2",
+          "LoaiLuu": "SYNTHETIC-2",
+          "HocKyHanHocID": 1100402,
+          "CLC": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101003,
+          "MaSV": "P02-students-3",
+          "HoTen": "SYNTHETIC-3",
+          "NgaySinh": "2026-11-12",
+          "GioiTinh": "SYNTHETIC-3",
+          "NoiSinhID": 1100303,
+          "DanTocID": 1100103,
+          "QuocTichID": 1100203,
+          "SoCCCD": "SYNTHETIC-3",
+          "SoDienThoai": "SYNTHETIC-3",
+          "Email": "SYNTHETIC-3",
+          "LopID": 1100903,
+          "KhoaQLID": 1100003,
+          "KhoaHocID": 1100503,
+          "NganhID": 1100803,
+          "TrangThaiHocTap": "SYNTHETIC-3",
+          "CapDT": "SYNTHETIC-3",
+          "HocKyApDungID": 1100403,
+          "HocKyBDID": 1100403,
+          "HocKyKTID": 1100403,
+          "MaHS": "P02-students-3",
+          "NgayNhapHoc": "SYNTHETIC-3",
+          "HeDT": "P02-students-3",
+          "NgayLuu": "SYNTHETIC-3",
+          "LoaiLuu": "SYNTHETIC-3",
+          "HocKyHanHocID": 1100403,
+          "CLC": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101009,
+          "MaSV": "P02-students-4",
+          "HoTen": "SYNTHETIC-4",
+          "NgaySinh": "2026-11-12",
+          "GioiTinh": "SYNTHETIC-4",
+          "NoiSinhID": 1100301,
+          "DanTocID": 1100102,
+          "QuocTichID": 1100202,
+          "SoCCCD": "SYNTHETIC-4",
+          "SoDienThoai": "SYNTHETIC-4",
+          "Email": "SYNTHETIC-4",
+          "LopID": 1100902,
+          "KhoaQLID": 1100002,
+          "KhoaHocID": 1100502,
+          "NganhID": 1100802,
+          "TrangThaiHocTap": "SYNTHETIC-4",
+          "CapDT": "SYNTHETIC-4",
+          "HocKyApDungID": 1100402,
+          "HocKyBDID": 1100402,
+          "HocKyKTID": 1100402,
+          "MaHS": "P02-students-4",
+          "NgayNhapHoc": "SYNTHETIC-4",
+          "HeDT": "P02-students-4",
+          "NgayLuu": "SYNTHETIC-4",
+          "LoaiLuu": "SYNTHETIC-4",
+          "HocKyHanHocID": 1100402,
+          "CLC": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "academic-results",
+      "table": "HocVu",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101101,
+          "HoSoSVID": 1101001,
+          "KeHoachID": 1100401,
+          "NganhID": 1100801,
+          "NamHoc": "SYNTHETIC-1",
+          "HK": "SYNTHETIC-1",
+          "HPDangKy": "1.2500000000",
+          "HPBatBuoc": "1.2500000000",
+          "SoTCHocLai": "1.2500000000",
+          "DiemTBHT10": "1.2500000000",
+          "DiemTBHB": "1.2500000000",
+          "XepLoaiCK": "SYNTHETIC-1",
+          "HPTichLuy": "1.2500000000",
+          "DiemTBTL": "1.2500000000",
+          "DiemTBTLThang10": "1.2500000000",
+          "XepLoai": "SYNTHETIC-1",
+          "KLDK": "1.2500000000",
+          "KLHL": "1.2500000000",
+          "TCKhung": "1.2500000000",
+          "TCTiendo": "1.2500000000",
+          "TCTyle": "1.2500000000",
+          "DiemRL": "SYNTHETIC-1",
+          "ThoiHoc": "SYNTHETIC-1",
+          "NgungHoc": "SYNTHETIC-1",
+          "SoKyNgung": "SYNTHETIC-1",
+          "IDCodeHoc": "P02-academic-results-1",
+          "DungHoc": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101102,
+          "HoSoSVID": 1101002,
+          "KeHoachID": 1100402,
+          "NganhID": 1100802,
+          "NamHoc": "SYNTHETIC-2",
+          "HK": "SYNTHETIC-2",
+          "HPDangKy": "1.2500000000",
+          "HPBatBuoc": "1.2500000000",
+          "SoTCHocLai": "1.2500000000",
+          "DiemTBHT10": "1.2500000000",
+          "DiemTBHB": "1.2500000000",
+          "XepLoaiCK": "SYNTHETIC-2",
+          "HPTichLuy": "1.2500000000",
+          "DiemTBTL": "1.2500000000",
+          "DiemTBTLThang10": "1.2500000000",
+          "XepLoai": "SYNTHETIC-2",
+          "KLDK": "1.2500000000",
+          "KLHL": "1.2500000000",
+          "TCKhung": "1.2500000000",
+          "TCTiendo": "1.2500000000",
+          "TCTyle": "1.2500000000",
+          "DiemRL": "SYNTHETIC-2",
+          "ThoiHoc": "SYNTHETIC-2",
+          "NgungHoc": "SYNTHETIC-2",
+          "SoKyNgung": "SYNTHETIC-2",
+          "IDCodeHoc": "P02-academic-results-2",
+          "DungHoc": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101103,
+          "HoSoSVID": 1101003,
+          "KeHoachID": 1100403,
+          "NganhID": 1100803,
+          "NamHoc": "SYNTHETIC-3",
+          "HK": "SYNTHETIC-3",
+          "HPDangKy": "1.2500000000",
+          "HPBatBuoc": "1.2500000000",
+          "SoTCHocLai": "1.2500000000",
+          "DiemTBHT10": "1.2500000000",
+          "DiemTBHB": "1.2500000000",
+          "XepLoaiCK": "SYNTHETIC-3",
+          "HPTichLuy": "1.2500000000",
+          "DiemTBTL": "1.2500000000",
+          "DiemTBTLThang10": "1.2500000000",
+          "XepLoai": "SYNTHETIC-3",
+          "KLDK": "1.2500000000",
+          "KLHL": "1.2500000000",
+          "TCKhung": "1.2500000000",
+          "TCTiendo": "1.2500000000",
+          "TCTyle": "1.2500000000",
+          "DiemRL": "SYNTHETIC-3",
+          "ThoiHoc": "SYNTHETIC-3",
+          "NgungHoc": "SYNTHETIC-3",
+          "SoKyNgung": "SYNTHETIC-3",
+          "IDCodeHoc": "P02-academic-results-3",
+          "DungHoc": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101109,
+          "HoSoSVID": 1101001,
+          "KeHoachID": 1100402,
+          "NganhID": 1100802,
+          "NamHoc": "SYNTHETIC-4",
+          "HK": "SYNTHETIC-4",
+          "HPDangKy": "1.2500000000",
+          "HPBatBuoc": "1.2500000000",
+          "SoTCHocLai": "1.2500000000",
+          "DiemTBHT10": "1.2500000000",
+          "DiemTBHB": "1.2500000000",
+          "XepLoaiCK": "SYNTHETIC-4",
+          "HPTichLuy": "1.2500000000",
+          "DiemTBTL": "1.2500000000",
+          "DiemTBTLThang10": "1.2500000000",
+          "XepLoai": "SYNTHETIC-4",
+          "KLDK": "1.2500000000",
+          "KLHL": "1.2500000000",
+          "TCKhung": "1.2500000000",
+          "TCTiendo": "1.2500000000",
+          "TCTyle": "1.2500000000",
+          "DiemRL": "SYNTHETIC-4",
+          "ThoiHoc": "SYNTHETIC-4",
+          "NgungHoc": "SYNTHETIC-4",
+          "SoKyNgung": "SYNTHETIC-4",
+          "IDCodeHoc": "P02-academic-results-4",
+          "DungHoc": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "courses",
+      "table": "HocPhan",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101401,
+          "MaHP": "P02-courses-1",
+          "TenHP": "SYNTHETIC-1",
+          "SoTC": "1.2500000000",
+          "DoAn": "1.2500000000",
+          "ThucTap": "SYNTHETIC-1",
+          "MaCongThuc": "P02-courses-1",
+          "LoaiHP": "SYNTHETIC-1",
+          "CapDT": "SYNTHETIC-1",
+          "HPao": "SYNTHETIC-1",
+          "DATN": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101402,
+          "MaHP": "P02-courses-2",
+          "TenHP": "SYNTHETIC-2",
+          "SoTC": "1.2500000000",
+          "DoAn": "1.2500000000",
+          "ThucTap": "SYNTHETIC-2",
+          "MaCongThuc": "P02-courses-2",
+          "LoaiHP": "SYNTHETIC-2",
+          "CapDT": "SYNTHETIC-2",
+          "HPao": "SYNTHETIC-2",
+          "DATN": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101403,
+          "MaHP": "P02-courses-3",
+          "TenHP": "SYNTHETIC-3",
+          "SoTC": "1.2500000000",
+          "DoAn": "1.2500000000",
+          "ThucTap": "SYNTHETIC-3",
+          "MaCongThuc": "P02-courses-3",
+          "LoaiHP": "SYNTHETIC-3",
+          "CapDT": "SYNTHETIC-3",
+          "HPao": "SYNTHETIC-3",
+          "DATN": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101409,
+          "MaHP": "P02-courses-4",
+          "TenHP": "SYNTHETIC-4",
+          "SoTC": "1.2500000000",
+          "DoAn": "1.2500000000",
+          "ThucTap": "SYNTHETIC-4",
+          "MaCongThuc": "P02-courses-4",
+          "LoaiHP": "SYNTHETIC-4",
+          "CapDT": "SYNTHETIC-4",
+          "HPao": "SYNTHETIC-4",
+          "DATN": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "curriculum-items",
+      "table": "KhungCT",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101501,
+          "MaKhung": "P02-curriculum-items-1",
+          "HocPhanID": 1101401,
+          "HocPhanDuocThayTheID": 1101401,
+          "HocKy": 7,
+          "TuChon": "SYNTHETIC-1",
+          "TQDA": "SYNTHETIC-1",
+          "DATN": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101502,
+          "MaKhung": "P02-curriculum-items-2",
+          "HocPhanID": 1101402,
+          "HocPhanDuocThayTheID": 1101402,
+          "HocKy": 7,
+          "TuChon": "SYNTHETIC-2",
+          "TQDA": "SYNTHETIC-2",
+          "DATN": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101503,
+          "MaKhung": "P02-curriculum-items-3",
+          "HocPhanID": 1101403,
+          "HocPhanDuocThayTheID": 1101403,
+          "HocKy": 7,
+          "TuChon": "SYNTHETIC-3",
+          "TQDA": "SYNTHETIC-3",
+          "DATN": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101509,
+          "MaKhung": "P02-curriculum-items-4",
+          "HocPhanID": 1101401,
+          "HocPhanDuocThayTheID": 1101402,
+          "HocKy": 7,
+          "TuChon": "SYNTHETIC-4",
+          "TQDA": "SYNTHETIC-4",
+          "DATN": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "course-results",
+      "table": "DiemKyHoc",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101601,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101001,
+          "HocPhanID": 1101401,
+          "HocPhanTuongDuongID": 1101401,
+          "Diem": "1.2500000000",
+          "Note": "SYNTHETIC-1",
+          "HocLai": "SYNTHETIC-1",
+          "IsChecked": "SYNTHETIC-1",
+          "HocPhi": "1.2500000000",
+          "NoHphi": "SYNTHETIC-1",
+          "SoCT": "SYNTHETIC-1",
+          "MaHS_MaHP": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101602,
+          "KeHoachID": 1100402,
+          "HoSoSVID": 1101002,
+          "HocPhanID": 1101402,
+          "HocPhanTuongDuongID": 1101402,
+          "Diem": "1.2500000000",
+          "Note": "SYNTHETIC-2",
+          "HocLai": "SYNTHETIC-2",
+          "IsChecked": "SYNTHETIC-2",
+          "HocPhi": "1.2500000000",
+          "NoHphi": "SYNTHETIC-2",
+          "SoCT": "SYNTHETIC-2",
+          "MaHS_MaHP": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101603,
+          "KeHoachID": 1100403,
+          "HoSoSVID": 1101003,
+          "HocPhanID": 1101403,
+          "HocPhanTuongDuongID": 1101403,
+          "Diem": "1.2500000000",
+          "Note": "SYNTHETIC-3",
+          "HocLai": "SYNTHETIC-3",
+          "IsChecked": "SYNTHETIC-3",
+          "HocPhi": "1.2500000000",
+          "NoHphi": "SYNTHETIC-3",
+          "SoCT": "SYNTHETIC-3",
+          "MaHS_MaHP": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101609,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101002,
+          "HocPhanID": 1101402,
+          "HocPhanTuongDuongID": 1101402,
+          "Diem": "1.2500000000",
+          "Note": "SYNTHETIC-4",
+          "HocLai": "SYNTHETIC-4",
+          "IsChecked": "SYNTHETIC-4",
+          "HocPhi": "1.2500000000",
+          "NoHphi": "SYNTHETIC-4",
+          "SoCT": "SYNTHETIC-4",
+          "MaHS_MaHP": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "recognized-course-results",
+      "table": "DiemMien",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101701,
+          "KeHoachID": 1100401,
+          "HocPhanID": 1101401,
+          "HoSoSVID": 1101001,
+          "Diem": "1.2500000000",
+          "LoaiDiem": "SYNTHETIC-1",
+          "NgayCN": "2026-11-12",
+          "GhiChu": "SYNTHETIC-1",
+          "HocPhanTuongDuongID": 1101401,
+          "HocLai": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101702,
+          "KeHoachID": 1100402,
+          "HocPhanID": 1101402,
+          "HoSoSVID": 1101002,
+          "Diem": "1.2500000000",
+          "LoaiDiem": "SYNTHETIC-2",
+          "NgayCN": "2026-11-12",
+          "GhiChu": "SYNTHETIC-2",
+          "HocPhanTuongDuongID": 1101402,
+          "HocLai": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101703,
+          "KeHoachID": 1100403,
+          "HocPhanID": 1101403,
+          "HoSoSVID": 1101003,
+          "Diem": "1.2500000000",
+          "LoaiDiem": "SYNTHETIC-3",
+          "NgayCN": "2026-11-12",
+          "GhiChu": "SYNTHETIC-3",
+          "HocPhanTuongDuongID": 1101403,
+          "HocLai": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101709,
+          "KeHoachID": 1100401,
+          "HocPhanID": 1101402,
+          "HoSoSVID": 1101002,
+          "Diem": "1.2500000000",
+          "LoaiDiem": "SYNTHETIC-4",
+          "NgayCN": "2026-11-12",
+          "GhiChu": "SYNTHETIC-4",
+          "HocPhanTuongDuongID": 1101402,
+          "HocLai": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "reference-values",
+      "table": "TieuThuc",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101801,
+          "Ma": "P02-reference-values-1",
+          "Ten": "SYNTHETIC-1",
+          "GiaTri": "SYNTHETIC-1",
+          "Note": "SYNTHETIC-1"
+        },
+        {
+          "ID": 1101802,
+          "Ma": "P02-reference-values-2",
+          "Ten": "SYNTHETIC-2",
+          "GiaTri": "SYNTHETIC-2",
+          "Note": "SYNTHETIC-2"
+        },
+        {
+          "ID": 1101803,
+          "Ma": "P02-reference-values-3",
+          "Ten": "SYNTHETIC-3",
+          "GiaTri": "SYNTHETIC-3",
+          "Note": "SYNTHETIC-3"
+        },
+        {
+          "ID": 1101809,
+          "Ma": "P02-reference-values-4",
+          "Ten": "SYNTHETIC-4",
+          "GiaTri": "SYNTHETIC-4",
+          "Note": "SYNTHETIC-4"
+        }
+      ]
+    },
+    {
+      "resource": "rooms",
+      "table": "PhongHoc",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1101901,
+          "SoPhong": "P02-rooms-1",
+          "MaGD": "P02-rooms-1",
+          "NoUse": 7,
+          "Lock": 7
+        },
+        {
+          "ID": 1101902,
+          "SoPhong": "P02-rooms-2",
+          "MaGD": "P02-rooms-2",
+          "NoUse": 7,
+          "Lock": 7
+        },
+        {
+          "ID": 1101903,
+          "SoPhong": "P02-rooms-3",
+          "MaGD": "P02-rooms-3",
+          "NoUse": 7,
+          "Lock": 7
+        },
+        {
+          "ID": 1101909,
+          "SoPhong": "P02-rooms-4",
+          "MaGD": "P02-rooms-4",
+          "NoUse": 7,
+          "Lock": 7
+        }
+      ]
+    },
+    {
+      "resource": "room-usage",
+      "table": "LichSuDungPhong",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102001,
+          "MalopHP": "P02-room-usage-1",
+          "Phong": "P02-room-usage-1",
+          "Ngay": "2026-11-12",
+          "TietDau": 7,
+          "TietCuoi": 7,
+          "MaLT": "SYNTHETIC-1",
+          "MaNB": "SYNTHETIC-1",
+          "KoShow": 7,
+          "HocOnline": 7,
+          "NgayLe": 7,
+          "LichThi": 7
+        },
+        {
+          "ID": 1102002,
+          "MalopHP": "P02-room-usage-2",
+          "Phong": "P02-room-usage-2",
+          "Ngay": "2026-11-12",
+          "TietDau": 7,
+          "TietCuoi": 7,
+          "MaLT": "SYNTHETIC-2",
+          "MaNB": "SYNTHETIC-2",
+          "KoShow": 7,
+          "HocOnline": 7,
+          "NgayLe": 7,
+          "LichThi": 7
+        },
+        {
+          "ID": 1102003,
+          "MalopHP": "P02-room-usage-3",
+          "Phong": "P02-room-usage-3",
+          "Ngay": "2026-11-12",
+          "TietDau": 7,
+          "TietCuoi": 7,
+          "MaLT": "SYNTHETIC-3",
+          "MaNB": "SYNTHETIC-3",
+          "KoShow": 7,
+          "HocOnline": 7,
+          "NgayLe": 7,
+          "LichThi": 7
+        },
+        {
+          "ID": 1102009,
+          "MalopHP": "P02-room-usage-4",
+          "Phong": "P02-room-usage-4",
+          "Ngay": "2026-11-12",
+          "TietDau": 7,
+          "TietCuoi": 7,
+          "MaLT": "SYNTHETIC-4",
+          "MaNB": "SYNTHETIC-4",
+          "KoShow": 7,
+          "HocOnline": 7,
+          "NgayLe": 7,
+          "LichThi": 7
+        }
+      ]
+    },
+    {
+      "resource": "room-locks",
+      "table": "KhoaPhong",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102101,
+          "PhieuKhoa": "SYNTHETIC-1",
+          "TuNgay": "2026-11-12",
+          "DenNgay": "2026-11-12",
+          "KhoaT7": 7,
+          "KhoaCN": 7
+        },
+        {
+          "ID": 1102102,
+          "PhieuKhoa": "SYNTHETIC-2",
+          "TuNgay": "2026-11-12",
+          "DenNgay": "2026-11-12",
+          "KhoaT7": 7,
+          "KhoaCN": 7
+        },
+        {
+          "ID": 1102103,
+          "PhieuKhoa": "SYNTHETIC-3",
+          "TuNgay": "2026-11-12",
+          "DenNgay": "2026-11-12",
+          "KhoaT7": 7,
+          "KhoaCN": 7
+        },
+        {
+          "ID": 1102109,
+          "PhieuKhoa": "SYNTHETIC-4",
+          "TuNgay": "2026-11-12",
+          "DenNgay": "2026-11-12",
+          "KhoaT7": 7,
+          "KhoaCN": 7
+        }
+      ]
+    },
+    {
+      "resource": "room-lock-details",
+      "table": "KhoaPhongChiTiet",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102201,
+          "PhieuCT": "SYNTHETIC-1",
+          "TuNgayCT": "2026-11-12",
+          "DenNgayCT": "2026-11-12",
+          "Phong": "P02-room-lock-details-1",
+          "Sang": 7,
+          "Chieu": 7,
+          "Toi": 7
+        },
+        {
+          "ID": 1102202,
+          "PhieuCT": "SYNTHETIC-2",
+          "TuNgayCT": "2026-11-12",
+          "DenNgayCT": "2026-11-12",
+          "Phong": "P02-room-lock-details-2",
+          "Sang": 7,
+          "Chieu": 7,
+          "Toi": 7
+        },
+        {
+          "ID": 1102203,
+          "PhieuCT": "SYNTHETIC-3",
+          "TuNgayCT": "2026-11-12",
+          "DenNgayCT": "2026-11-12",
+          "Phong": "P02-room-lock-details-3",
+          "Sang": 7,
+          "Chieu": 7,
+          "Toi": 7
+        },
+        {
+          "ID": 1102209,
+          "PhieuCT": "SYNTHETIC-4",
+          "TuNgayCT": "2026-11-12",
+          "DenNgayCT": "2026-11-12",
+          "Phong": "P02-room-lock-details-4",
+          "Sang": 7,
+          "Chieu": 7,
+          "Toi": 7
+        }
+      ]
+    },
+    {
+      "resource": "conduct-class-assignments",
+      "table": "PhanLopRenLuyen",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102301,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101001,
+          "LopRenLuyenID": 1100901
+        },
+        {
+          "ID": 1102302,
+          "KeHoachID": 1100402,
+          "HoSoSVID": 1101002,
+          "LopRenLuyenID": 1100902
+        },
+        {
+          "ID": 1102303,
+          "KeHoachID": 1100403,
+          "HoSoSVID": 1101003,
+          "LopRenLuyenID": 1100903
+        },
+        {
+          "ID": 1102309,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101002,
+          "LopRenLuyenID": 1100902
+        }
+      ]
+    },
+    {
+      "resource": "class-merges",
+      "table": "GhepLopSinhHoat",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102401,
+          "KeHoachID": 1100401,
+          "LopGocID": 1100901,
+          "LopNhanID": 1100901
+        },
+        {
+          "ID": 1102402,
+          "KeHoachID": 1100402,
+          "LopGocID": 1100902,
+          "LopNhanID": 1100902
+        },
+        {
+          "ID": 1102403,
+          "KeHoachID": 1100403,
+          "LopGocID": 1100903,
+          "LopNhanID": 1100903
+        },
+        {
+          "ID": 1102409,
+          "KeHoachID": 1100401,
+          "LopGocID": 1100902,
+          "LopNhanID": 1100902
+        }
+      ]
+    },
+    {
+      "resource": "student-progress",
+      "table": "TienDoSinhVien",
+      "key": "ID",
+      "identity": true,
+      "rows": [
+        {
+          "ID": 1102501,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101001,
+          "NganhID": 1100801,
+          "HocKyHienTai": 7
+        },
+        {
+          "ID": 1102502,
+          "KeHoachID": 1100402,
+          "HoSoSVID": 1101002,
+          "NganhID": 1100802,
+          "HocKyHienTai": 7
+        },
+        {
+          "ID": 1102503,
+          "KeHoachID": 1100403,
+          "HoSoSVID": 1101003,
+          "NganhID": 1100803,
+          "HocKyHienTai": 7
+        },
+        {
+          "ID": 1102509,
+          "KeHoachID": 1100401,
+          "HoSoSVID": 1101002,
+          "NganhID": 1100802,
+          "HocKyHienTai": 7
+        }
+      ]
+    }
+  ]
+}
