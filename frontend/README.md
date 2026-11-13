@@ -1,3 +1,21 @@
+# Cấu trúc frontend dùng chung CTSV
+
+Đọc [SKILL.md](SKILL.md) trước khi code. [AGENTS.md](AGENTS.md) là điểm nhắc cho Codex; quy tắc chi tiết chỉ có trong SKILL.md.
+
+- src/app: App, AuthProvider, AppShell và cấu hình tích hợp navigation/featureRegistry.
+- src/shared: auth-client, hooks API kỹ thuật, UI primitives và styles/tokens; không đặt nghiệp vụ riêng tại đây.
+- src/features/auth: đăng nhập và quản trị tài khoản; src/features/foundation: danh mục/sinh viên/xác minh/quyền.
+- src/features/mghp, drl, hocbong, shcn: pages/components/api/hooks/types/assets có .gitkeep. Chưa có menu hoặc nghiệp vụ giả.
+- Mỗi module xuất entry cần dùng từ index.ts. Khi tích hợp, phối hợp sửa hai file trong app/navigation; không sửa code module khác.
+- Auth implementation ở src/shared/auth/auth-client.mjs. Entry cũ src/shared/auth-client.mjs chỉ re-export để giữ tests/integrations tương thích.
+- CSS riêng dùng .module.css. Tokens ở src/shared/styles/tokens.css; không thêm CSS toàn cục cho module.
+
+## Kiểm tra sau refactor
+
+Cwd frontend: npm.cmd run build và npm.cmd test. Browser DEV: e2e/modules-dev.mjs đọc cấu hình/credentials qua môi trường private như local-dev.mjs, dùng Chrome và launcher dev HTTPS thật. Chỉ đọc dữ liệu nghiệp vụ; login/refresh/logout là Auth thật. Evidence ở <dev-home>/frontend-modules-evidence/browser.json, không đưa credential vào Git.
+
+Phần hướng dẫn setup/vận hành hiện có giữ dưới đây; FE refactor không sửa Vite proxy, origin, HTTPS, BE, database, dependency hoặc lockfile.
+
 # CTSV web — P04
 React19.2.0 / TypeScript5.9.3 / Vite7.1.12. Một frontend chung, không tạo frontend SIS/Kế toán hoặc module khác.
 

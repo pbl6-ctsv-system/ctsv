@@ -1,0 +1,13 @@
+/* Shared visual primitives scoped under the application. No selectors leak outside this root. */
+.controls :where(section){background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-card);padding:28px;box-shadow:var(--shadow-card)}
+.controls :where(label){display:flex;flex-direction:column;gap:var(--space-2);font-size:13px;font-weight:600}
+.controls :where(input,select,textarea){font:inherit;border:1px solid var(--color-control-border);border-radius:var(--radius-control);padding:11px;background:var(--color-surface);max-width:100%}
+.controls :where(input,select,textarea,button):focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+.controls :where(button){border:0;border-radius:var(--radius-control);padding:12px 18px;font:inherit;font-weight:600;background:var(--color-primary);color:var(--color-surface);cursor:pointer}
+.controls :where(button:disabled){opacity:.45;cursor:default}
+.controls :where(button:hover:not(:disabled)){filter:brightness(.94)}
+.controls :where(button:global(.secondary),nav button){background:var(--color-secondary-bg);color:var(--color-secondary-text)}
+.controls :where(button:global(.danger)){background:var(--color-danger)}
+.controls :where(nav){display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.controls :where(nav button:global(.selected)){background:var(--color-primary);color:var(--color-surface)}
+@media(max-width:650px){.controls :where(section){padding:18px}}
