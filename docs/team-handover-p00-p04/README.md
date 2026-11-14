@@ -1,5 +1,7 @@
 # Bàn giao CTSV/SIS P00–P04
 
+**Persistence13/11 — đọc trước khi bổ sung model:** [Entity/Repository và migration](../persistence.md), [inventory Entity–bảng–FK–owner](../persistence-entity-inventory.md). Foundation/P05 dùng Entity cho luồng nghiệp vụ; Flyway/schema, Auth JDBC và sync engine giữ nguyên. Xem branch/commit Git để xác định source đã phát hành; JAR DEV chưa được thay sang bản refactor. Các trạng thái release lịch sử bên dưới không thay bằng chứng Git hiện hành.
+
 **Cập nhật B01–B03: 13/11/2026.** Điểm bắt đầu cho thành viên và Codex của họ.
 
 | Mục | Trạng thái |

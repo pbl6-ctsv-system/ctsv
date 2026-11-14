@@ -52,3 +52,11 @@ Công nghệ hoặc mẫu thiết kế mà skill khuyến nghị không được
 - Package theo module trước, layer sau; dùng public interface/application service thay repository/entity nội bộ xuyên module; không phụ thuộc vòng. Migration CTSV dùng một Flyway history/version duy nhất, phối hợp trước merge theo nguồn chuẩn.
 - Ưu tiên feature branch và giữ `main` ổn định. Dùng PR khi cần tích hợp, review theo cách nhóm thống nhất. Ngoại lệ với `main` cần nhóm xác nhận trước. Codex chỉ commit, push, tạo PR, merge, đổi cấu hình GitHub hoặc deploy khi được giao trực tiếp.
 - Người dùng trực tiếp cài công cụ, thiết lập SQL Server test/kết nối và kiểm môi trường P00; Codex chỉ hướng dẫn/kiểm khi được yêu cầu. Không tự kết nối SQL hoặc xin credential trong task tài liệu. Không dùng báo cáo thiết kế làm runtime PASS.
+
+## 7. Persistence Foundation/P05 — refactor được giao13/11/2026
+
+- Đọc [quy tắc Entity/Repository](docs/persistence.md) và [inventory Entity–bảng–FK–owner](docs/persistence-entity-inventory.md) trước khi sửa persistence. Foundation có24 Entity resource +7 bảng hỗ trợ; MGHP P05 có7 Entity. Không tạo Entity cho mọi bảng máy móc hoặc triển khai nghiệp vụ module khác từ projection SIS.
+- Giữ Flyway V1–V8 bất biến và schema hiện có; Entity không thay migration. `ddl-auto=validate`, Open Session in View tắt. Backend thông thường dùng Repository/JPA/Entity và DTO/mapper whitelist; không trả Entity ra API hoặc xuyên module.
+- Auth và sync engine giữ JDBC chuyên biệt. Không tự chuyển CT/staging/fencing/checkpoint sang `save()`; PK CTSV độc lập ID SIS. SQL Server lock/CAS/rowversion/trigger vẫn là bảo đảm bắt buộc, không thay bằng `@Version Long`.
+- JPA/JdbcTemplate dùng chung transaction; flush trước native SQL, clear/refresh sau CAS/bulk/trigger khi cần. Association LAZY không cascade xóa; FK scalar ghi, association read-only đọc. Nạp lại association sau thay FK trong cùng transaction.
+- Test refactor chỉ dùng DB riêng `ctsv_jpa_refactor_test_20261113` có guard/marker đã được owner cho phép; không reset/drop hoặc ghi DB DEV/evidence cũ. Lệnh và giới hạn ở [kế hoạch/kết quả refactor](../nghiepvu/09-trien-khai/foundation-jpa-refactor-plan.md).

@@ -17,7 +17,7 @@ class P05HttpIT {
   @Bean @Primary AuthAccess p05Access(AuthService service){return new AuthAccess(){public Principal verifyAccessToken(String token){return service.verifyAccessToken(token);}public State requireCtsvAccess(Principal p,UUID mapped){if(AUTH_UNAVAILABLE.get())throw new AuthFailure(503,"DEPENDENCY_UNAVAILABLE");return service.requireCtsvAccess(p,mapped);}};}
  }
  @DynamicPropertySource static void properties(DynamicPropertyRegistry r)throws Exception{AuthHttpIT.configuration(r);if(System.getenv("P05_BROWSER_HOME")!=null)P05BrowserHarnessIT.browserProperties(r);}
- @LocalServerPort int port;@Autowired JdbcTemplate jdbc;@Autowired AuthAccess auth;@Autowired AuthSettings authSettings;
+ @LocalServerPort int port;@Autowired JdbcTemplate jdbc;@Autowired AuthAccess auth;@Autowired AuthSettings authSettings;@Autowired Clock fixtureClock;
  String cvToken,svToken;long cv,sv;JsonNode aliases;long policyM2,lockedM2,semester;
  record Reply(int status,HttpHeaders headers,String body){JsonNode json()throws Exception{return JSON.readTree(body);}String tag(){return headers.firstValue("ETag").orElseThrow();}void status(int n){assertThat(status).as(body).isEqualTo(n);}}
  Reply send(String method,String path,Object body,String token,String tag)throws Exception{
@@ -28,7 +28,10 @@ class P05HttpIT {
  }
  long insert(String sql,Object...a){return jdbc.queryForObject(sql+";SELECT CAST(SCOPE_IDENTITY() AS bigint)",Long.class,a);}
  String[] identity(boolean specialist)throws Exception{
-  UUID id=UUID.randomUUID();String name="p05."+id;var credentials=new AuthCredentials();jdbc.update("INSERT dbo.TaiKhoan(ID,TenDangNhap,TenDangNhapChuanHoa,MatKhauHash) VALUES(?,?,?,?)",id.toString(),name,name,credentials.hash(PASSWORD));jdbc.update("INSERT dbo.TaiKhoan_VaiTro SELECT ?,ID FROM dbo.VaiTro WHERE MaVaiTro=N'CTSV_USER'",id.toString());
+  UUID id=UUID.randomUUID();String name="p05."+id;var credentials=new AuthCredentials();
+  // Auth writes use the fixed test clock too: DB wall-clock defaults would put account creation after a later logout update.
+  var created=OffsetDateTime.ofInstant(fixtureClock.instant(),ZoneOffset.UTC);
+  jdbc.update("INSERT dbo.TaiKhoan(ID,TenDangNhap,TenDangNhapChuanHoa,MatKhauHash,ThoiDiemTao,ThoiDiemCapNhat) VALUES(?,?,?,?,?,?)",id.toString(),name,name,credentials.hash(PASSWORD),created,created);jdbc.update("INSERT dbo.TaiKhoan_VaiTro SELECT ?,ID FROM dbo.VaiTro WHERE MaVaiTro=N'CTSV_USER'",id.toString());
   long user=insert("INSERT dbo.nguoi_dung(dia_chi_email,dang_hoat_dong) VALUES(?,1)",name+"@example.invalid");jdbc.update("INSERT dbo.dinh_danh_dang_nhap(nguoi_dung_id,ma_nha_cung_cap,ma_chu_the_dang_nhap,thoi_diem_xac_minh) VALUES(?,?,?,SYSUTCDATETIME())",user,"https://auth.ctsv.test",id.toString());
   if(specialist)jdbc.update("INSERT dbo.phan_quyen_nguoi_dung(nguoi_dung_id,vai_tro_id,ma_phan_he) SELECT ?,id,N'MGHP' FROM dbo.vai_tro WHERE ma=N'mghp_chuyen_vien'",user);
   else insert("INSERT dbo.sinh_vien(mssv,ho_ten,nguoi_dung_id) VALUES(?,N'SYNTHETIC P05 student',?)",name,user);
