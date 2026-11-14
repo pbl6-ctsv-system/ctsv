@@ -9,7 +9,8 @@ import pbl6.ctsv.auth.AuthAccess;
 @ConditionalOnProperty(name="ctsv.foundation.enabled",havingValue="true")
 class FoundationConfiguration {
  @Bean FoundationSecurity foundationSecurity(AuthAccess auth,JdbcTemplate jdbc){return new FoundationSecurity(auth,jdbc);}
- @Bean FoundationService foundationService(FoundationSecurity security,JdbcTemplate jdbc,PlatformTransactionManager tx,ObjectMapper json,pbl6.ctsv.foundation.api.FoundationUsage usage){return new FoundationService(security,jdbc,tx,json,usage);}
+ @Bean pbl6.ctsv.foundation.repository.FoundationRepository foundationRepository(jakarta.persistence.EntityManager em,JdbcTemplate jdbc){return new pbl6.ctsv.foundation.repository.FoundationRepository(em,jdbc);}
+ @Bean FoundationService foundationService(FoundationSecurity security,pbl6.ctsv.foundation.repository.FoundationRepository repository,PlatformTransactionManager tx,ObjectMapper json,pbl6.ctsv.foundation.api.FoundationUsage usage){return new FoundationService(security,repository,tx,json,usage);}
  @Bean org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.CorsFilter> foundationCors(org.springframework.core.env.Environment env){
   var origins=org.springframework.boot.context.properties.bind.Binder.get(env).bind("ctsv.auth.origins",org.springframework.boot.context.properties.bind.Bindable.listOf(String.class)).orElseThrow(()->new IllegalStateException("Auth origins required"));
   var policy=new org.springframework.web.cors.CorsConfiguration();policy.setAllowedOrigins(origins);policy.setAllowCredentials(true);

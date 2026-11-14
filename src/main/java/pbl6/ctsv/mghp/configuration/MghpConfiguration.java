@@ -2,7 +2,7 @@ package pbl6.ctsv.mghp.configuration;
 import com.fasterxml.jackson.databind.ObjectMapper;import java.time.Clock;import java.util.*;import org.springframework.context.annotation.*;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;import org.springframework.jdbc.core.JdbcTemplate;import org.springframework.transaction.PlatformTransactionManager;import pbl6.ctsv.foundation.api.FoundationAccess;
 @Configuration(proxyBeanMethods=false) @ConditionalOnProperty(name="ctsv.mghp.configuration.enabled",havingValue="true")
 class MghpConfiguration {
- @Bean ConfigurationRepository mghpConfigurationRepository(JdbcTemplate jdbc,ObjectMapper json){return new ConfigurationRepository(jdbc,json);}
+ @Bean ConfigurationRepository mghpConfigurationRepository(JdbcTemplate jdbc,ObjectMapper json,jakarta.persistence.EntityManager em){return new ConfigurationRepository(jdbc,json,em);}
  @Bean ConfigurationAccess mghpConfigurationAccess(PlatformTransactionManager tx,FoundationAccess access,ConfigurationRepository r){return new ConfigurationAccess(tx,access,r);}
  @Bean PolicyService mghpPolicyService(ConfigurationRepository r,ObjectMapper json,Clock clock){return new PolicyService(r,json,clock);}
  @Bean RoundService mghpRoundService(ConfigurationRepository r,ObjectMapper json,Clock clock){return new RoundService(r,json,clock);}
