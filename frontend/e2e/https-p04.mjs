@@ -1,3 +1,4 @@
+import {openNav,revealNav} from './navigation.mjs';
 import {chromium} from '@playwright/test';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import path from 'node:path';
@@ -46,11 +47,17 @@ try{
   await student.screenshot({path:path.join(evidence,'https-student.png'),fullPage:true});
  });
  await check('B02_STUDENT_LOOKUP_AND_FORBIDDEN',async()=>{
-  await student.getByRole('button',{name:'Tra cứu',exact:true}).click();
-  await student.getByRole('table').waitFor();
-  await student.getByRole('button',{name:'Sinh viên',exact:true}).click();
-  await student.getByRole('button',{name:'Tra cứu',exact:true}).click();
-  await student.getByRole('alert').filter({hasText:'không có quyền'}).waitFor();
+  await (await revealNav(student,'Đợt xét MGHP')).waitFor();
+  assert.equal(await student.getByRole('link',{name:'Sinh viên',exact:true,includeHidden:true}).count(),0);
+  const statuses=await student.evaluate(async()=>{
+   const {createAuthClient}=await import('/src/shared/auth-client.mjs');
+   const client=createAuthClient();
+   await client.refresh();
+   const lookup=await client.request('/api/ctsv/nen-tang/danh-muc?kind=semesters');
+   try{await client.request('/api/ctsv/nen-tang/sinh-vien');return [lookup.status,200];}
+   catch(error){return [lookup.status,error.status];}
+  });
+  assert.deepEqual(statuses,[200,403]);
  });
  await check('B03_REFRESH_AFTER_RELOAD_AND_TWO_TABS',async()=>{
   await student.reload();
@@ -75,11 +82,11 @@ try{
  });
  await check('B05_SPECIALIST_STUDENT_DETAIL_AND_SEMESTER_UI',async()=>{
   cc=await context();cv=await page(cc);await login(cv,fixture.specialist);
-  await cv.getByRole('button',{name:'Sinh viên',exact:true}).click();
+  await openNav(cv,'Sinh viên');
   await cv.getByLabel('ID sinh viên',{exact:true}).fill(fixture.student.studentId);
   await cv.getByRole('button',{name:'Xem chi tiết',exact:true}).click();
   await cv.getByText('Sinh viên Browser TEST',{exact:true}).waitFor();
-  await cv.getByRole('button',{name:'Xác minh & quyền',exact:true}).click();
+  await openNav(cv,'Xác minh dữ liệu');
   await cv.getByLabel(/^Loại dữ liệu/).selectOption('semester');
   await cv.getByLabel('ID đối tượng',{exact:true}).fill(fixture.semesterId);
   await cv.getByRole('button',{name:'Đọc dữ liệu',exact:true}).click();
@@ -107,9 +114,10 @@ try{
  });
  await check('B07_ADMIN_AUTH_UI_AND_ETAG',async()=>{
   ac=await context();admin=await page(ac);await login(admin,fixture.admin);
-  await admin.getByRole('button',{name:'Quản trị tài khoản',exact:true}).click();
-  await admin.getByRole('button',{name:'Danh mục quyền Auth',exact:true}).click();
+  await openNav(admin,'Danh mục quyền Auth');
+  await admin.getByRole('button',{name:'Đọc danh mục quyền Auth',exact:true}).click();
   await admin.getByText('AUTH_ADMIN',{exact:true}).waitFor();
+  await openNav(admin,'Quản trị tài khoản');
   await admin.getByLabel(/^Loại dữ liệu/).selectOption('account');
   await admin.getByLabel('ID đối tượng',{exact:true}).fill(fixture.student.accountId);
   const read=admin.waitForResponse(r=>r.request().method()==='GET'&&r.url().endsWith('/tai-khoan/'+fixture.student.accountId));

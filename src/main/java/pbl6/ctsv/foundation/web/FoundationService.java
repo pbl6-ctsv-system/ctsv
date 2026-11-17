@@ -28,6 +28,9 @@ final class FoundationService {
     <T> T execute(AuthAccess.Principal p,boolean online,String capability,Function<Long,T> action) {
         return tx.execute(s -> action.apply(security.authorize(p,online,capability).userId()));
     }
+    FoundationSecurity.MenuAccess menuAccess(AuthAccess.Principal principal) {
+        return tx.execute(status -> security.menuAccess(principal));
+    }
     View view(Object body,byte[] version) {
         try {
             var digest=MessageDigest.getInstance("SHA-256");digest.update(version);

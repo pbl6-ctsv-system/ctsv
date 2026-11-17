@@ -10,4 +10,6 @@ public interface FoundationAccess {
  }
  record Identity(long userId,Long studentId,AuthAccess.Principal principal){}
  Identity authorize(AuthAccess.Principal principal,boolean online,String capability);
+ /** Resolve an active local recipient without imposing a module-specific role. */
+ default Identity identify(AuthAccess.Principal principal,boolean online){return authorize(principal,online,null);}
 }

@@ -1,5 +1,5 @@
 export class ApiError extends Error {
- constructor(status,code){super(code);this.status=status;this.code=code;}
+ constructor(status,code,fields=[]){super(code);this.status=status;this.code=code;this.fields=fields;}
 }
 export function createAuthClient({fetcher=fetch,locks=navigator.locks,storage=localStorage,channel=new BroadcastChannel('ctsv-auth-state')}={}){
  let access=null;let expires=0;let flight=null;
@@ -36,10 +36,12 @@ export function createAuthClient({fetcher=fetch,locks=navigator.locks,storage=lo
    if(!access||Date.now()>=expires-10000)await refresh();
    const response=await fetcher(path,{...options,redirect:'error',cache:'no-store',signal:options.signal??AbortSignal.timeout(20000),credentials:'include',headers:{...options.headers,Authorization:'Bearer '+access}});
    if(!response.ok){
-    const value=await response.json().catch(()=>({code:'REQUEST_FAILED'}));
+    const value=await response.json().catch(()=>null);
+    const fields=Array.isArray(value?.errors)
+     ? value.errors.map(item=>item?.field).filter(field=>typeof field==='string') : [];
     // Never blindly retry writes or turn a revocation into refresh loops.
     if(response.status===401){access=null;expires=0;}
-    throw new ApiError(response.status,value.code);
+    throw new ApiError(response.status,value?.code??'REQUEST_FAILED',fields);
    }
    return response;
   }

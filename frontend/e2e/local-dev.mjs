@@ -1,3 +1,4 @@
+import {openNav,revealNav} from './navigation.mjs';
 // Local-dev acceptance only. Does not rerun P04 acceptance or use its test host/database.
 import {chromium} from '@playwright/test';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
@@ -25,9 +26,10 @@ try{
   await check('DEV01_LOGIN_SYNTHETIC_ROLES_AND_P04_DATABASE',async()=>{
    sv=await page('student');cv=await page('specialist');admin=await page('admin');
    for(const [key,v]of [['student',sv],['specialist',cv],['admin',admin]])assert.equal(v.issue.accountId,identities[key].accountId);
-   await sv.p.getByRole('button',{name:'Tra cứu',exact:true}).click();await sv.p.getByText('DEV-2026-1',{exact:true}).waitFor();
-   await cv.p.getByRole('button',{name:'Sinh viên',exact:true}).click();await cv.p.getByLabel('ID sinh viên',{exact:true}).fill(identities.studentId);await cv.p.getByRole('button',{name:'Xem chi tiết',exact:true}).click();await cv.p.getByText('DEV-SV-001',{exact:true}).waitFor();
-   await admin.p.getByRole('button',{name:'Quản trị tài khoản',exact:true}).click();await admin.p.getByRole('button',{name:'Danh mục quyền Auth',exact:true}).click();await admin.p.getByText('AUTH_ADMIN',{exact:true}).waitFor();
+   await (await revealNav(sv.p,'Đợt xét MGHP')).waitFor();
+   assert.equal(await sv.p.getByRole('link',{name:'Quản trị tài khoản',exact:true,includeHidden:true}).count(),0);
+   await openNav(cv.p,'Sinh viên');await cv.p.getByLabel('ID sinh viên',{exact:true}).fill(identities.studentId);await cv.p.getByRole('button',{name:'Xem chi tiết',exact:true}).click();await cv.p.getByText('DEV-SV-001',{exact:true}).waitFor();
+   await openNav(admin.p,'Danh mục quyền Auth');await admin.p.getByRole('button',{name:'Đọc danh mục quyền Auth',exact:true}).click();await admin.p.getByText('AUTH_ADMIN',{exact:true}).waitFor();
   });
   await check('DEV02_HTTPS_HTTPONLY_COOKIE_CSRF_CORS',async()=>{
    const cookie=(await sv.context.cookies()).find(c=>c.name==='ctsv_refresh');assert(cookie.httpOnly&&cookie.secure);assert.equal(cookie.sameSite,'Strict');assert.equal(cookie.path,'/api/xac-thuc');
@@ -54,7 +56,7 @@ try{
    const context=await browser.newContext({ignoreHTTPSErrors:false,storageState:path.join(home,'restart-browser.json')});contexts.push(context);const p=await context.newPage();await p.goto(origin);
    const old=await p.evaluate(async token=>{const r=await fetch('/api/xac-thuc/toi',{headers:{Authorization:'Bearer '+token}});return{status:r.status,accountId:(await r.json()).accountId}},proof.access);assert.equal(old.status,200);assert.equal(old.accountId,proof.accountId);
    const refresh=p.waitForResponse(r=>r.url().endsWith('/lam-moi-token'));await p.getByRole('button',{name:'Tiếp tục đăng nhập',exact:true}).click();assert.equal((await refresh).status(),200);await p.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();
-   await p.getByRole('button',{name:'Tra cứu',exact:true}).click();await p.getByText('DEV-2026-1',{exact:true}).waitFor();
+   await (await revealNav(p,'Đợt xét MGHP')).waitFor();
    await p.getByRole('button',{name:'Đăng xuất',exact:true}).click();await p.getByRole('heading',{name:'Đăng nhập CTSV',exact:true}).waitFor();
   });
  }

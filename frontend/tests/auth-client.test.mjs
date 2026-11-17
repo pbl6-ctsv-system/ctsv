@@ -37,3 +37,16 @@ test('revoked bearer request never triggers an automatic refresh or replay',asyn
  const env=browser();let calls=0;const client=createAuthClient({...env,fetcher:async(url)=>{calls++;return url.endsWith('dang-nhap')?new Response(JSON.stringify({accessToken:'test',expiresIn:900})):new Response(JSON.stringify({code:'TOKEN_REVOKED'}),{status:401})}});
  await client.login('test','test');await assert.rejects(client.request('/api/ctsv/nen-tang/sinh-vien'));assert.equal(calls,2);assert.equal(client.token(),null);
 });
+test('request preserves the rejected field from a validation response',async()=>{
+ const fetcher=async url=>url.endsWith('dang-nhap')
+  ? Response.json({accessToken:'synthetic',expiresIn:900})
+  : Response.json({code:'VALIDATION_ERROR',errors:[{field:'ethnicityId',message:'Bad Request'}]},{status:400});
+ const client=createAuthClient({...browser(),fetcher});
+ await client.login('synthetic','synthetic');
+ await assert.rejects(client.request('/api/ctsv/mghp/ho-so',{method:'POST'}),error=>{
+  assert.equal(error.status,400);
+  assert.equal(error.code,'VALIDATION_ERROR');
+  assert.deepEqual(error.fields,['ethnicityId']);
+  return true;
+ });
+});

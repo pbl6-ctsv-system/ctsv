@@ -131,6 +131,7 @@ Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần
 - Access Token ở memory; Refresh Cookie Secure/HttpOnly, rotation và logout cookie-only. Giữ CSRF/CORS, Web Locks và xử lý mất response; module không tự refresh song song hoặc retry refresh bằng cookie cũ.
 - Không lưu JWT/refresh/password vào localStorage, URL, log, toast, screenshot hoặc shared state phát ra giữa tab. Không đặt private key/service key/SQL credentials trong FE hoặc biến VITE_*.
 - Frontend ẩn/chặn thao tác theo capability đã có để dễ dùng; backend vẫn là nơi quyết định quyền/ownership và online verification. Không suy quyền từ tên module, chức danh hay việc menu đang hiện.
+- Đợi quyền hiện hành từ backend trước khi hiển thị mục hoặc nút cần quyền. Dùng cùng điều kiện cho menu, màn hình và đường điều hướng trực tiếp. Khi đổi tài khoản hoặc quyền, làm mới phạm vi hiển thị và bỏ lựa chọn cũ nếu quyền mới loại trừ. Kiểm bằng tài khoản được cấp quyền và tài khoản thiếu quyền.
 - Mỗi màn hình có loading, empty, error, forbidden và success khi áp dụng. Phân biệt danh sách rỗng với chưa tải hoặc request lỗi; feedback lưu nằm gần thao tác, không chỉ một toast thoáng qua.
 - 401/thu hồi token đi qua xử lý Auth chung; 403 hiển thị thiếu quyền; lỗi validation gắn field nếu contract cung cấp; lỗi DB/integration không lộ stack trace. Không đổi mọi lỗi thành “không có dữ liệu”.
 - Giữ ETag/If-Match theo contract; version conflict yêu cầu đọc lại/đối chiếu, không tự ghi đè hoặc retry write mù. Client validation hỗ trợ người dùng, không thay validation server.
@@ -145,6 +146,7 @@ Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần
 - Tests riêng đặt cạnh feature hoặc theo bố cục test mà project cấu hình hỗ trợ; tests shared kiểm component/transport chung. Không chỉ đưa file vào thư mục rồi mặc nhiên nói test runner đã chạy nó.
 - Cwd `frontend`: `npm.cmd run build` kiểm TypeScript/build; `npm.cmd test` hiện chỉ chạy `tests/*.test.mjs`. TSX/browser tests mới cần runner hiện có phù hợp hoặc thiết kế test tooling riêng được thống nhất; không tự thêm dependency.
 - Tái dùng E2E hiện có khi thay đổi Auth/AppShell/Foundation. Kiểm điều hướng, bàn phím, viewport, loading/empty/error và quyền của màn hình bị ảnh hưởng; không chạy lại toàn P00–P04 cho thay đổi thuần tài liệu.
+- Chọn đích Playwright theo [AGENTS.md §8](../AGENTS.md#8-bàn-giao-dev-cho-mỗi-slice--15112026). Mặc định smoke luồng hằng ngày trên `ctsv_dev` qua `.\dev.ps1 start`. Dùng DB test riêng cho các ca cần trạng thái cố định hoặc có thao tác phá hủy.
 - Chỉ báo PASS với lệnh, số ca và kết quả thực tế; phân biệt mock với browser/API thật. Không đổi business assertion để hợp thức hóa refactor.
 
 ## 9. Mở rộng từ cấu trúc hiện tại
@@ -154,6 +156,7 @@ Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần
 3. Khi module sẵn sàng, phối hợp thêm entry public vào app/navigation/featureRegistry.tsx và menu/view vào modules.mjs. App chỉ render feature đã đăng ký, không tự tạo route/API cho thư mục rỗng.
 4. Page entry có props client (Auth client dùng chung) và view (màn hình trong feature), kiểu FeaturePageProps ở shared/types/module.ts. UI tiếp tục dùng shared components/tokens; tên trang/header mới cần đặt ở điểm tích hợp phù hợp, không sửa AppShell thành logic nghiệp vụ.
 5. Module có thể có tests riêng; chạy đúng test runner. Giữ các regression Auth và module khác bị ảnh hưởng; không commit/push chỉ vì đọc skill này.
+6. Đăng ký đường dẫn, quyền và nhóm của mỗi trang trong `app/navigation/modules.mjs`. Navbar và truy cập URL trực tiếp cùng dùng cấu hình đó. Trang chủ dùng `/`, nhóm MGHP dùng `/mghp/…`, Dữ liệu nền dùng `/du-lieu-nen/…`, Quản trị dùng `/quan-tri/…` và Thông báo dùng `/thong-bao`. Các mục đang phát triển chỉ là nhãn cho sinh viên. Khi phục vụ build SPA ngoài Vite DEV, web server cần trả `index.html` cho route con frontend để tải lại trang.
 
 ## 10. Checklist review mỗi thay đổi FE
 

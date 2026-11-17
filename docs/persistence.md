@@ -6,6 +6,7 @@ Ngày 13/11/2026, owner giao refactor Foundation và persistence MGHP P05 theo h
 
 - 24 Entity resource Foundation: `DonVi` và 23 bảng đã có production binding; thêm 7 Entity hỗ trợ: `HeThongNgoai`, `QuaTrinhTheoHoc`, `LichSuTrangThaiSv`, `QuaTrinhThuocLop`, `NguoiDung`, `VaiTro`, `PhanQuyenNguoiDung`.
 - 7 Entity MGHP P05: chính sách, phiên bản, tiêu chí, nhóm giấy, giấy bắt buộc, đợt xét, chính sách của đợt.
+- P06 dùng Entity cho hồ sơ, bản nộp, giấy, đối chiếu, audit chuyển trạng thái và inbox. V11 và Entity root cùng ánh xạ cột rowversion mới. Repository giữ SQL khóa/CAS; service làm việc với Entity và mapper trả DTO.
 - `foundation/entity/` sở hữu các Entity nền tảng; `DonVi` giữ đường dẫn `foundation/units/entity/` để không làm gãy tham chiếu cũ. `mghp/configuration/entity/` chỉ sở hữu dữ liệu P05.
 - Auth vẫn là module JDBC đã triển khai; không tạo Entity cho 8 bảng Auth. `NguoiDung`/`VaiTro` của Foundation không phải `TaiKhoan`/`VaiTro` của Auth. Cột mật khẩu legacy của `nguoi_dung` không phải nguồn credentials đăng nhập.
 - Bảng kỹ thuật CT/staging/checkpoint, file/audit/notification và các nghiệp vụ chưa triển khai không được tạo Entity máy móc. `PhanLopRenLuyen` là projection dữ liệu SIS dùng chung, không phải triển khai nghiệp vụ DRL.
