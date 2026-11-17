@@ -42,3 +42,16 @@ Nguồn: migrations CTSV V1–V8; không thay schema. 24 resource + 7 bảng h�
 | MGHP/P05 | MghpGiayToBatBuoc | `mghp_giay_to_bat_buoc` | nhom_id → mghp_nhom_yeu_cau_giay_to | — |
 | MGHP/P05 | MghpDotXet | `mghp_dot_xet` | — | hoc_ky_id → hoc_ky; thong_bao_dot_xet_id → thong_bao; nguoi_khoa_id → nguoi_dung; nguoi_chot_hoi_dong_id → nguoi_dung; nguoi_tao_id → nguoi_dung; nguoi_khoa_cau_hinh_id → nguoi_dung |
 | MGHP/P05 | MghpChinhSachDotXet | `mghp_chinh_sach_dot_xet` | dot_xet_id → mghp_dot_xet; phien_ban_chinh_sach_id → mghp_phien_ban_chinh_sach | tep_mau_don_id → tep_dinh_kem |
+
+## MGHP/P06
+
+Các entity sau thuộc `mghp.application.ApplicationEntities`. FK của luồng nộp ghi bằng ID local; repo resolve owner/version trước khi ghi. Root `Application.fence` ánh xạ read-only cột `phien_ban_ky_thuat` của V11.
+
+| Entity | Bảng | Quan hệ dùng trong P06 |
+|---|---|---|
+| Application | `mghp_ho_so` | Đợt, sinh viên, quá trình, chính sách và phiên bản |
+| Submission | `mghp_phien_ban_ho_so` | Root và người nộp; unique operationId |
+| Document, EvidenceLink | `mghp_giay_to_ho_so`, `mghp_tep_minh_chung` | Bản nộp, yêu cầu giấy, người liên quan và tệp TEP đã commit |
+| SemesterRequest, RelatedPerson, Comparison | `mghp_hoc_ky_de_nghi`, `mghp_nguoi_lien_quan`, `mghp_doi_chieu_ke_khai` | Snapshot của đúng bản nộp |
+| ApplicationEvent, Supplement | `mghp_nhat_ky_ho_so`, `mghp_yeu_cau_bo_sung` | Audit chuyển trạng thái và đóng vòng khi rút; wire vòng thuộc P07 |
+| Notification, Recipient | `thong_bao`, `nguoi_nhan_thong_bao` | Thông báo và mốc đọc riêng của người nhận |

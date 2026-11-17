@@ -14,6 +14,10 @@ final class FoundationController {
   var headers=Collections.list(r.getHeaders("Authorization"));if(headers.size()!=1||!headers.getFirst().startsWith("Bearer "))throw new FoundationFailure(401,"UNAUTHENTICATED");
   return auth.verifyAccessToken(headers.getFirst().substring(7));
  }
+ @GetMapping("/toi/quyen-giao-dien") ResponseEntity<?> menuAccess(HttpServletRequest r)throws IOException{
+  var p=principal(r);query(r);
+  return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.menuAccess(p));
+ }
  @GetMapping("/sinh-vien") Object students(HttpServletRequest r)throws IOException{
   var p=principal(r);query(r,"q","page","size");return service.execute(p,true,"mghp_chuyen_vien",u->service.students(q(r),paging(r,20)));
  }

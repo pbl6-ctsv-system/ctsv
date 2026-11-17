@@ -31,6 +31,30 @@ function Open-DevSecret([string]$Encrypted) {
     [System.Net.NetworkCredential]::new('local',$secure).Password
 }
 function Protect-DevSecret([string]$Plain) { ConvertFrom-SecureString (ConvertTo-SecureString $Plain -AsPlainText -Force) }
+function Get-DevCloudinaryEnvironment([string]$HomePath) {
+    $values=@{}
+    $credentialNames=@('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET')
+    $file=Join-Path $HomePath 'cloudinary.dpapi.json'
+    if(Test-Path -LiteralPath $file){
+        try{
+            $saved=Get-Content -LiteralPath $file -Raw|ConvertFrom-Json -AsHashtable
+            foreach($name in $credentialNames){$values[$name]=Open-DevSecret $saved[$name]}
+        }catch{throw 'Cannot read CTSV DEV Cloudinary configuration. Re-enter it with .\dev.ps1 storage on this Windows account.'}
+    }else{
+        foreach($name in ($credentialNames+@('CLOUDINARY_FOLDER','CLOUDINARY_FOLDER_MODE'))){
+            $values[$name]=[Environment]::GetEnvironmentVariable($name,'Process')
+        }
+    }
+    if([string]::IsNullOrWhiteSpace($values['CLOUDINARY_FOLDER'])){$values['CLOUDINARY_FOLDER']='ctsv'}
+    if([string]::IsNullOrWhiteSpace($values['CLOUDINARY_FOLDER_MODE'])){$values['CLOUDINARY_FOLDER_MODE']='dynamic'}
+    return $values
+}
+function Get-DevFileProperties([hashtable]$Values) {
+    $missing=@('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET','CLOUDINARY_FOLDER','CLOUDINARY_FOLDER_MODE')|
+        Where-Object{[string]::IsNullOrWhiteSpace($Values[$_])}
+    'ctsv.files.enabled=true'
+    'ctsv.files.cloudinary.enabled='+(-not $missing).ToString().ToLowerInvariant()
+}
 function New-DevSecret {
     [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 }
@@ -72,7 +96,7 @@ function Show-DevCertificate([string]$HomePath,$Config) {
         [pscustomobject]@{Subject=$cert.Subject;Issuer=$cert.Issuer;Thumbprint=$cert.Thumbprint;NotAfter=$cert.NotAfter;SAN=($cert.Extensions|Where-Object{$_.Oid.Value -eq '2.5.29.17'}).Format($false);BasicConstraints=($cert.Extensions|Where-Object{$_.Oid.Value -eq '2.5.29.19'}).Format($false);EKU=($cert.Extensions|Where-Object{$_.Oid.Value -eq '2.5.29.37'}).Format($false);Trusted=(Test-Path -LiteralPath "Cert:\CurrentUser\Root\$($Config.Thumbprint)");Home=$HomePath}|Format-List|Out-Host
     }finally{$cert.Dispose()}
 }
-function Set-DevEnvironment([string]$HomePath,$Config) {
+function Set-DevEnvironment([string]$HomePath,$Config,[hashtable]$Cloudinary=@{}) {
     $port=[int](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSSQL16.DEV2022\MSSQLServer\SuperSocketNetLib\Tcp\IPAll').TcpDynamicPorts
     if(-not $port){throw 'DEV2022 dynamic TCP port not found; inspect SQL Server TCP settings'}
     $dll=Join-Path $env:USERPROFILE '.m2/repository/com/microsoft/sqlserver/mssql-jdbc_auth/12.10.2.x64'
@@ -85,6 +109,7 @@ function Set-DevEnvironment([string]$HomePath,$Config) {
     $env:CTSV_DEV_HOME=$HomePath
     $props=@(
       'spring.profiles.active=dev',
+      'ctsv.mghp.applications.enabled=true',
       ('spring.datasource.url='+(Get-DevJdbcUrl $port)),
       'server.address=127.0.0.1',"server.port=$($Config.BackendPort)",
       'server.ssl.enabled=true','server.ssl.key-store-type=PKCS12',
@@ -95,7 +120,7 @@ function Set-DevEnvironment([string]$HomePath,$Config) {
       ('ctsv.auth.private-key='+(ConvertTo-DevProperty (Join-Path $HomePath 'jwt-private.pem'))),
       ('ctsv.auth.public-keys[local-dev]='+(ConvertTo-DevProperty (Join-Path $HomePath 'jwt-public.pem'))),
       "ctsv.auth.origins[0]=https://127.0.0.1:$($Config.FrontendPort)",
-      'ctsv.auth.trusted-sources[0]=SIS_MOCK')
+      'ctsv.auth.trusted-sources[0]=SIS_MOCK') + @(Get-DevFileProperties $Cloudinary)
     [IO.File]::WriteAllLines((Join-Path $HomePath 'application-dev.properties'),$props,[Text.UTF8Encoding]::new($false))
 }
 function Get-DevSourceHash([string]$Root) {

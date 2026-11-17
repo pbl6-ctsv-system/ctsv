@@ -1,3 +1,4 @@
+import {openNav} from './navigation.mjs';
 import {chromium} from '@playwright/test';
 import {readFile,writeFile,access} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
@@ -14,16 +15,16 @@ async function check(id,fn){try{await fn();report.cases.push({id,status:'PASS'})
 async function login(user){const c=await browser.newContext({ignoreHTTPSErrors:false});contexts.push(c);const p=await c.newPage();p.setDefaultTimeout(15000);await p.goto('https://127.0.0.1:5174');await p.getByLabel('Tên đăng nhập',{exact:true}).fill(user.username);await p.getByLabel('Mật khẩu',{exact:true}).fill(fixture.password);await p.getByRole('button',{name:'Đăng nhập',exact:true}).click();await p.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();return p;}
 async function api(p,method,url,body,tag){return p.evaluate(async({method,url,body,tag})=>{const {createAuthClient}=await import('/src/shared/auth-client.mjs');window.extraClient??=createAuthClient();try{const r=await window.extraClient.request(url,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(tag?{'If-Match':tag}:{})},...(body?{body:JSON.stringify(body)}:{})});return{status:r.status,tag:r.headers.get('ETag'),json:r.status===204?null:await r.json()};}catch(e){return{status:e.status,code:e.code};}},{method,url,body,tag});}
 async function waitMarker(name,present){const deadline=Date.now()+10000;while(Date.now()<deadline){let exists=true;try{await access(path.join(dir,name));}catch{exists=false;}if(exists===present)return;await new Promise(r=>setTimeout(r,100));}throw new Error('Test marker timeout: '+name);}
-let cv,admin,student;
+let cv,admin;
 try{
  await check('B12_UI_404_AND_STALE_ETAG_412',async()=>{
   cv=await login(fixture.specialist);
-  await cv.getByRole('button',{name:'Sinh viên',exact:true}).click();
+  await openNav(cv,'Sinh viên');
   await cv.getByLabel('ID sinh viên',{exact:true}).fill('9223372036854775807');
   const missing=cv.waitForResponse(r=>r.url().endsWith('/sinh-vien/9223372036854775807'));
   await cv.getByRole('button',{name:'Xem chi tiết',exact:true}).click();assert.equal((await missing).status(),404);
   await cv.getByRole('alert').filter({hasText:'Không tìm thấy dữ liệu'}).waitFor();
-  await cv.getByRole('button',{name:'Xác minh & quyền',exact:true}).click();
+  await openNav(cv,'Xác minh dữ liệu');
   await cv.getByLabel(/^Loại dữ liệu/).selectOption('semester');
   await cv.getByLabel('ID đối tượng',{exact:true}).fill(fixture.semesterId);
   await cv.getByRole('button',{name:'Đọc dữ liệu',exact:true}).click();
@@ -42,7 +43,7 @@ try{
   await cv.getByRole('alert').filter({hasText:'Dữ liệu đã thay đổi'}).waitFor();
  });
  await check('B13_ADMIN_CREATE_LOCK_UNLOCK_RESET_UI',async()=>{
-  admin=await login(fixture.admin);await admin.getByRole('button',{name:'Quản trị tài khoản',exact:true}).click();
+  admin=await login(fixture.admin);await openNav(admin,'Quản trị tài khoản');
   await admin.getByRole('button',{name:'Nhập tài khoản mới',exact:true}).click();
   await admin.getByLabel('Tên đăng nhập',{exact:true}).fill('browser.extra.'+randomUUID());
   await admin.getByLabel('Mật khẩu',{exact:true}).fill(fixture.password);
@@ -61,22 +62,23 @@ try{
   await admin.getByRole('button',{name:'Lưu thay đổi đã xác minh',exact:true}).click();assert.equal((await reset).status(),204);
  });
  await check('B14_LOCKED_ACCOUNT_UI_401_ORDINARY_GET_ALLOWED',async()=>{
-  student=await login(fixture.student);
-  await admin.getByLabel('ID đối tượng',{exact:true}).fill(fixture.student.accountId);await admin.getByRole('button',{name:'Đọc dữ liệu',exact:true}).click();
+  await openNav(cv,'Danh mục');
+  await admin.getByLabel('ID đối tượng',{exact:true}).fill(fixture.specialist.accountId);await admin.getByRole('button',{name:'Đọc dữ liệu',exact:true}).click();
   const lock=admin.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/trang-thai'));
   await admin.getByRole('button',{name:'Khóa',exact:true}).click();assert.equal((await lock).status(),200);
-  const ordinary=student.waitForResponse(r=>r.url().includes('/nen-tang/danh-muc?'));
-  await student.getByRole('button',{name:'Tra cứu',exact:true}).click();assert.equal((await ordinary).status(),200);
-  await student.getByRole('button',{name:'Sinh viên',exact:true}).click();
-  const sensitive=student.waitForResponse(r=>r.url().includes('/nen-tang/sinh-vien?'));
-  await student.getByRole('button',{name:'Tra cứu',exact:true}).click();assert.equal((await sensitive).status(),401);
-  await student.getByRole('alert').filter({hasText:'Tài khoản hoặc token đã bị thu hồi'}).waitFor();
+  const ordinary=cv.waitForResponse(r=>r.url().includes('/nen-tang/danh-muc?'));
+  await cv.getByRole('button',{name:'Tra cứu',exact:true}).click();assert.equal((await ordinary).status(),200);
+  await openNav(cv,'Sinh viên');
+  const sensitive=cv.waitForResponse(r=>r.url().includes('/nen-tang/sinh-vien?'));
+  await cv.getByRole('button',{name:'Tra cứu',exact:true}).click();assert.equal((await sensitive).status(),401);
+  await cv.getByRole('alert').filter({hasText:'Tài khoản hoặc token đã bị thu hồi'}).waitFor();
   await admin.getByRole('button',{name:'Đọc dữ liệu',exact:true}).click();
   const unlock=admin.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/trang-thai'));
   await admin.getByRole('button',{name:'Mở khóa',exact:true}).click();assert.equal((await unlock).status(),200);
+  cv=await login(fixture.specialist);
  });
  await check('B15_REAL_SQL_AUTH_TIMEOUT_UI_503_AND_RECOVERY',async()=>{
-  await cv.getByRole('button',{name:'Sinh viên',exact:true}).click();
+  await openNav(cv,'Sinh viên');
   await writeFile(path.join(dir,'auth-lock-request'),'synthetic specialist only');
   try{
    await waitMarker('auth-lock-held',true);

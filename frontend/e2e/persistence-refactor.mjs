@@ -1,3 +1,4 @@
+import {openNav,revealNav} from './navigation.mjs';
 // REAL browser + HTTPS + the owner-authorized refactor DB. No DEV/evidence DB writes and no TLS bypass.
 import {chromium} from '@playwright/test';
 import {readFile, writeFile} from 'node:fs/promises';
@@ -20,7 +21,7 @@ async function login(role) {
 try {
   const p=await login('cv');let created;
   await check('JPA-B01 policy create/edit/confirm and list-detail consistency',async()=>{
-    await p.getByRole('button',{name:'Chính sách MGHP',exact:true}).click();
+    await openNav(p,'Chính sách MGHP');
     const row=p.getByRole('row').filter({has:p.getByRole('cell',{name:'M2',exact:true})});
     await row.getByRole('button',{name:'Xem phiên bản',exact:true}).click();
     await p.getByRole('button',{name:'Xem bản '+cfg.lockedVersion,exact:true}).click();
@@ -40,7 +41,7 @@ try {
   });
   const code='SYNTHETIC-JPA-ROUND-'+Date.now();
   await check('JPA-B02 round create/open/close',async()=>{
-    await p.getByRole('button',{name:'Đợt xét MGHP',exact:true}).click();await p.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
+    await openNav(p,'Đợt xét MGHP');await p.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
     await p.getByRole('textbox',{name:'Mã',exact:true}).fill(code);await p.getByLabel('Học kỳ',{exact:true}).selectOption(cfg.semesterId);await p.getByRole('textbox',{name:'Tên',exact:true}).fill('SYNTHETIC JPA smoke');
     await p.getByLabel('Mở nhận lúc',{exact:true}).fill('2026-11-03T08:00');await p.getByLabel('Hạn nộp',{exact:true}).fill('2026-11-06T08:00');await p.getByLabel('Hạn rà soát',{exact:true}).fill('2026-11-15T08:00');
     await p.getByLabel('Chính sách thêm vào đợt',{exact:true}).selectOption(cfg.policyId);await p.getByLabel('Phiên bản thêm vào đợt',{exact:true}).selectOption(cfg.lockedVersionId);await p.getByRole('button',{name:'Thêm chính sách vào đợt',exact:true}).click();
@@ -50,8 +51,10 @@ try {
     result=p.waitForResponse(r=>r.url().endsWith('/dong-nhan-ho-so'));await p.getByRole('button',{name:'Đóng nhận hồ sơ',exact:true}).click();assert.equal((await result).status(),200);
   });
   await check('JPA-B03 student public round and denied management',async()=>{
-    const s=await login('student');await s.getByRole('button',{name:'Chính sách MGHP',exact:true}).click();await s.getByRole('alert').getByText(/không có quyền/).waitFor();
-    await s.getByRole('button',{name:'Đợt xét MGHP',exact:true}).click();const row=s.getByRole('row').filter({has:s.getByRole('cell',{name:code,exact:true})});await row.getByRole('button',{name:'Xem đợt',exact:true}).click();
+    const s=await login('student');
+    await (await revealNav(s,'Đợt xét MGHP')).waitFor();
+    assert.equal(await s.getByRole('link',{name:'Chính sách MGHP',exact:true,includeHidden:true}).count(),0);
+    await openNav(s,'Đợt xét MGHP');const row=s.getByRole('row').filter({has:s.getByRole('cell',{name:code,exact:true})});await row.getByRole('button',{name:'Xem đợt',exact:true}).click();
     assert.equal(await s.getByRole('button',{name:'Lưu cấu hình',exact:true}).count(),0);
     const logout=s.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/dang-xuat'));
     await s.getByRole('button',{name:'Đăng xuất',exact:true}).click();const response=await logout;

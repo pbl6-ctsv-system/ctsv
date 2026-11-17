@@ -7,6 +7,22 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 class FoundationMvcTest {
+ @Test void menuAccessUsesCallerAndRejectsTargetId()throws Exception{
+  var service=mock(FoundationService.class);var auth=mock(AuthAccess.class);
+  var principal=new AuthAccess.Principal("issuer",java.util.UUID.randomUUID(),0);
+  when(auth.verifyAccessToken("test")).thenReturn(principal);
+  when(service.menuAccess(principal)).thenReturn(new FoundationSecurity.MenuAccess(true,false,false));
+  var mvc=MockMvcBuilders.standaloneSetup(new FoundationController(service,auth,new ObjectMapper())).setControllerAdvice(new FoundationErrors()).build();
+  String path="/api/ctsv/nen-tang/toi/quyen-giao-dien";
+  mvc.perform(get(path)).andExpect(status().isUnauthorized());
+  mvc.perform(get(path+"?userId=123").header("Authorization","Bearer test")).andExpect(status().isBadRequest());
+  mvc.perform(get(path).header("Authorization","Bearer test")).andExpect(status().isOk())
+   .andExpect(header().string("Cache-Control","no-store"))
+   .andExpect(jsonPath("$.student").value(true)).andExpect(jsonPath("$.mghpSpecialist").value(false))
+   .andExpect(jsonPath("$.ctsvRoleAdmin").value(false));
+  verify(service).menuAccess(principal);
+  verifyNoMoreInteractions(service);
+ }
  @Test void malformedJwtDoesNotReachFoundationService()throws Exception{
   var service=mock(FoundationService.class);var auth=mock(AuthAccess.class);
   var mvc=MockMvcBuilders.standaloneSetup(new FoundationController(service,auth,new ObjectMapper())).setControllerAdvice(new FoundationErrors()).build();

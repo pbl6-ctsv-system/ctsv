@@ -32,6 +32,24 @@ Windows PowerShell5.1 entrypoint tự tìm runtime qua file `powershell-runtime.
 
 Không chạy test suite, build ngầm, seed/reset, migration, trust certificate hoặc regenerate JWT/account. Không chạy SIS, Kế toán, scheduled sync. Sync flags bị launcher tắt chủ động; xem [06](06-sis-ctsv-sync-guide.md), không bật bằng cách đoán biến môi trường cho launcher này.
 
+## Bật upload PDF MGHP trên DEV
+
+Dùng `.\dev.ps1 start` hằng ngày. Chỉ dùng các lệnh sau khi máy chưa lưu cấu hình Cloudinary hoặc cần thay khóa. Nhập giá trị DEV từ nơi lưu nội bộ khi terminal hỏi.
+
+```powershell
+.\dev.ps1 stop
+.\dev.ps1 storage
+.\dev.ps1 start
+```
+
+`storage` lưu cấu hình mã hóa ngoài Git cho tài khoản Windows và checkout hiện tại. Launcher ưu tiên cấu hình đã lưu, với thư mục `ctsv` ở chế độ Dynamic Folder. Khi chưa có file lưu, launcher có thể nạp đủ ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` từ shell. Nếu thiếu cấu hình, launcher cảnh báo và API tệp trả `503 STORAGE_UNAVAILABLE` cho một yêu cầu upload PDF hợp lệ. Auth và Foundation vẫn chạy.
+
+## Chuẩn bị dữ liệu kê khai MGHP cho sinh viên DEV
+
+Setup mới tạo dữ liệu mẫu cho `dev.sinhvien` (`DEV-SV-001`). Với DB DEV đã setup trước đó và còn thiếu trường, chạy `.\dev.ps1 stop`, `.\dev.ps1 build`, `.\dev.ps1 seed-student`, rồi `.\dev.ps1 start`. Lệnh bổ sung các trường trống của đúng sinh viên mẫu trên `ctsv_dev`, giữ các giá trị đã có và có thể chạy lại.
+
+Mở lại form để lấy dữ liệu gợi ý. Điền địa chỉ thường trú giả lập vì đây là lời khai của sinh viên. Giữ mã số danh mục được điền sẵn, chọn đợt còn nhận và gắn PDF vào từng yêu cầu giấy của chính sách trước khi nộp.
+
 ## Status/stop có giới hạn gì?
 
 - Status đối chiếu PID + thời điểm tạo UTC + command line, rồi in URL/DB/log path. Nó **không** tự gọi DB hoặc kiểm HTTP liveness liên tục. `RUNNING` chỉ xác nhận process identity, không bảo đảm mọi API đang healthy.
@@ -51,7 +69,9 @@ Cwd `ctsv`:
 
 Build dành cho thay Java/resource/POM; package không chạy test hay migration. Sau khi sửa source, phải chạy test liên quan riêng theo Quality Gates; build này không thay kiểm thử. Sửa FE bình thường dùng HMR. Nếu package/lockfile thay đổi đã được duyệt: cwd `ctsv/frontend`, `npm.cmd ci`; không tự dùng `npm update`/sửa native binary.
 
-Chỉ chạy lại `setup` khi có việc setup/migration được giao và đã dừng process; không coi đó là start hằng ngày hay cách sửa lỗi login. Preset tài khoản DEV synthetic đã được owner chấp nhận; không áp ngoại lệ này cho khóa TLS/JWT/service hoặc credentials thật. Từ P05, setup áp thêm V8 có kiểm checksum; start vẫn chỉ check, không tự migrate. Xem [runbook DEV/P05](../../frontend/README.md).
+Khi source có migration mới đang pending trên `ctsv_dev`, chạy `.\dev.ps1 stop`, `.\dev.ps1 migrate`, rồi `.\dev.ps1 start` từ `ctsv`. `migrate` build JAR từ source hiện hành và áp migration cho DB DEV có guard, giữ tài khoản hiện có. Nếu bước này báo lệch checksum hoặc history, dừng và đối chiếu source với Flyway history trước khi ghi. `start` chỉ kiểm tra Flyway và khởi động ứng dụng.
+
+`setup` dành cho lần chuẩn bị môi trường hoặc khi cần cấp lại tài khoản DEV theo quyết định của chủ dự án. Kiểm dữ liệu mẫu SYNTHETIC theo runbook của slice khi bàn giao để từng vai trò chạy được luồng chính. Xem [runbook DEV/P05](../../frontend/README.md).
 
 ## Tự kiểm liveness và xem log
 

@@ -5,7 +5,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 final class FoundationSecurity implements FoundationAccess {
  private final AuthAccess auth; private final JdbcTemplate jdbc;
  FoundationSecurity(AuthAccess auth,JdbcTemplate jdbc){this.auth=auth;this.jdbc=jdbc;}
+ record MenuAccess(boolean student,boolean mghpSpecialist,boolean ctsvRoleAdmin){}
+ MenuAccess menuAccess(AuthAccess.Principal principal){
+  var identity=identify(principal,true);
+  long user=identity.userId();
+  return new MenuAccess(identity.studentId()!=null,role(user,"mghp_chuyen_vien"),role(user,"ctsv.roles.manage"));
+ }
  public Identity authorize(AuthAccess.Principal p,boolean online,String capability){
+  var identity=identify(p,online);
+  long user=identity.userId();
+  if(capability==null){if(identity.studentId()==null&&!role(user,"mghp_chuyen_vien"))throw new FoundationFailure(403,"FORBIDDEN");}
+  else if(!role(user,capability))throw new FoundationFailure(403,"FORBIDDEN");
+  return identity;
+ }
+ public Identity identify(AuthAccess.Principal p,boolean online){
   if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Foundation authorization requires a local transaction");
   // Resolve the trusted binding before Auth, without retaining a local lock across its independent transaction.
   var mapped=jdbc.query("""
@@ -25,8 +38,6 @@ final class FoundationSecurity implements FoundationAccess {
   long user=rows.getFirst();
   var students=jdbc.query("SELECT id FROM dbo.sinh_vien WHERE nguoi_dung_id=?",(r,n)->r.getLong(1),user);
   if(students.size()>1)throw new FoundationFailure(503,"DEPENDENCY_UNAVAILABLE");
-  if(capability==null){if(students.isEmpty()&&!role(user,"mghp_chuyen_vien"))throw new FoundationFailure(403,"FORBIDDEN");}
-  else if(!role(user,capability))throw new FoundationFailure(403,"FORBIDDEN");
   return new Identity(user,students.isEmpty()?null:students.getFirst(),p);
  }
  private boolean role(long user,String code){

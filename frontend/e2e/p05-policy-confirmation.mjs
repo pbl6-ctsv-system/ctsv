@@ -1,3 +1,4 @@
+import {openNav} from './navigation.mjs';
 // Focused DEV regression. Run through Playwright MCP against the real UI/backend.
 // Credentials are supplied by the caller and are never included in the result.
 export async function checkPolicyConfirmation(page, {username, password, runId}) {
@@ -12,7 +13,7 @@ export async function checkPolicyConfirmation(page, {username, password, runId})
   await page.getByRole('textbox', {name:'Tên đăng nhập', exact:true}).fill(username);
   await page.getByRole('textbox', {name:'Mật khẩu', exact:true}).fill(password);
   await page.getByRole('button', {name:'Đăng nhập', exact:true}).click();
-  await page.getByRole('button', {name:'Chính sách MGHP', exact:true}).click();
+  await openNav(page,'Chính sách MGHP');
   const m9 = page.getByRole('row').filter({has:page.getByRole('cell', {name:'M9', exact:true})});
   await m9.getByRole('button', {name:'Xem phiên bản', exact:true}).click();
   // Read the existing synthetic template; never update that locked version.

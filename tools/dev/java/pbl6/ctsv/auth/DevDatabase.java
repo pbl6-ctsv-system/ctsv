@@ -27,8 +27,9 @@ public final class DevDatabase {
     }
     static void require(boolean value,String code){if(!value)throw new IllegalStateException(code);}
     static void run(String[] args)throws Exception {
-        require(args.length==1&&Set.of("setup","check","snapshot").contains(args[0]),"mode");
+        require(args.length==1&&Set.of("setup","migrate","check","snapshot","seed-student").contains(args[0]),"mode");
         boolean setup=args[0].equals("setup");
+        boolean migrate=setup||args[0].equals("migrate");
         Path home=Path.of(Objects.requireNonNull(System.getenv("CTSV_DEV_HOME")));
         var properties=new Properties();try(var in=Files.newInputStream(home.resolve("application-dev.properties"))){properties.load(in);}
         String url=properties.getProperty("spring.datasource.url");
@@ -64,11 +65,15 @@ public final class DevDatabase {
         stage="Flyway validate existing history";
         // Explicit setup lets migrate validate applied checksums and accept pending versions atomically.
         // Read-only check/snapshot must still reject a pending migration instead of applying it.
-        if(history&&!setup)flyway.validate();
-        if(setup){stage="approved migrations only";flyway.migrate();}
+        if(history&&!migrate)flyway.validate();
+        if(migrate){stage="approved migrations only";flyway.migrate();}
         flyway.validate();
         require(flyway.info().pending().length==0,"pending migration; run setup explicitly");
         if(setup){stage="synthetic dev identities";seed(ds,jdbc,properties,home);stage="owner-approved DEV password";presetPassword(ds,jdbc,properties,home);}
+        if(setup||args[0].equals("seed-student")){
+            stage="P06 synthetic student lookup data";
+            new TransactionTemplate(new DataSourceTransactionManager(ds)).executeWithoutResult(tx->seedIntakeStudent(jdbc));
+        }
         stage="snapshot";
         var accounts=jdbc.queryForList("SELECT TenDangNhap AS username,CONVERT(varchar(36),ID) AS accountId,PhienBanToken AS tokenVersion FROM dbo.TaiKhoan WHERE TenDangNhap IN ('dev.admin','dev.sinhvien','dev.chuyenvien') ORDER BY TenDangNhap");
         var counts=new TreeMap<String,Long>();
@@ -136,6 +141,44 @@ public final class DevDatabase {
         Files.writeString(home.resolve("identities.json"),JSON.writerWithDefaultPrettyPrinter().writeValueAsString(ids));
     }
     static long insert(JdbcTemplate jdbc,String sql,Object...args){return jdbc.queryForObject(sql+";SELECT CAST(SCOPE_IDENTITY() AS bigint)",Long.class,args);}
+    static void seedIntakeStudent(JdbcTemplate jdbc) {
+        var students=jdbc.queryForList("""
+            SELECT s.id FROM dbo.sinh_vien s WITH (UPDLOCK,HOLDLOCK)
+            JOIN dbo.nguoi_dung u ON u.id=s.nguoi_dung_id
+            WHERE s.mssv=N'DEV-SV-001' AND s.ma_dinh_danh_ben_ngoai=N'DEV-STUDENT-001'
+              AND s.he_thong_nguon_id IS NULL AND s.thoi_diem_xoa IS NULL
+              AND u.dia_chi_email=N'dev.student@example.invalid'
+            """,Long.class);
+        require(students.size()==1,"unexpected synthetic student identity");
+        var units=jdbc.queryForList("SELECT id FROM dbo.don_vi WHERE ma=N'DEV-UNIT' AND he_thong_nguon_id IS NULL",Long.class);
+        require(units.size()==1,"missing synthetic DEV unit; run setup for a new checkout");
+        long unit=units.getFirst();
+        long ethnicity=fixtureId(jdbc,"dan_toc","DEV-P06-ETHNICITY","INSERT dbo.dan_toc(ma,ten) VALUES(?,N'Dân tộc DEV giả lập')");
+        long birthplace=fixtureId(jdbc,"dia_phuong","DEV-P06-PLACE","INSERT dbo.dia_phuong(ma,ten) VALUES(?,N'Nơi sinh DEV giả lập')");
+        long cohort=fixtureId(jdbc,"khoa_hoc","DEV-P06-COHORT","INSERT dbo.khoa_hoc(ma) VALUES(?)");
+        long schoolClass=fixtureId(jdbc,"lop_sinh_hoat","DEV-P06-CLASS",
+            "INSERT dbo.lop_sinh_hoat(ma,ten,khoa_hoc_id,khoa_quan_ly_id) VALUES(?,N'Lớp DEV giả lập',?,?)",cohort,unit);
+        jdbc.update("""
+            UPDATE dbo.sinh_vien SET
+                so_cccd=COALESCE(so_cccd,N'DEV-SYNTHETIC-ID'), ngay_sinh=COALESCE(ngay_sinh,CONVERT(date,'20050101')),
+                noi_sinh_id=COALESCE(noi_sinh_id,?), gioi_tinh=COALESCE(gioi_tinh,N'Nam'),
+                dan_toc_id=COALESCE(dan_toc_id,?), lop_hien_tai_id=COALESCE(lop_hien_tai_id,?),
+                khoa_hoc_hien_tai_id=COALESCE(khoa_hoc_hien_tai_id,?), khoa_quan_ly_hien_tai_id=COALESCE(khoa_quan_ly_hien_tai_id,?),
+                so_dien_thoai=COALESCE(so_dien_thoai,N'0000000000')
+            WHERE id=? AND (so_cccd IS NULL OR ngay_sinh IS NULL OR noi_sinh_id IS NULL OR gioi_tinh IS NULL
+                  OR dan_toc_id IS NULL OR lop_hien_tai_id IS NULL OR khoa_hoc_hien_tai_id IS NULL
+                  OR khoa_quan_ly_hien_tai_id IS NULL OR so_dien_thoai IS NULL)
+            """,birthplace,ethnicity,schoolClass,cohort,unit,students.getFirst());
+    }
+    private static long fixtureId(JdbcTemplate jdbc,String table,String code,String insertSql,Object... values) {
+        var rows=jdbc.queryForList("SELECT id,he_thong_nguon_id FROM dbo."+table+" WITH (UPDLOCK,HOLDLOCK) WHERE ma=?",code);
+        if(!rows.isEmpty()){
+            require(rows.size()==1&&rows.getFirst().get("he_thong_nguon_id")==null,"fixture code conflict");
+            return ((Number)rows.getFirst().get("id")).longValue();
+        }
+        var args=new ArrayList<Object>();args.add(code);args.addAll(Arrays.asList(values));
+        return insert(jdbc,insertSql,args.toArray());
+    }
     static void presetPassword(DataSource ds,JdbcTemplate jdbc,Properties config,Path home)throws Exception {
         // Public synthetic DEV fixture; use the existing Auth hashing and password policy.
         String preset="CtsvDev@2026!";

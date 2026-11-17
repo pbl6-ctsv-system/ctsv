@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([ValidateSet('setup','build','start','stop','status','certificate','trust','credentials')][string]$Action='start',
+param([ValidateSet('setup','build','migrate','start','stop','status','certificate','trust','credentials','storage','seed-student')][string]$Action='start',
       [string]$ConfirmThumbprint,[ValidateSet('admin','student','specialist')][string]$Account)
 $ErrorActionPreference='Stop'
 # Windows PowerShell is the default Windows terminal. Delegate before loading .NET7-dependent tooling.
@@ -37,7 +37,7 @@ $locked=$false
 try{
     try{$locked=$mutex.WaitOne(0)}catch [Threading.AbandonedMutexException]{$locked=$true}
     if(-not $locked){throw 'Another dev launcher command is running. Wait for it to finish.'}
-    if($Action -in @('setup','build','start') -and (Test-Path -LiteralPath $stateFile)){
+    if($Action -in @('setup','build','migrate','start','seed-student') -and (Test-Path -LiteralPath $stateFile)){
         $existing=Get-Content $stateFile -Raw|ConvertFrom-Json -AsHashtable
         foreach($saved in @($existing.Backend,$existing.Frontend)){
             if($saved -and (Test-DevProcessIdentity $saved (Get-DevProcess $saved.Pid))){throw 'Launcher already running. Use .\dev.ps1 stop before setup/build/start.'}
@@ -71,6 +71,19 @@ try{
         Set-Clipboard -Value (Open-DevSecret $config.Accounts.$Account.Password)
         Write-Output "Password copied locally for $($config.Accounts.$Account.Username). Not printed or logged. Clear clipboard after login: Set-Clipboard -Value ''";return
       }
+      'storage'{
+        $saved=@{}
+        foreach($name in @('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET')){
+            $value=Read-Host $name -AsSecureString
+            try{
+                if($value.Length -eq 0){throw "$name is required. Existing configuration was kept."}
+                $saved[$name]=ConvertFrom-SecureString $value
+            }finally{$value.Dispose()}
+        }
+        $saved|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $devHome 'cloudinary.dpapi.json') -Encoding utf8
+        Write-Output 'Cloudinary DEV configuration saved for this Windows account. Restart the launcher to use it.'
+        return
+      }
       'stop'{if(Test-Path -LiteralPath $stateFile){$state=Get-Content $stateFile -Raw|ConvertFrom-Json -AsHashtable;Stop-DevOwned $state;Remove-Item -LiteralPath $stateFile};Write-Output 'Stopped owned dev processes only.';return}
       'status'{
         if(-not (Test-Path -LiteralPath $stateFile)){Write-Output 'STOPPED (no launcher state)';return}
@@ -79,14 +92,28 @@ try{
         Write-Output "FE https://127.0.0.1:$($config.FrontendPort) | BE https://127.0.0.1:$($config.BackendPort) | DB localhost\DEV2022 / ctsv_dev | logs $devHome/logs";return
       }
     }
-    Set-DevEnvironment $devHome $config
+    $cloudinary=if($Action -eq 'start'){Get-DevCloudinaryEnvironment $devHome}else{@{}}
+    $cloudinaryReady=(Get-DevFileProperties $cloudinary) -contains 'ctsv.files.cloudinary.enabled=true'
+    Set-DevEnvironment $devHome $config $cloudinary
     if($Action -eq 'build'){Build-DevApplication $root $devHome;Write-Output 'Dev application built without test execution or migration.';return}
+    if($Action -eq 'seed-student'){
+        Invoke-DevDatabase $root $devHome seed-student $config
+        Write-Output 'Synthetic MGHP student data prepared without resetting accounts.'
+        return
+    }
+    if($Action -eq 'migrate'){
+        Build-DevApplication $root $devHome
+        Invoke-DevDatabase $root $devHome migrate $config
+        Write-Output 'Existing DEV database migrated without resetting accounts.'
+        return
+    }
     $cert=Get-DevCertificate $devHome $config;$cert.Dispose()
     if(-not (Test-Path -LiteralPath "Cert:\CurrentUser\Root\$($config.Thumbprint)")){throw 'Certificate not trusted; review .\dev.ps1 certificate, then explicitly approve trust'}
     if(-not (Test-Path (Join-Path $devHome 'build-source.sha256')) -or (Get-Content (Join-Path $devHome 'build-source.sha256') -Raw).Trim() -ne (Get-DevSourceHash $root)){throw 'Backend source changed or not built: .\dev.ps1 build (no migration)'}
     foreach($port in @($config.BackendPort,$config.FrontendPort)){if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw "Port $port occupied; use status/stop or select a free port in local config. No unrelated process is killed."}}
     if(-not (Test-Path (Join-Path $root 'frontend/node_modules/vite/bin/vite.js'))){throw 'Missing frontend dependencies: cd frontend; npm ci'}
     Invoke-DevDatabase $root $devHome check $config
+    if(-not $cloudinaryReady){Write-Warning 'MGHP PDF storage is unavailable. Use .\dev.ps1 storage to configure Cloudinary DEV.'}
     $state=@{Backend=$null;Frontend=$null}
     try{
         $properties=[Uri]::new((Join-Path $devHome 'application-dev.properties')).AbsoluteUri
@@ -94,7 +121,18 @@ try{
         $jdbc=(Get-Content -LiteralPath (Join-Path $devHome 'application-dev.properties')|Where-Object{$_ -like 'spring.datasource.url=*'}).Substring('spring.datasource.url='.Length)
         # Explicit safe command-line overrides prevent ambient SPRING_* variables selecting a test/other DB or migration.
         $backendArgs=@("-Dspring.config.additional-location=$properties",'-jar',('"'+$jar+'"'),'--spring.profiles.active=dev',"--spring.datasource.url=$jdbc",'--spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration','--spring.flyway.enabled=false','--spring.jpa.hibernate.ddl-auto=validate','--ctsv.auth.bootstrap-enabled=false','--foundation.units.enabled=false','--foundation.resources.enabled=false')
-        $backend=Start-Process java.exe -ArgumentList $backendArgs -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput (Join-Path $devHome 'logs/backend.log') -RedirectStandardError (Join-Path $devHome 'logs/backend.err.log') -PassThru
+        $originalCloudinary=@{}
+        try{
+            if($cloudinaryReady){
+                foreach($name in $cloudinary.Keys){
+                    $originalCloudinary[$name]=[Environment]::GetEnvironmentVariable($name,'Process')
+                    [Environment]::SetEnvironmentVariable($name,$cloudinary[$name],'Process')
+                }
+            }
+            $backend=Start-Process java.exe -ArgumentList $backendArgs -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput (Join-Path $devHome 'logs/backend.log') -RedirectStandardError (Join-Path $devHome 'logs/backend.err.log') -PassThru
+        }finally{
+            foreach($name in $originalCloudinary.Keys){[Environment]::SetEnvironmentVariable($name,$originalCloudinary[$name],'Process')}
+        }
         $state.Backend=Get-DevProcess $backend.Id;$state|ConvertTo-Json -Depth 4|Set-Content $stateFile
         $ready=$false;$until=(Get-Date).AddSeconds(90)
         while((Get-Date) -lt $until){
