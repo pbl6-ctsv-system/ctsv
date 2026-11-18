@@ -145,3 +145,11 @@ Menu hồ sơ phân biệt theo capability backend cấp: sinh viên dùng **H�
 - Quy chuẩn cho các màn hình tiếp theo: [SKILL.md §11](SKILL.md#11-thiết-kế-theo-tác-vụ--áp-dụng-sau-review-ui-ngày-18112026). Phạm vi và kết quả: [kế hoạch cải thiện thao tác](../docs/frontend-usability-plan.md).
 
 Smoke được chạy bằng `node frontend/e2e/p07-dev.mjs` và `node frontend/e2e/ui-workspaces-dev.mjs` từ root CTSV, sau khi launcher DEV sẵn sàng. Cả hai yêu cầu `CTSV_DEV_HOME`, `CTSV_DEV_SMOKE_PASSWORDS` (JSON lấy từ cấu hình DPAPI trong bộ nhớ, không lưu file), `NODE_EXTRA_CA_CERTS`; runner hồ sơ thêm `P07_SAMPLE_PDF`, `P07_DEV_EVIDENCE`, runner quản trị thêm `CTSV_UI_EVIDENCE`. Những runner này tạo dữ liệu synthetic mới qua UI/API hiện hành trên `ctsv_dev`; không dùng cho dữ liệu thật hoặc DB test/evidence. Chúng tuân thủ `Retry-After` của Auth khi gặp giới hạn đăng nhập, không vô hiệu hóa TLS hoặc limiter.
+
+## P08 — Đánh giá và quyền hưởng
+
+`features/mghp/review/ReviewWorkspace.tsx` tích hợp vào navigation/AppShell hiện có qua `ConfigurationPage`; không thêm router hay Auth riêng. `/mghp/danh-gia` dành cho chuyên viên MGHP. `/mghp/quyen-huong` cho chuyên viên rà soát hoặc sinh viên đọc quyền chính chủ; tài khoản có cả hai capability giữ màn nghiệp vụ chuyên viên, không tạo menu trùng. Backend tiếp tục kiểm quyền và ownership.
+
+Draft có tiêu chí/căn cứ/khoảng theo từng nguồn; confirmed hiển thị thông tin chỉ đọc và đường tạo revision mới. Mọi write đọc lại view/ETag đúng representation trước thông báo thành công. Lỗi dùng Feedback chung trong viewport. Ghi nhận rà soát và yêu cầu cập nhật nằm trong từng vùng mở theo tác vụ; không đưa toàn bộ form ra trang mặc định.
+
+Kiểm thử P08: 21 Node test và build/typecheck; Browser trên `ctsv_p08_test_20261118` qua `e2e/p08.mjs` (SQL/HTTPS thật, storage STUB), smoke launcher `ctsv_dev` qua `e2e/p08-dev.mjs` (Cloudinary REAL). Giữ bản ghi FAIL đã sửa, không tính lượt bị owner dừng là PASS. [Kế hoạch/kết quả và lệnh chạy](../../nghiepvu/09-trien-khai/p08-review-benefits-implementation-plan.md), [runbook dữ liệu DEV](../docs/team-handover-p00-p04/03-daily-operations.md#p08--đánh-giá-và-rà-soát-mghp).

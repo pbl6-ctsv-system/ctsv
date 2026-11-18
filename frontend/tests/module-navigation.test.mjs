@@ -8,16 +8,16 @@ test('navigation identifies implemented feature entries without publishing empty
  assert.equal(new Set(navigationItems.map(item=>item.id)).size,navigationItems.length);
  assert.deepEqual(navigationItems.map(item=>[item.id,item.feature]),[
   ['lookup','foundation'],['students','foundation'],['manage','foundation'],['roles','foundation'],['auth','auth'],['auth-rbac','auth'],['mghp-policies','mghp'],['mghp-rounds','mghp'],
-  ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-inbox','mghp']]);
+  ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-evaluations','mghp'],['mghp-benefits','mghp'],['mghp-inbox','mghp']]);
  assert(navigationItems.every(item=>typeof item.label==='string'&&item.label.length>0));
 });
 test('student menu contains only the student workflow',()=>{
  assert.deepEqual(visibleNavigation([],{student:true,mghpSpecialist:false,ctsvRoleAdmin:false}).map(item=>item.id),
-  ['mghp-rounds','mghp-applications','mghp-inbox']);
+  ['mghp-rounds','mghp-applications','mghp-benefits','mghp-inbox']);
 });
 test('specialist gets verification and case review without student submission or account administration',()=>{
  const menu=visibleNavigation([],{student:false,mghpSpecialist:true,ctsvRoleAdmin:false});
- assert.deepEqual(menu.map(item=>item.id),['lookup','students','manage','mghp-policies','mghp-rounds','mghp-casework','mghp-inbox']);
+ assert.deepEqual(menu.map(item=>item.id),['lookup','students','manage','mghp-policies','mghp-rounds','mghp-casework','mghp-evaluations','mghp-benefits','mghp-inbox']);
  assert.equal(menu.find(item=>item.id==='mghp-casework').view,'staff-applications');
  assert.equal(menu.find(item=>item.id==='mghp-casework').label,'Tiếp nhận & bổ sung hồ sơ');
  assert(!menu.some(item=>item.label==='Hồ sơ MGHP'||item.view==='applications'));
@@ -37,7 +37,7 @@ test('student sees six top-level entries, with real MGHP routes grouped and unim
  assert.deepEqual(sections.map(item=>item.id),['home','drl','mghp','shcn','notifications','scholarships']);
  assert.deepEqual(sections.filter(item=>item.kind==='disabled').map(item=>item.id),['drl','shcn','scholarships']);
  assert.deepEqual(sections.find(item=>item.id==='mghp').groups.flatMap(group=>group.items.map(item=>item.path)),
-  ['/mghp/dot-xet','/mghp/ho-so']);
+  ['/mghp/dot-xet','/mghp/ho-so','/mghp/quyen-huong']);
 });
 test('direct links and refresh use the same access decisions as the navbar',()=>{
  const student={student:true,mghpSpecialist:false,ctsvRoleAdmin:false};

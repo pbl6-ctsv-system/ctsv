@@ -55,3 +55,18 @@ Các entity sau thuộc `mghp.application.ApplicationEntities`. FK của luồng
 | SemesterRequest, RelatedPerson, Comparison | `mghp_hoc_ky_de_nghi`, `mghp_nguoi_lien_quan`, `mghp_doi_chieu_ke_khai` | Snapshot của đúng bản nộp |
 | ApplicationEvent, Supplement | `mghp_nhat_ky_ho_so`, `mghp_yeu_cau_bo_sung` | Audit chuyển trạng thái và đóng vòng khi rút; wire vòng thuộc P07 |
 | Notification, Recipient | `thong_bao`, `nguoi_nhan_thong_bao` | Thông báo và mốc đọc riêng của người nhận |
+
+## MGHP/P08
+
+`mghp.application.EvaluationEntities` bổ sung mapping cho các bảng đã có trong baseline. V13 thêm rowversion và bảo vệ chain; không thay V1–V12 đã áp dụng. Repository JPA ghi Entity, SQL chuyên biệt giữ khóa/CAS/audit cùng transaction. Các FK dưới đây ghi bằng ID CTSV đã kiểm nguồn, không cascade xóa hoặc trả Entity ra API.
+
+| Entity | Bảng | FK / bảo đảm chính |
+|---|---|---|
+| Evaluation | `mghp_danh_gia_dieu_kien` | XOR hồ sơ+bản nộp hoặc quyền+bản cập nhật; process/kỳ/policy/scope; predecessor và một draft/chain |
+| Criterion | `mghp_ket_qua_tieu_chi` | Đánh giá và tiêu chí đúng phiên bản chính sách |
+| Evidence | `mghp_can_cu_danh_gia` | Đánh giá, kết quả tiêu chí tùy chọn và giấy đúng bản nguồn |
+| Period | `mghp_khoang_du_dieu_kien` | Đánh giá; giữ từng khoảng inclusive, không lấp khoảng trống |
+| Benefit | `mghp_quyen_huong` | Sinh viên/process/policy/bản nộp nguồn; QH04 chỉ cập nhật dữ kiện rà soát |
+| BenefitEvent | `mghp_bien_dong_quyen_huong` | Quyền hưởng/predecessor; observation append, không ghi lại sự kiện cũ |
+
+`Evaluation.fence` và `Benefit.fence` ánh xạ read-only `rowversion` bằng JDBC BINARY. Strong ETag gắn đúng projection; khóa SQL Server và UNIQUE bảo vệ concurrency. Trigger giữ bất biến evaluation và các bảng con sau confirm, kể cả bản đã superseded. Confirm không cấp quyền hưởng; quyền synthetic chỉ có trong fixture DB P08, công bố thật thuộc P12.
