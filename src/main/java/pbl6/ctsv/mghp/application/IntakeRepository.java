@@ -59,6 +59,22 @@ class IntakeRepository {
         return children(Submission.class,"applicationId",id,"revision desc,id desc");
     }
 
+    Supplement supplement(long id) {
+        if(rows("SELECT id FROM dbo.mghp_yeu_cau_bo_sung WITH(UPDLOCK,HOLDLOCK) WHERE id=?",id).isEmpty())
+            throw IntakeProblem.missing();
+        return em.find(Supplement.class,id);
+    }
+
+    void changeSupplement(Supplement row,String state,OffsetDateTime deadline,OffsetDateTime respondedAt,OffsetDateTime closedAt) {
+        em.flush();
+        if(jdbc.update("""
+            UPDATE dbo.mghp_yeu_cau_bo_sung SET trang_thai=?,han_xu_ly=?,thoi_diem_nhan_phan_hoi=?,thoi_diem_dong=?
+            WHERE id=? AND phien_ban_ky_thuat=?
+            """,state,deadline,respondedAt,closedAt,row.id,row.fence)!=1)
+            throw new IntakeProblem(412,"VERSION_CONFLICT","If-Match");
+        em.refresh(row);
+    }
+
     Submission replay(UUID operation) {
         return em.createQuery("from P06Submission where operationId=:operation",Submission.class)
             .setParameter("operation",operation).getResultList().stream().findFirst().orElse(null);

@@ -8,7 +8,7 @@ test('navigation identifies implemented feature entries without publishing empty
  assert.equal(new Set(navigationItems.map(item=>item.id)).size,navigationItems.length);
  assert.deepEqual(navigationItems.map(item=>[item.id,item.feature]),[
   ['lookup','foundation'],['students','foundation'],['manage','foundation'],['roles','foundation'],['auth','auth'],['auth-rbac','auth'],['mghp-policies','mghp'],['mghp-rounds','mghp'],
-  ['mghp-applications','mghp'],['mghp-inbox','mghp']]);
+  ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-inbox','mghp']]);
  assert(navigationItems.every(item=>typeof item.label==='string'&&item.label.length>0));
 });
 test('student menu contains only the student workflow',()=>{
@@ -17,8 +17,10 @@ test('student menu contains only the student workflow',()=>{
 });
 test('specialist gets verification and case review without student submission or account administration',()=>{
  const menu=visibleNavigation([],{student:false,mghpSpecialist:true,ctsvRoleAdmin:false});
- assert.deepEqual(menu.map(item=>item.id),['lookup','students','manage','mghp-policies','mghp-rounds','mghp-applications','mghp-inbox']);
- assert.equal(menu.find(item=>item.id==='mghp-applications').view,'staff-applications');
+ assert.deepEqual(menu.map(item=>item.id),['lookup','students','manage','mghp-policies','mghp-rounds','mghp-casework','mghp-inbox']);
+ assert.equal(menu.find(item=>item.id==='mghp-casework').view,'staff-applications');
+ assert.equal(menu.find(item=>item.id==='mghp-casework').label,'Tiếp nhận & bổ sung hồ sơ');
+ assert(!menu.some(item=>item.label==='Hồ sơ MGHP'||item.view==='applications'));
 });
 test('Auth account administration and CTSV permissions are separate and fail closed',()=>{
  const functions=[{code:'auth.accounts.manage',active:true},{code:'auth.rbac.read',active:false}];
@@ -41,6 +43,10 @@ test('direct links and refresh use the same access decisions as the navbar',()=>
  const student={student:true,mghpSpecialist:false,ctsvRoleAdmin:false};
  assert.equal(resolveRoute('/',[],student).kind,'home');
  assert.equal(resolveRoute('/mghp/ho-so/',[],student).entry.view,'applications');
+ assert.equal(resolveRoute('/mghp/tiep-nhan-ho-so',[],student).kind,'denied');
+ const specialist={student:false,mghpSpecialist:true,ctsvRoleAdmin:false};
+ assert.equal(resolveRoute('/mghp/ho-so',[],specialist).kind,'denied');
+ assert.equal(resolveRoute('/mghp/tiep-nhan-ho-so',[],specialist).entry.view,'staff-applications');
  assert.equal(resolveRoute('/mghp/chinh-sach',[],student).kind,'denied');
  assert.equal(resolveRoute('/mghp/ho-so',[],null).kind,'denied');
  assert.equal(resolveRoute('/hoc-bong',[],student).kind,'missing');
@@ -55,4 +61,9 @@ test('combined permissions union menu sections without duplicating pages',()=>{
  assert(sections.some(item=>item.id==='admin'));
  assert.equal(resolveRoute('/mghp/dot-xet',functions,access).entry.view,'public-rounds');
  assert.equal(resolveRoute('/mghp/chinh-sach',functions,access).entry.view,'policies');
+ assert.equal(resolveRoute('/mghp/ho-so',functions,access).entry.view,'applications');
+ assert.equal(resolveRoute('/mghp/tiep-nhan-ho-so',functions,access).entry.view,'staff-applications');
+ const casePages=visibleNavigation(functions,access).filter(item=>['applications','staff-applications'].includes(item.view));
+ assert.equal(casePages.length,2);
+ assert.equal(new Set(casePages.map(item=>item.label)).size,2);
 });

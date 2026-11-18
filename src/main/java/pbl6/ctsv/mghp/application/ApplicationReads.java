@@ -76,18 +76,21 @@ class ApplicationReads {
         var response=summary(root);
         var versions=repo.versions(root.id).stream().map(v -> {
             var dto=version(v);
-            var related=repo.children(RelatedPerson.class,"versionId",v.id,"id");
-            var indexes=new HashMap<Long,Integer>();
-            for(int i=0;i<related.size();i++) indexes.put(related.get(i).id,i);
-            dto.put("documents",repo.children(Document.class,"versionId",v.id,"id").stream()
-                .map(d -> {
-                    if(d.personId!=null && !indexes.containsKey(d.personId)) throw new IllegalStateException("Invalid related-person binding");
-                    return document(d,repo.fileId(d),indexes.get(d.personId));
-                }).toList());
+            dto.put("documents",documents(v.id));
             return dto;
         }).toList();
         response.put("submittedVersions",versions);
         return new Detail(response,tag(root,response));
+    }
+
+    List<Map<String,Object>> documents(long versionId) {
+        var related=repo.children(RelatedPerson.class,"versionId",versionId,"id");
+        var indexes=new HashMap<Long,Integer>();
+        for(int i=0;i<related.size();i++) indexes.put(related.get(i).id,i);
+        return repo.children(Document.class,"versionId",versionId,"id").stream().map(d -> {
+            if(d.personId!=null && !indexes.containsKey(d.personId)) throw new IllegalStateException("Invalid related-person binding");
+            return document(d,repo.fileId(d),indexes.get(d.personId));
+        }).toList();
     }
 
     Object declaration(Application root,long id) {
@@ -103,9 +106,13 @@ class ApplicationReads {
     }
 
     void match(Application root,String supplied) {
+        matchTag(detail(root).tag(),supplied);
+    }
+
+    static void matchTag(String expected,String supplied) {
         if(supplied==null)throw new IntakeProblem(428,"PRECONDITION_REQUIRED","If-Match");
         if(!supplied.matches("\"[A-Za-z0-9_-]+\""))throw IntakeProblem.invalid("If-Match");
-        if(!detail(root).tag().equals(supplied))throw new IntakeProblem(412,"VERSION_CONFLICT","If-Match");
+        if(!expected.equals(supplied))throw new IntakeProblem(412,"VERSION_CONFLICT","If-Match");
     }
 
     private String tag(Application root,Object body) {

@@ -53,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
     properties={"ctsv.auth.enabled=true","ctsv.foundation.enabled=true","ctsv.files.enabled=true",
         "ctsv.mghp.configuration.enabled=true","ctsv.mghp.applications.enabled=true","server.address=127.0.0.1"})
 @ActiveProfiles({"local","test"})
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class P06FileHttpIT {
     private static final ObjectMapper JSON=new ObjectMapper();
@@ -62,7 +63,11 @@ class P06FileHttpIT {
 
     @TestConfiguration(proxyBeanMethods=false)
     static class Config {
-        @Bean DataSource p06Source() throws Exception { return P06Database.migrate(); }
+        @Bean DataSource p06Source() throws Exception {
+            if(Boolean.getBoolean("p07.test.enabled"))
+                return P06Database.migrate("ctsv_p07_test_20261117","p07_test_owner","ctsv-mghp-p07-20261117","11");
+            return P06Database.migrate();
+        }
         @Bean
         @ConditionalOnProperty(name="ctsv.files.cloudinary.enabled",havingValue="false",matchIfMissing=true)
         Store p06Storage() { return STORE; }
@@ -82,7 +87,8 @@ class P06FileHttpIT {
 
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) throws Exception {
         AuthHttpIT.configuration(registry);
-        if (Boolean.getBoolean("p06.browser.enabled")) P05BrowserHarnessIT.browserProperties(registry);
+        if (Boolean.getBoolean("p06.browser.enabled") || Boolean.getBoolean("p07.browser.enabled"))
+            P05BrowserHarnessIT.browserProperties(registry);
         if (Boolean.getBoolean("p06.cloudinary.real") || Boolean.getBoolean("p06.browser.cloudinary.real")) {
             registry.add("ctsv.files.cloudinary.enabled",() -> true);
             registry.add("ctsv.files.reconciliation.enabled",() -> false);
@@ -90,6 +96,7 @@ class P06FileHttpIT {
     }
 
     @Autowired JdbcTemplate jdbc;
+    @Autowired org.springframework.test.web.servlet.MockMvc mvc;
     @Autowired org.springframework.context.ApplicationContext context;
     @LocalServerPort int port;
     private Actor student,other,specialist,admin;
@@ -368,6 +375,11 @@ class P06FileHttpIT {
     }
 
     private IntakeFixture intake(Actor actor,boolean future,boolean m6) {
+        return intake(actor,future,m6?"M6":"M2");
+    }
+
+    private IntakeFixture intake(Actor actor,boolean future,String policyCode) {
+        boolean m6="M6".equals(policyCode);
         var unique=UUID.randomUUID().toString();
         long studentId=jdbc.queryForObject("SELECT id FROM dbo.sinh_vien WHERE nguoi_dung_id=?",Long.class,actor.user());
         String code=jdbc.queryForObject("SELECT mssv FROM dbo.sinh_vien WHERE id=?",String.class,studentId);
@@ -388,7 +400,7 @@ class P06FileHttpIT {
             """,place,epoch,cls,cohort,unit,studentId);
         long process=insert("INSERT dbo.qua_trinh_theo_hoc(sinh_vien_id,khoa_hoc_id,hoc_ky_bat_dau_id,ma_qua_trinh_hoc) VALUES(?,?,?,?)",
             studentId,cohort,sem,"TEST-P06-"+unique);
-        long parent=jdbc.queryForObject("SELECT id FROM dbo.mghp_chinh_sach WHERE ma=?",Long.class,m6?"M6":"M2");
+        long parent=jdbc.queryForObject("SELECT id FROM dbo.mghp_chinh_sach WHERE ma=?",Long.class,policyCode);
         int next=jdbc.queryForObject("SELECT COALESCE(MAX(phien_ban),0)+1 FROM dbo.mghp_phien_ban_chinh_sach WHERE chinh_sach_id=?",Integer.class,parent);
         long policy=insert("""
             INSERT dbo.mghp_phien_ban_chinh_sach(chinh_sach_id,phien_ban,ten_tai_thoi_diem_chot,ty_le_giam,
@@ -444,6 +456,313 @@ class P06FileHttpIT {
         n.putArray("documents").addObject().put("requirementId",""+req).put("fileId",""+file).putNull("documentNumber")
             .putNull("issuer").putNull("issuedOn").putNull("expiresOn").putNull("relatedPersonIndex");
         return n;
+    }
+
+    private static final String APPLICATIONS="/api/ctsv/mghp/ho-so";
+    private record SupplementFixture(Actor owner,IntakeFixture intake,long file,String root,String baseVersion) {}
+
+    private SupplementFixture supplementFixture() throws Exception {
+        return supplementFixture("M2");
+    }
+
+    private SupplementFixture supplementFixture(String policyCode) throws Exception {
+        if(!Boolean.getBoolean("p07.test.enabled"))throw new IllegalStateException("P07 requires its own guarded database");
+        var owner=actor("student");
+        var fixture=intake(owner,false,policyCode);
+        var sample=Path.of(java.util.Objects.requireNonNull(System.getenv("P07_SAMPLE_PDF")));
+        var uploaded=upload("minh-chung",owner,"du lieu test.pdf",Files.readAllBytes(sample)).expect(201).json();
+        var file=uploaded.path("id").asLong();
+        var ack=command("POST",APPLICATIONS,owner,submission(fixture,file),null).expect(201).json();
+        return new SupplementFixture(owner,fixture,file,APPLICATIONS+"/"+ack.path("applicationId").asText(),ack.path("versionId").asText());
+    }
+
+    private static String etag(Reply reply) { return reply.headers().firstValue("ETag").orElseThrow(); }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode newSupplement(SupplementFixture f) {
+        var body=JSON.createObjectNode().put("sourceVersionId",f.baseVersion())
+            .put("receivingRoundId",Long.toString(f.intake().round())).putNull("benefitId")
+            .put("updateType","initial_supplement").put("reason","SYNTHETIC P07 clarification")
+            .put("deadline",java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusSeconds(3600).toString());
+        body.putArray("items").addObject().putNull("requirementId").putNull("documentId").putNull("semesterId")
+            .putNull("evaluationId").put("declarationField","phoneNumber").put("type","declaration").put("reason","Confirm phone");
+        return body;
+    }
+
+    private Reply openSupplement(SupplementFixture f) throws Exception {
+        return command("POST",f.root()+"/yeu-cau-bo-sung",specialist,newSupplement(f),
+            etag(get(f.root(),specialist).expect(200))).expect(201);
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07MvcBoundaryRejectsInvalidRequestAndChecksProjection() throws Exception {
+        var f=supplementFixture();
+        String creation=f.root()+"/yeu-cau-bo-sung";
+        var mediaType=org.springframework.http.MediaType.APPLICATION_JSON;
+        var missing=mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(creation)
+            .contentType(mediaType).content(JSON.writeValueAsBytes(newSupplement(f)))).andReturn().getResponse();
+        assertThat(missing.getStatus()).isEqualTo(401);
+        var invalidInput=newSupplement(f).put("actorId","99");
+        var invalid=mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(creation)
+            .header("Authorization","Bearer "+specialist.token()).header("If-Match",etag(get(f.root(),specialist).expect(200)))
+            .contentType(mediaType).content(JSON.writeValueAsBytes(invalidInput))).andReturn().getResponse();
+        assertThat(invalid.getStatus()).isEqualTo(400);
+        assertThat(JSON.readTree(invalid.getContentAsString()).path("code").asText()).isEqualTo("VALIDATION_ERROR");
+        var created=openSupplement(f);
+        var projected=mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(created.location())
+            .header("Authorization","Bearer "+f.owner().token())).andReturn().getResponse();
+        assertThat(projected.getStatus()).isEqualTo(200);
+        assertThat(projected.getHeader("ETag")).isNotBlank();
+        var data=JSON.readTree(projected.getContentAsString());
+        assertThat(data.properties().stream().map(Map.Entry::getKey).toList()).containsExactlyInAnyOrder(
+            "id","applicationId","sourceVersionId","receivingRoundId","benefitId","roundNumber",
+            "status","reason","deadline","respondedAt","closedAt","items");
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07LifecycleWithStrongTagsReplayAndAudit() throws Exception {
+        var f=supplementFixture();
+        var request=f.root()+"/yeu-cau-bo-sung";
+        var firstRootTag=etag(get(f.root(),specialist).expect(200));
+        command("POST",request,admin,newSupplement(f),firstRootTag).problem(403,"FORBIDDEN");
+        command("POST",request,specialist,newSupplement(f),null).problem(428,"PRECONDITION_REQUIRED");
+        var creation=newSupplement(f);
+        var declared=get(f.root(),specialist).expect(200).json().path("submittedVersions").get(0).path("documents").get(0);
+        ((com.fasterxml.jackson.databind.node.ArrayNode)creation.path("items")).addObject()
+            .put("requirementId",declared.path("requirementId").asText()).put("documentId",declared.path("id").asText())
+            .putNull("semesterId").putNull("evaluationId").putNull("declarationField").put("type","document").put("reason","Check PDF again");
+        var created=command("POST",request,specialist,creation,firstRootTag).expect(201);
+        String supplement=created.location();
+        assertThat(etag(get(supplement,specialist).expect(200))).isEqualTo(etag(created));
+        command("POST",request,specialist,newSupplement(f),firstRootTag).problem(412,"VERSION_CONFLICT");
+        command("POST",request,specialist,newSupplement(f),etag(get(f.root(),specialist).expect(200))).problem(409,"SUPPLEMENT_NOT_ALLOWED");
+        get(supplement,other).problem(404,"NOT_FOUND");
+        get(supplement+"/phan-hoi",other).problem(404,"NOT_FOUND");
+        var read=get(supplement+"/phan-hoi",f.owner()).expect(200);
+        assertThat(read.json().path("baseDeclaration").path("id").asText()).isEqualTo(f.baseVersion());
+        assertThat(read.json().path("baseDocuments").get(0).path("fileId").asLong()).isEqualTo(f.file());
+        assertThat(etag(read)).isNotEqualTo(etag(created)).isNotEqualTo(etag(get(supplement+"/phan-hoi",specialist).expect(200)));
+        var deadline=JSON.createObjectNode().put("deadline",java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+            .plusSeconds(7200).toString()).put("reason","Extend P07");
+        assertThat(command("PUT",supplement+"/han-nop",specialist,deadline,etag(created)).expect(200).headers().firstValue("ETag")).isEmpty();
+        var reply=submission(f.intake(),f.file());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)reply.path("claims")).put("phoneNumber","0900000001");
+        command("POST",supplement+"/phan-hoi",f.owner(),reply,etag(read)).problem(412,"VERSION_CONFLICT");
+        String fresh=etag(get(supplement+"/phan-hoi",f.owner()).expect(200));
+        var accepted=command("POST",supplement+"/phan-hoi",f.owner(),reply,fresh).expect(201);
+        assertThat(accepted.json().path("revision").asInt()).isEqualTo(2);
+        assertThat(command("POST",supplement+"/phan-hoi",f.owner(),reply,fresh).expect(200).json()).isEqualTo(accepted.json());
+        var different=reply.deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode)different.path("claims")).put("phoneNumber","0900000002");
+        command("POST",supplement+"/phan-hoi",f.owner(),different,fresh).problem(409,"SUBMISSION_KEY_CONFLICT");
+        different.put("operationId",UUID.randomUUID().toString());
+        command("POST",supplement+"/phan-hoi",f.owner(),different,etag(get(supplement+"/phan-hoi",f.owner()).expect(200)))
+            .problem(409,"SUBMISSION_NOT_ALLOWED");
+        var reason=JSON.createObjectNode().put("reason","Checked P07");
+        var responded=get(supplement,specialist).expect(200);
+        command("POST",supplement+"/hoan-tat",specialist,reason,etag(responded)).problem(409,"SUPPLEMENT_NOT_READY");
+        var item="/api/ctsv/mghp/muc-bo-sung/"+responded.json().path("items").get(0).path("id").asText()+"/danh-gia";
+        var result=JSON.createObjectNode().putNull("responseDocumentId").put("result","needs_verification").put("reason","Compare source");
+        command("PUT",item,specialist,result,etag(responded)).expect(200);
+        command("POST",supplement+"/hoan-tat",specialist,reason,etag(get(supplement,specialist).expect(200)))
+            .problem(409,"SUPPLEMENT_NOT_READY");
+        result.put("result","satisfied");
+        command("PUT",item,specialist,result,etag(get(supplement,specialist).expect(200))).expect(200);
+        var secondItem="/api/ctsv/mghp/muc-bo-sung/"+responded.json().path("items").get(1).path("id").asText()+"/danh-gia";
+        var documentResult=result.deepCopy().put("responseDocumentId",declared.path("id").asText());
+        command("PUT",secondItem,specialist,documentResult,etag(get(supplement,specialist).expect(200)))
+            .problem(409,"SUPPLEMENT_STATE_CONFLICT");
+        var newDocument=get(f.root(),specialist).expect(200).json().path("submittedVersions").get(0).path("documents").get(0);
+        documentResult.put("responseDocumentId",newDocument.path("id").asText());
+        command("PUT",secondItem,specialist,documentResult,etag(get(supplement,specialist).expect(200))).expect(200);
+        var completed=command("POST",supplement+"/hoan-tat",specialist,reason,etag(get(supplement,specialist).expect(200))).expect(200);
+        assertThat(completed.json().path("status").asText()).isEqualTo("completed");
+        assertThat(etag(completed)).isEqualTo(etag(get(supplement,specialist).expect(200)));
+        var root=get(f.root(),f.owner()).expect(200).json();
+        assertThat(root.path("status").asText()).isEqualTo("processing");
+        assertThat(root.path("submittedVersions").size()).isEqualTo(2);
+        assertThat(get(f.root()+"/phien-ban/"+f.baseVersion(),f.owner()).expect(200).json().path("claims").path("phoneNumber").asText())
+            .isEqualTo("0900000000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_nhat_ky_ho_so WHERE yeu_cau_bo_sung_id=? AND han_cu IS NOT NULL AND han_moi>han_cu",
+            Integer.class,completed.json().path("id").asLong())).isEqualTo(1);
+        var inbox=get("/api/ctsv/toi/thong-bao",f.owner()).expect(200).json();
+        assertThat(inbox.path("items").get(0).path("actionUrl").asText())
+            .isEqualTo("/mghp/ho-so?bo-sung="+completed.json().path("id").asText());
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07CheckAppendAndCancelledRoundHistory() throws Exception {
+        var f=supplementFixture();
+        var opened=openSupplement(f);
+        var reason=JSON.createObjectNode().put("reason","SYNTHETIC P07 cancellation");
+        var cancelled=command("POST",opened.location()+"/huy",specialist,reason,etag(opened)).expect(200);
+        assertThat(cancelled.json().path("status").asText()).isEqualTo("cancelled");
+        command("POST",opened.location()+"/huy",specialist,reason,etag(opened)).problem(412,"VERSION_CONFLICT");
+        assertThat(etag(command("POST",opened.location()+"/huy",specialist,reason,etag(cancelled)).expect(200))).isEqualTo(etag(cancelled));
+        assertThat(openSupplement(f).json().path("roundNumber").asInt()).isEqualTo(2);
+        var review=f.root()+"/ngu-canh-xet-duyet";
+        get(review,f.owner()).problem(403,"FORBIDDEN");
+        var before=get(review,specialist).expect(200).json();
+        assertThat(before.path("comparisons").size()).isEqualTo(12);
+        var id=before.path("documents").get(0).path("id").asText();
+        var path="/api/ctsv/mghp/giay-to-da-nop/"+id;
+        var tag=etag(get(f.root(),specialist).expect(200));
+        var hardCopy=JSON.createObjectNode().put("received",true).putNull("note");
+        var hard=command("POST",path+"/xac-nhan-ban-cung",specialist,hardCopy,tag).expect(201);
+        assertThat(hard.json().path("result").asText()).isEqualTo("received");
+        assertThat(hard.headers().firstValue("ETag")).isEmpty();
+        var check=JSON.createObjectNode().put("kind","form").put("result","pass").putNull("note").putNull("replacesCheckId");
+        command("POST",path+"/kiem-tra",specialist,check,tag).problem(412,"VERSION_CONFLICT");
+        var first=command("POST",path+"/kiem-tra",specialist,check,etag(get(f.root(),specialist).expect(200))).expect(201);
+        check.put("result","needs_verification").put("note","Source needs confirmation").put("replacesCheckId",first.json().path("id").asText());
+        var second=command("POST",path+"/kiem-tra",specialist,check,etag(get(f.root(),specialist).expect(200))).expect(201);
+        assertThat(second.json().path("previousCheckId")).isEqualTo(first.json().path("id"));
+        var checks=get(review,specialist).expect(200).json().path("documents").get(0).path("checks");
+        assertThat(checks.size()).isEqualTo(3);
+        assertThat(checks.get(1).path("result").asText()).isEqualTo("pass");
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07RaceAndAtomicRollback() throws Exception {
+        var f=supplementFixture();
+        var rootTag=etag(get(f.root(),specialist).expect(200));
+        var create=newSupplement(f);
+        String path=f.root()+"/yeu-cau-bo-sung";
+        var secondSpecialist=actor("specialist");
+        Reply[] opened=raceP07(() -> command("POST",path,specialist,create,rootTag),
+            () -> command("POST",path,secondSpecialist,create,rootTag));
+        assertThat(java.util.Arrays.stream(opened).map(Reply::status).toList()).containsExactlyInAnyOrder(201,412);
+        var supplement=java.util.Arrays.stream(opened).filter(r->r.status()==201).findFirst().orElseThrow();
+        String response=supplement.location()+"/phan-hoi";
+        var body=submission(f.intake(),f.file());
+        String prior=etag(get(response,f.owner()).expect(200));
+        jdbc.execute("""
+            CREATE TRIGGER dbo.p07_response_audit_fixture ON dbo.mghp_nhat_ky_ho_so AFTER INSERT AS
+            BEGIN
+                IF EXISTS(SELECT 1 FROM inserted WHERE hanh_dong='respond_supplement')
+                    THROW 51717,'Synthetic P07 rollback after submission and status',1;
+            END
+            """);
+        try {
+            command("POST",response,f.owner(),body,prior).problem(500,"INTERNAL_ERROR");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_phien_ban_ho_so WHERE ma_thao_tac_nop=?",
+                Integer.class,body.path("operationId").asText())).isZero();
+            assertThat(etag(get(response,f.owner()).expect(200))).isEqualTo(prior);
+        } finally {
+            jdbc.execute("DROP TRIGGER dbo.p07_response_audit_fixture");
+        }
+        Reply[] submitted=raceP07(() -> command("POST",response,f.owner(),body,prior),
+            () -> command("POST",response,f.owner(),body,prior));
+        assertThat(java.util.Arrays.stream(submitted).map(Reply::status).toList()).containsExactlyInAnyOrder(200,201);
+        assertThat(submitted[0].json()).isEqualTo(submitted[1].json());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_phien_ban_ho_so WHERE yeu_cau_bo_sung_id=?",
+            Integer.class,supplement.json().path("id").asLong())).isEqualTo(1);
+        var f2=supplementFixture();
+        var opened2=openSupplement(f2);
+        String responses=opened2.location()+"/phan-hoi";
+        String root2Tag=etag(get(f2.root(),f2.owner()).expect(200));
+        String context2=etag(get(responses,f2.owner()).expect(200));
+        var response2=submission(f2.intake(),f2.file());
+        var reason=JSON.createObjectNode().put("reason","Synthetic P07 race");
+        Reply[] withdrawal=raceP07(() -> command("POST",responses,f2.owner(),response2,context2),
+            () -> command("POST",f2.root()+"/rut",f2.owner(),reason,root2Tag));
+        assertThat(withdrawal[0].status()==201 && withdrawal[1].status()==412
+            || withdrawal[0].status()==412 && withdrawal[1].status()==200).isTrue();
+        var f3=supplementFixture();
+        var opened3=openSupplement(f3);
+        String responses3=opened3.location()+"/phan-hoi";
+        String context3=etag(get(responses3,f3.owner()).expect(200));
+        var oldPaper=get(f3.root()+"/ngu-canh-xet-duyet",specialist).expect(200).json().path("documents").get(0).path("id").asText();
+        var tag3=etag(get(f3.root(),specialist).expect(200));
+        var physical=JSON.createObjectNode().put("received",true).putNull("note");
+        var response3=submission(f3.intake(),f3.file());
+        String paper="/api/ctsv/mghp/giay-to-da-nop/"+oldPaper+"/xac-nhan-ban-cung";
+        Reply[] documentRace=raceP07(() -> command("POST",responses3,f3.owner(),response3,context3),
+            () -> command("POST",paper,specialist,physical,tag3));
+        assertThat(java.util.Arrays.stream(documentRace).map(Reply::status).toList()).containsExactlyInAnyOrder(201,412);
+        if(documentRace[0].status()==412)
+            command("POST",responses3,f3.owner(),response3,etag(get(responses3,f3.owner()).expect(200))).expect(201);
+        command("POST",paper,specialist,physical,etag(get(f3.root(),specialist).expect(200))).problem(409,"DOCUMENT_VERSION_CONFLICT");
+        var after=get(f3.root()+"/ngu-canh-xet-duyet",specialist).expect(200).json();
+        assertThat(after.path("documents").get(0).path("checks").size()).isZero();
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07LaterRoundKeepsRootBindingAndCompletedStatus() throws Exception {
+        var f=supplementFixture("M4");
+        var later=intake(actor("student"),false,"M4");
+        long rootId=Long.parseLong(f.root().substring(f.root().lastIndexOf('/')+1));
+        long benefit=insert("""
+            INSERT dbo.mghp_quyen_huong(ma_quyen_huong,sinh_vien_id,qua_trinh_hoc_id,
+                phien_ban_chinh_sach_id,ma_pham_vi,phien_ban_ho_so_nguon_id,chinh_sach_id)
+            SELECT ?,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,'hoc_phi',?,chinh_sach_id
+            FROM dbo.mghp_ho_so WHERE id=?
+            ""","SYNTHETIC-P07-"+UUID.randomUUID(),Long.parseLong(f.baseVersion()),rootId);
+        jdbc.update("UPDATE dbo.mghp_ho_so SET trang_thai='completed' WHERE id=?",rootId);
+        jdbc.update("UPDATE dbo.mghp_dot_xet SET trang_thai='closed',thoi_diem_khoa=SYSUTCDATETIME() WHERE id=?",later.round());
+        var request=newSupplement(f).put("updateType","periodic_update").put("benefitId",Long.toString(benefit))
+            .put("receivingRoundId",Long.toString(later.round()));
+        var created=command("POST",f.root()+"/yeu-cau-bo-sung",specialist,request,etag(get(f.root(),specialist).expect(200))).expect(201);
+        var response=created.location()+"/phan-hoi";
+        var body=submission(new IntakeFixture(f.intake().code(),later.round(),f.intake().process(),later.policy(),later.semester(),
+            f.intake().ethnicity(),f.intake().classId(),f.intake().cohort(),f.intake().unit()),f.file());
+        jdbc.update("UPDATE dbo.mghp_yeu_cau_bo_sung SET trang_thai='expired',han_xu_ly=DATEADD(minute,-1,SYSDATETIMEOFFSET()) WHERE id=?",
+            created.json().path("id").asLong());
+        command("POST",response,f.owner(),body,etag(get(response,f.owner()).expect(200))).problem(409,"SUBMISSION_NOT_ALLOWED");
+        var extension=JSON.createObjectNode().put("reason","Extend expired period")
+            .put("deadline",java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusSeconds(3600).toString());
+        var extended=command("PUT",created.location()+"/han-nop",specialist,extension,
+            etag(get(created.location(),specialist).expect(200))).expect(200);
+        assertThat(extended.json().path("status").asText()).isEqualTo("open");
+        var tag=etag(get(response,f.owner()).expect(200));
+        command("POST",response,f.owner(),body.deepCopy().put("policyVersionId",Long.toString(f.intake().policy())),tag)
+            .problem(409,"SUBMISSION_NOT_ALLOWED");
+        var accepted=command("POST",response,f.owner(),body,tag).expect(201).json();
+        assertThat(accepted.path("submissionType").asText()).isEqualTo("periodic_update");
+        var root=get(f.root(),f.owner()).expect(200).json();
+        assertThat(root.path("status").asText()).isEqualTo("completed");
+        assertThat(root.path("roundId").asLong()).isEqualTo(f.intake().round());
+        assertThat(root.path("policyVersionId").asLong()).isEqualTo(f.intake().policy());
+        assertThat(jdbc.queryForObject("""
+            SELECT COUNT(*) FROM dbo.mghp_phien_ban_ho_so
+            WHERE id=? AND quyen_huong_cap_nhat_id=? AND dot_tiep_nhan_id=? AND phien_ban_chinh_sach_ke_khai_id=?
+            """,Integer.class,accepted.path("versionId").asLong(),benefit,later.round(),later.policy())).isEqualTo(1);
+    }
+
+    private Reply[] raceP07(java.util.concurrent.Callable<Reply> first,java.util.concurrent.Callable<Reply> second) throws Exception {
+        var barrier=new java.util.concurrent.CyclicBarrier(2);
+        try(var pool=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var a=pool.submit(() -> { barrier.await(10,java.util.concurrent.TimeUnit.SECONDS); return first.call(); });
+            var b=pool.submit(() -> { barrier.await(10,java.util.concurrent.TimeUnit.SECONDS); return second.call(); });
+            return new Reply[]{a.get(30,java.util.concurrent.TimeUnit.SECONDS),b.get(30,java.util.concurrent.TimeUnit.SECONDS)};
+        }
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.browser.enabled",matches="true")
+    void p07ServeBrowser() throws Exception {
+        assertThat(Boolean.getBoolean("p07.test.enabled")).isTrue();
+        Path home=Path.of(java.util.Objects.requireNonNull(System.getenv("P07_BROWSER_HOME")));
+        var done=home.resolve("browser.done");
+        assertThat(Files.exists(done)).isFalse();
+        String browserUser="p07."+UUID.randomUUID(), browserOther="p07."+UUID.randomUUID(), browserStaff="p07."+UUID.randomUUID();
+        String password="SYNTHETIC-P07-"+UUID.randomUUID();
+        var owner=actor("student",browserUser,password);
+        actor("student",browserOther,password);
+        actor("specialist",browserStaff,password);
+        var fixture=intake(owner,false);
+        var body=Map.of("origin","https://127.0.0.1:5175","backend","https://127.0.0.1:"+port,"round",Long.toString(fixture.round()),
+            "username",browserUser,"other",browserOther,"staff",browserStaff,"password",password,
+            "storage",Boolean.getBoolean("p06.browser.cloudinary.real")?"Cloudinary REAL":"Cloudinary STUB");
+        Files.writeString(home.resolve("credentials.json"),JSON.writeValueAsString(body),java.nio.file.StandardOpenOption.CREATE_NEW);
+        long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.MINUTES.toNanos(4);
+        while(!Files.exists(done) && System.nanoTime()<deadline)Thread.sleep(200);
+        assertThat(done).exists();
+        assertThat(Files.readString(done).trim()).isEqualTo("PASS");
     }
 
     @Test void submissionHistoryReplayWithdrawReopenAndInbox() throws Exception {
@@ -572,6 +891,18 @@ class P06FileHttpIT {
         var payload=submission(f,file);
         String base="/api/ctsv/mghp/ho-so";
         command("POST",base,owner,payload,null).problem(400,"VALIDATION_ERROR");
+        addM6Parent(payload,f,file);
+        var created=command("POST",base,owner,payload,null).expect(201).json();
+        var documents=get(base+"/"+created.path("applicationId").asText(),owner).expect(200).json()
+            .path("submittedVersions").get(0).path("documents");
+        assertThat(documents.size()).isEqualTo(2);
+        assertThat(documents.get(0).path("fileId")).isEqualTo(documents.get(1).path("fileId"));
+        assertThat(documents.get(0).path("requirementId")).isNotEqualTo(documents.get(1).path("requirementId"));
+        assertThat(documents.get(0).path("relatedPersonIndex").isNull()).isTrue();
+        assertThat(documents.get(1).path("relatedPersonIndex").asInt()).isZero();
+    }
+
+    private void addM6Parent(com.fasterxml.jackson.databind.node.ObjectNode payload,IntakeFixture f,long file) {
         var parent=payload.withArray("relatedPeople").addObject().put("relation","mẹ").put("fullName","SYNTHETIC parent");
         for(String name:java.util.List.of("citizenId","ethnicityId","permanentAddress","localityCode","workplaceUnitId",
             "workplaceName","workplaceGroup","employmentStatus","statusFrom","statusUntil","matchingStaffCode")) parent.putNull(name);
@@ -581,14 +912,44 @@ class P06FileHttpIT {
             """,Long.class,f.policy());
         payload.withArray("documents").addObject().put("requirementId",""+requirement).put("fileId",""+file)
             .putNull("documentNumber").putNull("issuer").putNull("issuedOn").putNull("expiresOn").put("relatedPersonIndex",0);
-        var created=command("POST",base,owner,payload,null).expect(201).json();
-        var documents=get(base+"/"+created.path("applicationId").asText(),owner).expect(200).json()
-            .path("submittedVersions").get(0).path("documents");
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="p07.test.enabled",matches="true")
+    void p07M6PaperChecksAreSeparateEvenWithSamePdf() throws Exception {
+        var owner=actor("student");
+        var f=intake(owner,false,true);
+        var sample=Path.of(java.util.Objects.requireNonNull(System.getenv("P07_SAMPLE_PDF")));
+        long file=upload("minh-chung",owner,"du lieu test.pdf",Files.readAllBytes(sample)).expect(201).json().path("id").asLong();
+        var body=submission(f,file);
+        addM6Parent(body,f,file);
+        var created=command("POST",APPLICATIONS,owner,body,null).expect(201).json();
+        var root=APPLICATIONS+"/"+created.path("applicationId").asText();
+        var review=root+"/ngu-canh-xet-duyet";
+        var documents=get(review,specialist).expect(200).json().path("documents");
         assertThat(documents.size()).isEqualTo(2);
         assertThat(documents.get(0).path("fileId")).isEqualTo(documents.get(1).path("fileId"));
         assertThat(documents.get(0).path("requirementId")).isNotEqualTo(documents.get(1).path("requirementId"));
-        assertThat(documents.get(0).path("relatedPersonIndex").isNull()).isTrue();
-        assertThat(documents.get(1).path("relatedPersonIndex").asInt()).isZero();
+        String paper="/api/ctsv/mghp/giay-to-da-nop/";
+        String studentPaper=paper+documents.get(0).path("id").asText();
+        String parentPaper=paper+documents.get(1).path("id").asText();
+        var physical=JSON.createObjectNode().put("received",true).putNull("note");
+        command("POST",studentPaper+"/xac-nhan-ban-cung",specialist,physical,etag(get(root,specialist).expect(200))).expect(201);
+        var afterPhysical=get(review,specialist).expect(200).json().path("documents");
+        assertThat(afterPhysical.get(0).path("checks").get(0).path("kind").asText()).isEqualTo("hard_copy");
+        assertThat(afterPhysical.get(1).path("checks").size()).isZero();
+        var valid=JSON.createObjectNode().put("kind","subject").put("result","pass").putNull("note").putNull("replacesCheckId");
+        var first=command("POST",studentPaper+"/kiem-tra",specialist,valid,etag(get(root,specialist).expect(200))).expect(201);
+        valid.put("replacesCheckId",first.json().path("id").asText());
+        command("POST",parentPaper+"/kiem-tra",specialist,valid,etag(get(root,specialist).expect(200)))
+            .problem(409,"DOCUMENT_VERSION_CONFLICT");
+        valid.putNull("replacesCheckId").put("result","not_applicable").put("note","Cannot skip M6 subject");
+        command("POST",parentPaper+"/kiem-tra",specialist,valid,etag(get(root,specialist).expect(200))).problem(400,"VALIDATION_ERROR");
+        valid.put("result","needs_verification").put("note","Review synthetic parent");
+        command("POST",parentPaper+"/kiem-tra",specialist,valid,etag(get(root,specialist).expect(200))).expect(201);
+        var after=get(review,specialist).expect(200).json().path("documents");
+        assertThat(after.get(0).path("checks").get(1).path("result").asText()).isEqualTo("pass");
+        assertThat(after.get(1).path("checks").get(0).path("result").asText()).isEqualTo("needs_verification");
     }
 
     @Test

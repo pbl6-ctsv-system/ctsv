@@ -49,6 +49,8 @@ final class ApplicationEntities {
         @Column(name="thoi_diem_tao",columnDefinition="datetimeoffset(7)") OffsetDateTime createdAt;
         @Column(name="loai_lan_nop",nullable=false,columnDefinition="nvarchar(128)") String type;
         @Column(name="dot_tiep_nhan_id") Long roundId;
+        @Column(name="yeu_cau_bo_sung_id") Long supplementId;
+        @Column(name="quyen_huong_cap_nhat_id") Long benefitId;
         @Column(name="phien_ban_chinh_sach_ke_khai_id") Long policyVersionId;
         @JdbcTypeCode(SqlTypes.UUID)
         @Column(name="ma_thao_tac_nop",nullable=false,columnDefinition="uniqueidentifier") UUID operationId;
@@ -155,6 +157,8 @@ final class ApplicationEntities {
         @Column(name="ma_lien_ket_yeu_cau",columnDefinition="uniqueidentifier") UUID requestId;
         @Column(name="thoi_diem_tao",columnDefinition="datetimeoffset(7)") OffsetDateTime createdAt;
         @Column(name="yeu_cau_bo_sung_id") Long supplementId;
+        @Column(name="han_cu",columnDefinition="datetimeoffset(7)") OffsetDateTime oldDeadline;
+        @Column(name="han_moi",columnDefinition="datetimeoffset(7)") OffsetDateTime newDeadline;
     }
 
     @Entity(name="P06Supplement")
@@ -164,7 +168,48 @@ final class ApplicationEntities {
         @Column(name="phien_ban_lam_co_so_id",nullable=false) Long baseVersionId;
         @Column(name="so_vong",nullable=false) Integer number;
         @Column(name="trang_thai",columnDefinition="nvarchar(128)") String status;
+        @Column(name="ly_do",columnDefinition="nvarchar(max)") String reason;
+        @Column(name="han_xu_ly",columnDefinition="datetimeoffset(7)") OffsetDateTime deadline;
+        @Column(name="nguoi_yeu_cau_id") Long requestedBy;
+        @Column(name="thoi_diem_yeu_cau",columnDefinition="datetimeoffset(7)") OffsetDateTime requestedAt;
+        @Column(name="thoi_diem_nhan_phan_hoi",columnDefinition="datetimeoffset(7)") OffsetDateTime respondedAt;
         @Column(name="thoi_diem_dong",columnDefinition="datetimeoffset(7)") OffsetDateTime closedAt;
+        @Column(name="dot_tiep_nhan_id") Long receivingRoundId;
+        @Column(name="quyen_huong_id") Long benefitId;
+        @Column(name="loai_dot_cap_nhat",columnDefinition="nvarchar(128)") String updateType;
+        @org.hibernate.annotations.Generated(event={org.hibernate.generator.EventType.INSERT,org.hibernate.generator.EventType.UPDATE})
+        @JdbcTypeCode(SqlTypes.BINARY)
+        @Column(name="phien_ban_ky_thuat",nullable=false,insertable=false,updatable=false,length=8,columnDefinition="rowversion")
+        byte[] fence;
+    }
+
+    @Entity(name="P06SupplementItem")
+    @Table(name="mghp_noi_dung_bo_sung",schema="dbo")
+    static class SupplementItem extends Row {
+        @Column(name="yeu_cau_bo_sung_id",nullable=false) Long supplementId;
+        @Column(name="giay_to_bat_buoc_id") Long requirementId;
+        @Column(name="giay_to_ho_so_id") Long documentId;
+        @Column(name="hoc_ky_ap_dung_id") Long semesterId;
+        @Column(name="danh_gia_dieu_kien_id") Long evaluationId;
+        @Column(name="khoa_truong_khai_bao",columnDefinition="nvarchar(128)") String declarationField;
+        @Column(name="loai_yeu_cau",columnDefinition="nvarchar(128)") String type;
+        @Column(name="ly_do",columnDefinition="nvarchar(max)") String reason;
+        @Column(name="giay_to_tra_loi_id") Long responseDocumentId;
+        @Column(name="ket_qua_xu_ly",columnDefinition="nvarchar(128)") String result;
+        @Column(name="nguoi_xu_ly_id") Long reviewerId;
+        @Column(name="thoi_diem_xu_ly",columnDefinition="datetimeoffset(7)") OffsetDateTime reviewedAt;
+    }
+
+    @Entity(name="P06DocumentCheck")
+    @Table(name="mghp_ket_qua_kiem_tra_giay_to",schema="dbo")
+    static class DocumentCheck extends Row {
+        @Column(name="giay_to_ho_so_id") Long documentId;
+        @Column(name="loai_kiem_tra",columnDefinition="nvarchar(128)") String kind;
+        @Column(name="ket_qua",columnDefinition="nvarchar(128)") String result;
+        @Column(name="ghi_chu",columnDefinition="nvarchar(max)") String note;
+        @Column(name="ket_qua_kiem_tra_duoc_thay_the_id") Long previousId;
+        @Column(name="nguoi_thuc_hien_id") Long actorId;
+        @Column(name="thoi_diem_thao_tac",columnDefinition="datetimeoffset(7)") OffsetDateTime checkedAt;
     }
 
     @Entity(name="P06Notification")

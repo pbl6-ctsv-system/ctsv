@@ -98,6 +98,9 @@ public class KhungChuongTrinh {
     @JoinColumn(name="hoc_phan_duoc_thay_the_id", insertable=false, updatable=false)
     private HocPhan hocPhanDuocThayThe;
 
+     //
+
+   //
     public KhungChuongTrinh() {}
 
     public Long getId() { return id; }

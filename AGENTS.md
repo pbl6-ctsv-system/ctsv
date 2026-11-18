@@ -22,7 +22,7 @@ Công nghệ hoặc mẫu thiết kế mà skill khuyến nghị không được
 - Không tuyên bố PASS nếu chưa chạy. Phân biệt Unit/mock, MockMvc, integration SQL Server thật, HTTP thật và hai backend MVP chạy thật; `contextLoads()` không chứng minh nghiệp vụ/DB/API đúng.
 - Dùng DB test riêng đã xác minh đích và quyền sở hữu cho các bộ test tự động cần fixture/trạng thái cố định hoặc thao tác reset, cleanup phá dữ liệu. Smoke Playwright hằng ngày theo §8. Dùng dữ liệu synthetic và che key/token trong bằng chứng. Hạ tầng chưa thiết lập phải ghi rõ, không báo lệnh dự kiến là đã chạy.
 - Không skip/disable/xóa assertion hoặc sửa test/expected chỉ để xanh; nếu test sai phải có căn cứ và lý do review. Kiểm số test thực sự chạy, fail/error/skip và report mới; zero test không đạt gate cần test.
-- Bàn giao kèm lệnh/cwd, phiên bản, số ca/report/evidence, phạm vi thật–mock; bắt buộc nêu FAIL, BLOCKED, NOT VERIFIED và giới hạn. Chỉ kết luận hoàn thành khi các gate liên quan đạt; nghiệm thu slice cần thành viên khác kiểm độc lập.
+- Bàn giao kèm lệnh/cwd, phiên bản, số ca/report/evidence, phạm vi thật–mock; bắt buộc nêu FAIL, BLOCKED, NOT VERIFIED và giới hạn. Chỉ kết luận hoàn thành khi các gate liên quan đạt; nghiệm thu slice áp dụng kiểm độc lập theo G8, ngoại trừ phạm vi được chủ dự án miễn. Với P07–P16 của backlog CTSV/MGHP, [G8 = WAIVED BY OWNER](../nghiepvu/09-trien-khai/master-implementation-backlog.md#g8-waiver-p07-p16); giữ mọi kiểm thử kỹ thuật và evidence theo phạm vi.
 
 ## 5. API Design & Contract-First bắt buộc
 

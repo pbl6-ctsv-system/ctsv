@@ -1,11 +1,13 @@
-import {useState,type FormEvent} from 'react';
+import {useEffect,useId,useState,useRef,type FormEvent} from 'react';
+import type {AuthClient} from '../../../shared/types/api';
 import {errorMessage} from '../../../shared/api/error-message';
 import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {Alert} from '../../../shared/ui/Alert';
 import styles from './IntakeWorkspace.module.css';
+import {displayName} from '../presentation.mjs';
 
 type Requirement={id:string;name:string;type:string;evidenceSubject:string|null};
-type Policy={id:string;name:string;documentGroups:{id:string;name:string;minimumRequired:number;documents:Requirement[]}[]};
+type Policy={id:string;policyId:string;name:string;documentGroups:{id:string;name:string;minimumRequired:number;documents:Requirement[]}[]};
 export type FormContext={student:{studentCode:string};round:{id:string;name:string;semesterId:string;declarationGuidance:string|null};
  sourceStatus:string;suggestedClaims:Record<string,string|null>;studyProcesses:{id:string;code:string}[];policyVersions:Policy[]};
 export type Attachment={id:string;fileName:string};
@@ -25,6 +27,18 @@ const personFields={relation:'Quan hệ',fullName:'Họ tên người liên quan
 const statementFields={firstDegree:'Đang học văn bằng thứ nhất',alreadyBenefitedAtSameLevel:'Đã hưởng ở cùng trình độ',
  salariedWhileStudying:'Đang hưởng lương khi đi học'};
 const idFields=new Set(['ethnicityId','classId','cohortId','managementUnitId','workplaceUnitId']);
+const catalogKinds:Record<string,string>={ethnicityId:'ethnicities',classId:'classes',cohortId:'cohorts',managementUnitId:'units'};
+type Reference={id:string;name?:string|null;code?:string|null};
+function ReferenceField({label,value,items,onChange}:{label:string;value:string;items:Reference[];onChange:(value:string)=>void}){
+ const listId=useId();
+ const readable=label.replace(/^ID /,'').replace(/^./,letter=>letter.toUpperCase());
+ const title=(item:Reference)=>[item.name,item.code].filter(Boolean).join(' · ')||'Mã '+item.id;
+ const chosen=items.find(item=>item.id===value);
+ return <label>{readable}<input aria-label={readable} list={listId} required value={chosen?title(chosen):value} onChange={event=>{
+  const text=event.currentTarget.value;onChange(items.find(item=>title(item)===text)?.id??text);
+ }}/><datalist id={listId}>{items.map(item=><option key={item.id} value={title(item)}/>)}</datalist>
+ <small className={styles.muted}>Chọn tên gợi ý hoặc nhập mã danh mục.</small></label>;
+}
 const submitFields:Record<string,string>={...personFields,...fields,...statementFields,
  requestedSemesterIds:'Học kỳ đề nghị',declarationConfirmed:'Cam kết lời khai',
  relatedPersonIndex:'Người liên quan trên giấy minh chứng',requirementId:'Loại giấy minh chứng',documents:'Minh chứng PDF'};
@@ -44,9 +58,11 @@ export function submissionErrorMessage(error:unknown) {
  return errorMessage(error);
 }
 
-export function DeclarationForm({context,initial,existing,target,busy,onUpload,onSubmit,onCancel}:{
+export function DeclarationForm({context,initial,existing,target,busy,onUpload,onSubmit,onCancel,submitLabel='Nộp hồ sơ',allowPolicySelection=false,client}:{
  context:FormContext;initial:History|null;existing:Existing[];target:{studyProcessId:string;policyVersionId:string}|null;
- busy:boolean;onUpload:(file:File)=>Promise<Attachment>;onSubmit:(event:FormEvent,form:SubmissionForm)=>Promise<void>;onCancel:()=>void;
+ busy:boolean;onUpload:(file:File)=>Promise<Attachment>;onSubmit:(event:FormEvent,form:SubmissionForm)=>Promise<void>;onCancel:()=>void;submitLabel?:string;
+ allowPolicySelection?:boolean;
+ client?:AuthClient;
 }) {
  const [claims,setClaims]=useState(()=>Object.fromEntries(Object.keys(fields).map(k=>[k,(initial?.claims??context.suggestedClaims)[k]??''])));
  const [process,setProcess]=useState(target?.studyProcessId??context.studyProcesses[0]?.id??'');
@@ -59,6 +75,22 @@ export function DeclarationForm({context,initial,existing,target,busy,onUpload,o
  }])));
  const [attachments,setAttachments]=useState<Attachment[]>(()=>Array.from(new Set(existing.map(d=>d.fileId))).map(id=>({id,fileName:'PDF '+id})));
  const [uploading,setUploading]=useState(false),[error,setError]=useState('');
+ const [step,setStep]=useState(0);
+ const formElement=useRef<HTMLFormElement>(null);
+ const stepNames=['Thông tin sinh viên','Người liên quan','Minh chứng & nộp'];
+ const [references,setReferences]=useState<Record<string,Reference[]>>({});
+ useEffect(()=>{
+  if(!client)return;
+  const controller=new AbortController();
+  void Promise.allSettled(Object.entries(catalogKinds).map(async([field,kind])=>{
+   const response=await client.request('/api/ctsv/nen-tang/danh-muc?kind='+kind+'&size=100',{signal:controller.signal});
+   const page=await response.json();return [field,page.items] as const;
+  })).then(results=>{
+   if(controller.signal.aborted)return;
+   setReferences(Object.fromEntries(results.flatMap(result=>result.status==='fulfilled'?[result.value]:[])));
+  });
+  return ()=>controller.abort();
+ },[client]);
  const selected=context.policyVersions.find(p=>p.id===policy);
  const parents=people.flatMap((person,index)=>
   ['cha','me','mẹ','bố','bo','ba','father','mother'].includes(person.relation?.trim().toLowerCase()??'')?[{person,index}]:[]);
@@ -106,22 +138,32 @@ export function DeclarationForm({context,initial,existing,target,busy,onUpload,o
     issuer:d.issuer,issuedOn:d.issuedOn,expiresOn:d.expiresOn,relatedPersonIndex:d.relatedPersonIndex}))});
  }
 
- return <form className={styles.form} onSubmit={submit}>
-  <h2>Kê khai hồ sơ</h2><p>{context.round.name}</p>
+ return <form ref={formElement} className={styles.form} onSubmit={submit} onInvalidCapture={event=>{
+  event.preventDefault();
+  const input=event.target as HTMLInputElement;
+  const group=input.closest('[data-form-step]');
+  if(group)setStep(Number(group.getAttribute('data-form-step')));
+  setError('Vui lòng kiểm tra '+(input.labels?.[0]?.textContent?.trim().slice(0,80)??'các trường bắt buộc')+'.');
+  requestAnimationFrame(()=>input.focus());
+ }}>
+  <div><h2>Kê khai hồ sơ</h2><p className={styles.muted}>{displayName(context.round.name)}</p></div>
+  <div className={styles.tabs} aria-label="Các phần kê khai">{stepNames.map((name,index)=><button type="button" key={name}
+   aria-current={step===index?'step':undefined} onClick={()=>setStep(index)}>{index+1}. {name}</button>)}</div>
   {context.round.declarationGuidance&&<p>{context.round.declarationGuidance}</p>}
   {context.sourceStatus!=='ready'&&<p>Thiếu một phần dữ liệu nguồn. Kiểm tra và bổ sung lời khai trước khi nộp.</p>}
   {error&&<Alert>{error}</Alert>}
-  <fieldset disabled={busy||uploading}>
+  <fieldset data-form-step="0" hidden={step!==0} disabled={busy||uploading}>
    <legend>Thông tin sinh viên</legend>
-   <div className={styles.fields}>{Object.entries(fields).map(([key,label])=><label key={key}>{label}
+   <div className={styles.fields}>{Object.entries(fields).map(([key,label])=>catalogKinds[key]?<ReferenceField key={key} label={label} value={claims[key]}
+    items={references[key]??[]} onChange={value=>setClaims(previous=>({...previous,[key]:value}))}/>:<label key={key}>{label}
     <input type={key==='birthDate'?'date':'text'} inputMode={idFields.has(key)?'numeric':undefined} required readOnly={key==='studentCode'} value={claims[key]} onChange={e=>{
      const value=e.currentTarget.value;setClaims(previous=>({...previous,[key]:value}));
     }}/></label>)}</div>
    <div className={styles.fields}>
     <label>Quá trình học<select required value={process} disabled={!!target} onChange={e=>setProcess(e.currentTarget.value)}>
      <option value="">Chọn quá trình</option>{context.studyProcesses.map(p=><option value={p.id} key={p.id}>{p.code}</option>)}</select></label>
-    <label>Chính sách<select required value={policy} disabled={!!target} onChange={e=>{setPolicy(e.currentTarget.value);setDocs({});}}>
-     <option value="">Chọn chính sách</option>{context.policyVersions.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label>
+    <label>Chính sách<select required value={policy} disabled={!!target&&!allowPolicySelection} onChange={e=>{setPolicy(e.currentTarget.value);setDocs({});}}>
+     <option value="">Chọn chính sách</option>{context.policyVersions.map(p=><option value={p.id} key={p.id}>{displayName(p.name)}</option>)}</select></label>
     <label>ID học kỳ đề nghị, cách nhau bằng dấu phẩy<input required value={semesters} onChange={e=>setSemesters(e.currentTarget.value)}/></label>
    </div>
    <div className={styles.fields}>{Object.entries(statementFields).map(([key,label])=><label key={key}>{label}
@@ -129,8 +171,9 @@ export function DeclarationForm({context,initial,existing,target,busy,onUpload,o
      const value=e.currentTarget.value;setStatements(previous=>({...previous,[key]:value===''?null:value==='true'}));
     }}><option value="">Chưa khai</option><option value="true">Có</option><option value="false">Không</option></select></label>)}</div>
   </fieldset>
-  <fieldset disabled={busy||uploading}>
+  <fieldset data-form-step="1" hidden={step!==1} disabled={busy||uploading}>
    <legend>Người liên quan</legend>
+   <p className={styles.muted}>Kê khai khi giấy tờ chứng minh có thông tin cha, mẹ hoặc người liên quan.</p>
    {people.map((person,index)=><fieldset key={index}><legend>Người liên quan {index+1}</legend><div className={styles.fields}>
     {Object.entries(personFields).map(([key,label])=><label key={key}>{label}<input type={key==='statusFrom'||key==='statusUntil'?'date':'text'}
      value={person[key]??''} onChange={e=>{
@@ -139,7 +182,7 @@ export function DeclarationForm({context,initial,existing,target,busy,onUpload,o
    </div></fieldset>)}
    <button type="button" onClick={()=>setPeople(previous=>[...previous,Object.fromEntries(Object.keys(personFields).map(k=>[k,null]))])}>Thêm người liên quan</button>
   </fieldset>
-  <fieldset disabled={busy||uploading}>
+  <fieldset data-form-step="2" hidden={step!==2} disabled={busy||uploading}>
    <legend>Minh chứng PDF</legend>
    <label>Chọn PDF minh chứng<input type="file" accept=".pdf,application/pdf" onChange={e=>{
     const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void upload(file);
@@ -160,7 +203,16 @@ export function DeclarationForm({context,initial,existing,target,busy,onUpload,o
     </div>)}
    </fieldset>)}
   </fieldset>
-  <label><input type="checkbox" required/> Tôi cam kết lời khai đúng sự thật</label>
-  <div><button type="submit" disabled={busy||uploading}>Nộp hồ sơ</button><button type="button" disabled={busy||uploading} onClick={onCancel}>Hủy kê khai</button></div>
+  <div data-form-step="2" hidden={step!==2}><label><input type="checkbox" required/> Tôi cam kết lời khai đúng sự thật</label></div>
+  <div className={styles.formFooter}><span className={styles.muted}>Phần {step+1} / 3</span><div className={styles.actions}>
+   <button type="button" disabled={busy||uploading} onClick={onCancel}>Hủy kê khai</button>
+   {step>0&&<button type="button" disabled={busy||uploading} onClick={()=>setStep(step-1)}>Quay lại</button>}
+   {step<2?<button type="button" className="primary" disabled={busy||uploading} onClick={()=>{
+    const fields=formElement.current?.querySelectorAll<HTMLInputElement|HTMLSelectElement>('[data-form-step="'+step+'"] input,[data-form-step="'+step+'"] select');
+    const invalid=Array.from(fields??[]).find(input=>!input.checkValidity());
+    if(invalid){invalid.reportValidity();return;}
+    setError('');setStep(step+1);
+   }}>Tiếp tục</button>:<button type="submit" disabled={busy||uploading}>{busy?'Đang gửi…':submitLabel}</button>}
+  </div></div>
  </form>;
 }

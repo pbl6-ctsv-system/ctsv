@@ -1,3 +1,3 @@
 import type {ReactNode} from 'react';
-import styles from './Alert.module.css';
-export function Alert({children}:{children:ReactNode}){return <div role="alert" className={styles.error}>{children}</div>;}
+import {ErrorFeedback} from './Feedback';
+export function Alert({children}:{children:ReactNode}){return <ErrorFeedback>{children}</ErrorFeedback>;}

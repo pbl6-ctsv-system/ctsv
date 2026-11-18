@@ -7,6 +7,7 @@ import {ApiError} from '../shared/auth/auth-client.mjs';
 import {LoginPage,readCurrentAccount} from '../features/auth';
 import {featurePages} from './navigation/featureRegistry';
 import {Alert} from '../shared/ui/Alert';
+import {FeedbackProvider} from '../shared/ui/Feedback';
 
 function Workspace(){
  const auth=useAuth();
@@ -101,4 +102,4 @@ function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Au
   {entry&&ActiveFeature&&<ActiveFeature key={entry.id+':'+entry.view} client={client} view={entry.view}/>}
  </AppShell>;
 }
-export default function App(){return <AuthProvider><Workspace/></AuthProvider>;}
+export default function App(){return <FeedbackProvider><AuthProvider><Workspace/></AuthProvider></FeedbackProvider>;}

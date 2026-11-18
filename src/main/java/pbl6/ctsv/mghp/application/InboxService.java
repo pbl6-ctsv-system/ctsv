@@ -16,10 +16,20 @@ class InboxService {
     InboxService(IntakeRepository repo,Clock clock) { this.repo=repo; this.clock=clock; }
 
     void publish(Application application,long actor,long owner,String title,OffsetDateTime now) {
+        publish(application,actor,owner,title,now,null);
+    }
+
+    void publish(Application application,long actor,long owner,String title,OffsetDateTime now,Supplement supplement) {
         var notice=new Notification();
         notice.module="MGHP"; notice.title=title; notice.content=title+" "+application.code+".";
         notice.category="mghp"; notice.objectType="mghp_ho_so"; notice.objectId=application.id.toString();
         notice.actionUrl="/mghp"; notice.status="published"; notice.publishedAt=now; notice.createdAt=now; notice.createdBy=actor;
+        if(supplement!=null) {
+            notice.objectType="mghp_yeu_cau_bo_sung";
+            notice.objectId=supplement.id.toString();
+            notice.actionUrl="/mghp/ho-so?bo-sung="+supplement.id;
+            notice.deadline=supplement.deadline;
+        }
         repo.save(notice);
         var recipient=new Recipient();
         recipient.notificationId=notice.id; recipient.userId=owner; recipient.createdAt=now;
@@ -56,8 +66,11 @@ class InboxService {
     }
 
     private Map<String,Object> item(Notification n,Recipient r) {
+        String supplementAction="mghp_yeu_cau_bo_sung".equals(n.objectType) && n.objectId!=null
+            && n.objectId.matches("[1-9][0-9]*")?"/mghp/ho-so?bo-sung="+n.objectId:null;
+        String action="/mghp".equals(n.actionUrl) || java.util.Objects.equals(supplementAction,n.actionUrl)?n.actionUrl:null;
         return map("id",n.id,"title",n.title,"content",n.content,"category",n.category,
-            "actionUrl","/mghp".equals(n.actionUrl)?n.actionUrl:null,"deadline",n.deadline,"important",n.important,
+            "actionUrl",action,"deadline",n.deadline,"important",n.important,
             "publishedAt",n.publishedAt,"createdAt",n.createdAt,"readAt",r.readAt);
     }
 }

@@ -50,6 +50,16 @@ Setup mới tạo dữ liệu mẫu cho `dev.sinhvien` (`DEV-SV-001`). Với DB 
 
 Mở lại form để lấy dữ liệu gợi ý. Điền địa chỉ thường trú giả lập vì đây là lời khai của sinh viên. Giữ mã số danh mục được điền sẵn, chọn đợt còn nhận và gắn PDF vào từng yêu cầu giấy của chính sách trước khi nộp.
 
+## Bổ sung hồ sơ MGHP P07 trên DEV
+
+P07 dùng V12. Sau khi source có V12 và được phép cập nhật DEV, dùng `stop` → `migrate` → `start` như phần migration bên dưới. `start` giữ vai trò kiểm tra phiên bản. Auth và cấu hình Cloudinary DEV vẫn lấy từ cấu hình local đã lưu.
+
+- `dev.chuyenvien` vào **Miễn giảm học phí → Hồ sơ MGHP**, chọn hồ sơ, mở **Mở vòng bổ sung**, nhập lý do/hạn/mục cần bổ sung rồi gửi. Mã vòng được trả về trên màn hình. Dùng **Đọc vòng bổ sung** để đọc lại, gia hạn, xử lý từng mục và đóng vòng.
+- `dev.sinhvien` mở **Thông báo → Xem yêu cầu bổ sung**, hoặc nhập mã yêu cầu tại **Hồ sơ MGHP → Bổ sung hồ sơ**. Kê khai phản hồi đầy đủ, có thể dùng PDF đã nộp hoặc tải PDF mới. Mỗi vòng nhận một bản phản hồi.
+- Chuyên viên đọc **Đối chiếu và giấy đã nộp**, ghi nhận bản cứng/kiểm giấy trên đúng bản mới. Đọc lại khi dữ liệu đổi trước khi thao tác. Tài khoản admin Auth chỉ sử dụng chức năng nghiệp vụ khi được cấp capability phù hợp.
+
+Smoke thực hành chạy trên ứng dụng của launcher và `ctsv_dev`. Script `frontend/e2e/p07-dev.mjs` tạo riêng dữ liệu synthetic qua API/UI hiện có, dùng PDF do caller chỉ định, giữ dữ liệu đã có. Script cần template đợt synthetic `NAV-SYNTH-*` và tài khoản DEV đã setup. Cách nạp cấu hình và các ID dữ liệu mẫu đã kiểm nằm trong [runbook P07](../../../nghiepvu/09-trien-khai/p07-supplement-implementation-plan.md#bàn-giao-dev--18112026). Evidence có URL/DB/storage thực tế trong `browser-report.json`.
+
 ## Status/stop có giới hạn gì?
 
 - Status đối chiếu PID + thời điểm tạo UTC + command line, rồi in URL/DB/log path. Nó **không** tự gọi DB hoặc kiểm HTTP liveness liên tục. `RUNNING` chỉ xác nhận process identity, không bảo đảm mọi API đang healthy.
