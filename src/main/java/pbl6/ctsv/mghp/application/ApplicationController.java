@@ -25,12 +25,16 @@ class ApplicationController {
     private final ApplicationReads reads;
     private final ApplicationService writes;
     private final InboxService inbox;
+    private final SupplementService supplements;
+    private final DocumentReviewService reviews;
     private final TransactionTemplate tx;
     private final ObjectMapper json;
 
     ApplicationController(AuthAccess auth,FoundationAccess access,ApplicationReads reads,ApplicationService writes,
-                          InboxService inbox,PlatformTransactionManager manager,ObjectMapper json) {
+                          InboxService inbox,SupplementService supplements,DocumentReviewService reviews,
+                          PlatformTransactionManager manager,ObjectMapper json) {
         this.auth=auth; this.access=access; this.reads=reads; this.writes=writes; this.inbox=inbox;
+        this.supplements=supplements; this.reviews=reviews;
         tx=new TransactionTemplate(manager);
         this.json=json.copy().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
@@ -86,9 +90,133 @@ class ApplicationController {
         var principal=principal(request);
         var body=body(request);
         var result=tx.execute(s->writes.submit(student(principal,false),id,body,request.getHeader("If-Match"),received));
+        return submissionReply(result);
+    }
+
+    private ResponseEntity<?> submissionReply(ApplicationService.Accepted result) {
         var reply=ResponseEntity.status(result.replay()?200:201).cacheControl(CacheControl.noStore());
         if(!result.replay())reply.location(URI.create("/api/ctsv/mghp/ho-so/"+result.root().id+"/phien-ban/"+result.version().id));
         return reply.body(IntakeMapping.acknowledgement(result.root(),result.version()));
+    }
+
+    @PostMapping("/mghp/ho-so/{idHoSo}/yeu-cau-bo-sung")
+    ResponseEntity<?> requestSupplement(@PathVariable String idHoSo,HttpServletRequest request) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var input=body(request);
+        var result=tx.execute(s -> supplements.create(specialist(principal),id(idHoSo,"idHoSo"),input,
+            request.getHeader("If-Match"),received));
+        return ResponseEntity.created(URI.create("/api/ctsv/mghp/yeu-cau-bo-sung/"+result.body().get("id")))
+            .cacheControl(CacheControl.noStore()).eTag(result.tag()).body(result.body());
+    }
+
+    @GetMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}")
+    ResponseEntity<?> supplement(@PathVariable String idYeuCauBoSung,HttpServletRequest request) {
+        return readSupplement(idYeuCauBoSung,request,false);
+    }
+
+    @GetMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}/phan-hoi")
+    ResponseEntity<?> responseContext(@PathVariable String idYeuCauBoSung,HttpServletRequest request) {
+        return readSupplement(idYeuCauBoSung,request,true);
+    }
+
+    private ResponseEntity<?> readSupplement(String key,HttpServletRequest request,boolean context) {
+        var principal=principal(request);
+        query(request);
+        var result=tx.execute(s -> {
+            var actor=access.authorize(principal,true,null);
+            long supplementId=id(key,"idYeuCauBoSung");
+            if(actor.studentId()==null)return supplements.get(actor,true,supplementId,context);
+            if(context) {
+                try { return supplements.get(actor,false,supplementId,true); }
+                catch(IntakeProblem failure) { if(failure.status!=404)throw failure; }
+            }
+            try { return supplements.get(specialist(principal),true,supplementId,context); }
+            catch(FoundationAccess.Failure failure) { if(failure.status()!=403)throw failure; }
+            return supplements.get(actor,false,supplementId,context);
+        });
+        return tagged(result);
+    }
+
+    @PutMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}/han-nop")
+    ResponseEntity<?> extendSupplement(@PathVariable String idYeuCauBoSung,HttpServletRequest request) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var input=body(request);
+        return ok(tx.execute(s -> supplements.extend(specialist(principal),id(idYeuCauBoSung,"idYeuCauBoSung"),
+            input,request.getHeader("If-Match"),received)));
+    }
+
+    @PostMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}/phan-hoi")
+    ResponseEntity<?> respondSupplement(@PathVariable String idYeuCauBoSung,HttpServletRequest request) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var input=body(request);
+        return submissionReply(tx.execute(s -> supplements.respond(student(principal,false),id(idYeuCauBoSung,"idYeuCauBoSung"),
+            input,request.getHeader("If-Match"),received)));
+    }
+
+    @PutMapping("/mghp/muc-bo-sung/{idMuc}/danh-gia")
+    ResponseEntity<?> reviewSupplementItem(@PathVariable String idMuc,HttpServletRequest request) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var input=body(request);
+        return ok(tx.execute(s -> supplements.review(specialist(principal),id(idMuc,"idMuc"),input,
+            request.getHeader("If-Match"),received)));
+    }
+
+    @PostMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}/huy")
+    ResponseEntity<?> cancelSupplement(@PathVariable String idYeuCauBoSung,HttpServletRequest request) throws IOException {
+        return closeSupplement(idYeuCauBoSung,request,false);
+    }
+
+    @PostMapping("/mghp/yeu-cau-bo-sung/{idYeuCauBoSung}/hoan-tat")
+    ResponseEntity<?> completeSupplement(@PathVariable String idYeuCauBoSung,HttpServletRequest request) throws IOException {
+        return closeSupplement(idYeuCauBoSung,request,true);
+    }
+
+    private ResponseEntity<?> closeSupplement(String key,HttpServletRequest request,boolean complete) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var reason=SupplementService.reason(shape(body(request),List.of("reason")));
+        return tagged(tx.execute(s -> supplements.close(specialist(principal),id(key,"idYeuCauBoSung"),reason,
+            request.getHeader("If-Match"),complete,received)));
+    }
+
+    @GetMapping("/mghp/ho-so/{idHoSo}/ngu-canh-xet-duyet")
+    ResponseEntity<?> reviewContext(@PathVariable String idHoSo,HttpServletRequest request) {
+        var principal=principal(request);
+        query(request);
+        return ok(tx.execute(s -> {
+            specialist(principal);
+            return reviews.context(id(idHoSo,"idHoSo"));
+        }));
+    }
+
+    @PostMapping("/mghp/giay-to-da-nop/{idGiayTo}/xac-nhan-ban-cung")
+    ResponseEntity<?> hardCopy(@PathVariable String idGiayTo,HttpServletRequest request) throws IOException {
+        return documentCheck(idGiayTo,request,true);
+    }
+
+    @PostMapping("/mghp/giay-to-da-nop/{idGiayTo}/kiem-tra")
+    ResponseEntity<?> evidenceCheck(@PathVariable String idGiayTo,HttpServletRequest request) throws IOException {
+        return documentCheck(idGiayTo,request,false);
+    }
+
+    private ResponseEntity<?> documentCheck(String key,HttpServletRequest request,boolean hardCopy) throws IOException {
+        var received=writes.received();
+        var principal=principal(request);
+        var input=body(request);
+        var result=tx.execute(s -> reviews.check(specialist(principal),id(key,"idGiayTo"),input,request.getHeader("If-Match"),hardCopy,received));
+        return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(result);
+    }
+
+    private FoundationAccess.Identity specialist(AuthAccess.Principal principal) {
+        return access.authorize(principal,true,"mghp_chuyen_vien");
+    }
+
+    private ResponseEntity<?> tagged(ApplicationReads.Detail detail) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).eTag(detail.tag()).body(detail.body());
     }
 
     @PostMapping("/mghp/ho-so/{idHoSo}/rut")

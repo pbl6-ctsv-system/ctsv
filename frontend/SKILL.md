@@ -169,3 +169,17 @@ Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần
 - Build/test phù hợp đã chạy thật, những phần chưa kiểm được ghi rõ?
 
 File này không thay thế nghiệp vụ/API Contract của từng module hoặc cấp quyền triển khai thay member khác.
+
+## 11. Thiết kế theo tác vụ — áp dụng sau review UI ngày 18/11/2026
+
+- Trước khi dựng màn hình, xác định người dùng, việc chính và bước tiếp theo. Danh sách, chi tiết và form tạo/sửa là các trạng thái rõ ràng. Khi mở form dài, thu lại danh sách và tác vụ không liên quan. Có đường quay về dễ thấy, giữ lựa chọn và dữ liệu nhập khi lỗi.
+- Cùng dữ liệu nhưng khác tác vụ phải có tên menu và màn hình rõ theo capability. “Hồ sơ MGHP” của sinh viên để nộp/theo dõi tách khỏi “Tiếp nhận & bổ sung hồ sơ” của chuyên viên. Hai tác vụ có route/guard riêng, vẫn có thể dùng cùng component/API hợp lệ; người có cả hai capability được truy cập từng tác vụ, không để việc chọn view theo một vai trò che mất tác vụ còn lại. Không suy quyền từ tên role hoặc tên menu.
+- Mỗi vùng chỉ có một nút chính. Nút đọc lại/tải tài liệu/chuyển bước là secondary. Nút rút/hủy/khóa là danger, đặt trong vùng tác vụ riêng, nêu hậu quả và yêu cầu lý do theo contract. Mọi button trong form phải khai báo type; phím Enter chỉ gửi đúng form đang thực hiện.
+- Form dài chia nhóm hoặc bước có tên nghiệp vụ. Giữ state khi chuyển bước, kiểm đủ các phần trước khi gửi và mở đúng phần có lỗi. Form con không được lồng trong form khác. Field chỉ đọc trình bày như thông tin, không dựng hàng loạt input disabled chỉ để hiển thị.
+- Desktop dùng một hoặc hai cột, gap 16–24px. Căn hàng các label/control; nút tác vụ nằm cùng nhóm. Mobile 360px một cột; các button, UUID và tên dài không làm tràn trang. Không tạo card/padding/shadow lồng vô hạn cho mọi section.
+- Các thao tác phụ như gia hạn, nhập mã tham khảo, cấu hình chi tiết hoặc kiểm một giấy phải được mở theo nhu cầu. Trạng thái và hạn cần xử lý vẫn thấy ngay. Bảng đối chiếu dùng cột có nhãn; lịch sử dùng dòng thời gian, tài liệu có tên dễ đọc.
+- Lỗi request phải xuất hiện trong viewport ngay cả khi đã cuộn xuống cuối form. Dùng Alert/FeedbackProvider chung. Lỗi không tự mất theo timer; người dùng có thể đóng bằng bàn phím. Không tự đưa focus ra khỏi field khi có lỗi mạng. Lỗi field phải giữ/mở đúng phần để sửa; thông báo thành công cần gần tác vụ.
+- Tên và nhãn hướng đến người dùng. Hiển thị ngày theo vi-VN, trạng thái có chữ, UUID/mã kỹ thuật ở thông tin tham khảo. Với danh mục đã có API, cung cấp tên gợi ý/chọn và giữ ID trong request. Không ép người dùng đoán mã hoặc tạo API giả khi thiếu nguồn.
+- Dữ liệu mẫu đặt tên có ý nghĩa, ví dụ “Đợt thực hành bổ sung hồ sơ”, mô tả rõ đây là thực hành. Mã chạy test/epoch nằm ở phần tham khảo. Chỉ đổi cách trình bày cho mẫu nhận diện chắc chắn; tên thật và mã đối chiếu phải giữ nguyên. Không suy học kỳ, người, quyền hoặc căn cứ pháp lý từ một mã test.
+- API/quyền/ETag và Auth client giữ nguyên trong thay đổi UI. Trạng thái pending chặn gửi lặp; sau success đọc lại các vùng liên quan. Không dùng tải lại toàn trang, bỏ validation hoặc đổi expected để che lỗi nút/request.
+- Kiểm bằng browser thật trước bàn giao. Tối thiểu một luồng ghi hợp lệ, một lỗi từ backend sau khi cuộn, một tài khoản thiếu quyền, giữ dữ liệu qua chuyển bước, refresh route và viewport 360px. Xác nhận nút tạo request đúng method/path, response/status và UI sau commit. Chụp và xem ảnh desktop/mobile; ghi rõ SQL/HTTP/storage REAL hay STUB.

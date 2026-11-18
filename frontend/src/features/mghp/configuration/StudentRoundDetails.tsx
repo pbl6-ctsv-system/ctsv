@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import type {AuthClient} from '../../../shared/types/api';
 import type {FormContext} from '../intake/DeclarationForm';
 import styles from './ConfigurationWorkspace.module.css';
+import {displayName} from '../presentation.mjs';
 
 type PublicRound={
  id:string;code:string;name:string;description:string|null;
@@ -30,7 +31,7 @@ export function StudentRoundDetails({client,round,status,semester}:{
  },[client,round.id]);
 
  return <section className={styles.card} aria-label="Thông tin đợt xét">
-  <h3>{round.name} · {status}</h3>
+  <h3>{displayName(round.name,round.code)}</h3><p><span className={styles.badge}>{status}</span></p>
   <dl>
    <dt>Mã đợt</dt><dd>{round.code}</dd>
    {semester&&<><dt>Học kỳ</dt><dd>{semester}</dd></>}

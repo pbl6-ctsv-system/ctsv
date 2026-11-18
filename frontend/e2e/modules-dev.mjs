@@ -120,8 +120,8 @@ try{
   await specialist.page.getByLabel('Thứ tự học kỳ',{exact:true}).waitFor();
   await openNav(specialist.page,'Đợt xét MGHP');
   await specialist.page.getByRole('button',{name:'Tạo đợt xét',exact:true}).waitFor();
-  await openNav(specialist.page,'Hồ sơ MGHP');
-  await specialist.page.getByRole('heading',{name:'Hồ sơ miễn giảm học phí'}).waitFor();
+  await openNav(specialist.page,'Tiếp nhận & bổ sung hồ sơ');
+  await specialist.page.getByRole('heading',{name:'Tiếp nhận & bổ sung hồ sơ MGHP'}).waitFor();
   assert.equal(await specialist.page.getByLabel('Đợt kê khai',{exact:true}).count(),0);
  });
  await check('MODULE04_AUTH_ADMIN_ISOLATED_FROM_FOUNDATION',async()=>{

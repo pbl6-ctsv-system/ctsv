@@ -8,7 +8,8 @@ export const navigationItems=Object.freeze([
  {id:'auth-rbac',label:'Danh mục quyền Auth',feature:'auth',view:'rbac',path:'/quan-tri/danh-muc-quyen',group:'auth',allow:['auth.rbac.read']},
  {id:'mghp-policies',label:'Chính sách MGHP',feature:'mghp',view:'policies',path:'/mghp/chinh-sach',group:'policy',allow:['mghpSpecialist']},
  {id:'mghp-rounds',label:'Đợt xét MGHP',feature:'mghp',view:'rounds',studentView:'public-rounds',path:'/mghp/dot-xet',group:'intake',allow:['student','mghpSpecialist']},
- {id:'mghp-applications',label:'Hồ sơ MGHP',feature:'mghp',view:'staff-applications',studentView:'applications',path:'/mghp/ho-so',group:'intake',allow:['student','mghpSpecialist']},
+ {id:'mghp-applications',label:'Hồ sơ MGHP',feature:'mghp',view:'applications',path:'/mghp/ho-so',group:'intake',allow:['student']},
+ {id:'mghp-casework',label:'Tiếp nhận & bổ sung hồ sơ',feature:'mghp',view:'staff-applications',path:'/mghp/tiep-nhan-ho-so',group:'intake',allow:['mghpSpecialist']},
  {id:'mghp-inbox',label:'Thông báo',feature:'mghp',view:'inbox',path:'/thong-bao',group:'notifications',allow:['ctsvIdentity']},
 ].map(item=>Object.freeze(item)));
 

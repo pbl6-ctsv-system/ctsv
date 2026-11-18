@@ -18,7 +18,7 @@ import static pbl6.ctsv.mghp.application.IntakeProblem.invalid;
 @ConditionalOnProperty(name="ctsv.mghp.applications.enabled",havingValue="true")
 class ApplicationService {
     record Accepted(Application root,Submission version,boolean replay) {}
-    private static final List<String> FIELDS=List.of("operationId","roundId","studyProcessId","policyVersionId",
+    static final List<String> FIELDS=List.of("operationId","roundId","studyProcessId","policyVersionId",
         "claims","requestedSemesterIds","statements","relatedPeople","documents");
     private final IntakeRepository repo;
     private final ApplicationReads reads;
@@ -39,7 +39,7 @@ class ApplicationService {
         long process=id(body.get("studyProcessId"),"studyProcessId");
         long policyVersion=id(body.get("policyVersionId"),"policyVersionId");
         UUID operation=operation(body.get("operationId"));
-        String hash=hash(target,body);
+        String hash=hash(target==null?"initial":target.toString(),body);
         long student=actor.studentId();
         repo.lockOperation(operation);
         if(target!=null) {
@@ -79,6 +79,15 @@ class ApplicationService {
             if(!root.roundId.equals(round)||!root.processId.equals(process)||!root.policyVersionId.equals(policyVersion)
                 ||!"reopened".equals(root.status)||repo.confirmed(root)) throw IntakeProblem.conflict("SUBMISSION_NOT_ALLOWED");
         }
+        return persistSubmission(actor,root,round,process,policyVersion,body,operation,hash,received,null);
+    }
+
+    Accepted persistSubmission(Identity actor,Application root,long round,long process,long policyVersion,JsonNode body,
+                               UUID operation,String hash,Instant received,Supplement supplement) {
+        var policy=cfg.policy(policyVersion);
+        long policyId=Long.parseLong(policy.get("policyId").toString());
+        long student=actor.studentId();
+        boolean initial=root==null;
         var v=new Submission();
         claims(v,body.get("claims"));
         statements(v,body.get("statements"));
@@ -124,8 +133,13 @@ class ApplicationService {
             repo.save(root);
         }
         v.applicationId=root.id; v.operationId=operation; v.hash=hash; v.actorId=actor.userId();
-        v.type=target==null?"initial":"resubmission";
-        v.revision=target==null?1:repo.versions(root.id).stream().findFirst().orElseThrow().revision+1;
+        v.type=initial?"initial":"resubmission";
+        if(supplement!=null) {
+            v.type="initial_supplement".equals(supplement.updateType)?"supplement":supplement.updateType;
+            v.supplementId=supplement.id;
+            v.benefitId=supplement.benefitId;
+        }
+        v.revision=initial?1:repo.versions(root.id).stream().findFirst().orElseThrow().revision+1;
         v.submittedAt=now; v.createdAt=now; v.roundId=round; v.policyVersionId=policyVersion;
         v.sourceAt=(OffsetDateTime)source.get("observedAt");
         var comparison=compare(v,source);
@@ -151,9 +165,11 @@ class ApplicationService {
             repo.save(row);
         }
         for(var row:comparison){row.versionId=v.id; repo.save(row);}
-        if(target!=null)repo.change(root,"submitted",now,null);
-        event(root,v,actor.userId(),v.type,target==null?null:"reopened","submitted",null,now,null);
-        inbox.publish(root,actor.userId(),actor.userId(),"Đã tiếp nhận hồ sơ",now);
+        if(supplement==null) {
+            if(!initial)repo.change(root,"submitted",now,null);
+            event(root,v,actor.userId(),v.type,initial?null:"reopened","submitted",null,now,null);
+            inbox.publish(root,actor.userId(),actor.userId(),"Đã tiếp nhận hồ sơ",now);
+        }
         repo.flush();
         return new Accepted(root,v,false);
     }
@@ -283,10 +299,10 @@ class ApplicationService {
         repo.save(row);
     }
 
-    private String hash(Long target,JsonNode body) {
+    String hash(String target,JsonNode body) {
         try {
             var canonical=json.createObjectNode();
-            canonical.put("target",target==null?"initial":target.toString());
+            canonical.put("target",target);
             var payload=(ObjectNode)sorted(body);
             payload.remove("operationId");
             canonical.set("content",payload);
