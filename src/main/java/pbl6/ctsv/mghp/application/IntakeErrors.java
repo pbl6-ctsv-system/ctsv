@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import pbl6.ctsv.auth.AuthFailure;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 
-@RestControllerAdvice(assignableTypes=ApplicationController.class)
+@RestControllerAdvice(assignableTypes={ApplicationController.class,EvaluationController.class,BenefitController.class})
 class IntakeErrors {
     @ExceptionHandler(IntakeProblem.class)
     ResponseEntity<?> problem(IntakeProblem error,HttpServletRequest req) {

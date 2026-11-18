@@ -64,6 +64,8 @@ class P06FileHttpIT {
     @TestConfiguration(proxyBeanMethods=false)
     static class Config {
         @Bean DataSource p06Source() throws Exception {
+            if(Boolean.getBoolean("p08.test.enabled"))
+                return P06Database.migrate("ctsv_p08_test_20261118","p08_test_owner","ctsv-mghp-p08-20261118","12");
             if(Boolean.getBoolean("p07.test.enabled"))
                 return P06Database.migrate("ctsv_p07_test_20261117","p07_test_owner","ctsv-mghp-p07-20261117","11");
             return P06Database.migrate();
@@ -87,7 +89,7 @@ class P06FileHttpIT {
 
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) throws Exception {
         AuthHttpIT.configuration(registry);
-        if (Boolean.getBoolean("p06.browser.enabled") || Boolean.getBoolean("p07.browser.enabled"))
+        if (Boolean.getBoolean("p06.browser.enabled") || Boolean.getBoolean("p07.browser.enabled") || Boolean.getBoolean("p08.browser.enabled"))
             P05BrowserHarnessIT.browserProperties(registry);
         if (Boolean.getBoolean("p06.cloudinary.real") || Boolean.getBoolean("p06.browser.cloudinary.real")) {
             registry.add("ctsv.files.cloudinary.enabled",() -> true);
@@ -407,10 +409,15 @@ class P06FileHttpIT {
               ngay_bat_dau_hieu_luc,ma_pham_vi,trang_thai) VALUES(?,?,N'SYNTHETIC P06 chính sách',1,'20260101','hoc_phi','draft')
             """,parent,next);
         long group=insert("INSERT dbo.mghp_nhom_yeu_cau_giay_to(phien_ban_chinh_sach_id,ma,ten,so_yeu_cau_toi_thieu_dat) VALUES(?,'TEST','SYNTHETIC',1)",policy);
+        if(Boolean.getBoolean("p08.test.enabled")){
+            jdbc.update("UPDATE dbo.mghp_phien_ban_chinh_sach SET tinh_trang_xac_nhan_quy_tac='da_doi_chieu_nguon' WHERE id=?",policy);
+            jdbc.update("INSERT dbo.mghp_tieu_chi_chinh_sach(phien_ban_chinh_sach_id,ma,ten,bat_buoc,co_dieu_kien_ap_dung) VALUES(?,'P08-VERIFIED',N'SYNTHETIC đối chiếu điều kiện',1,0)",policy);
+        }
         jdbc.update("""
             INSERT dbo.mghp_giay_to_bat_buoc(nhom_id,ma,ten,loai_giay_to,chu_the_minh_chung)
             VALUES(?,'TEST','SYNTHETIC P06 PDF',?,'sinh_vien')
             """,group,m6?"xac_nhan_cu_tru":"xac_nhan_khuyet_tat");
+        if(Boolean.getBoolean("p08.test.enabled")&&"M2".equals(policyCode))jdbc.update("INSERT dbo.mghp_giay_to_bat_buoc(nhom_id,ma,ten,loai_giay_to,chu_the_minh_chung) VALUES(?,'TEST-ALT',N'SYNTHETIC giấy thay thế','quyet_dinh_tro_cap_xa_hoi','sinh_vien')",group);
         if(m6) {
             jdbc.update("UPDATE dbo.mghp_nhom_yeu_cau_giay_to SET so_yeu_cau_toi_thieu_dat=2 WHERE id=?",group);
             jdbc.update("""
@@ -439,8 +446,8 @@ class P06FileHttpIT {
 
     private com.fasterxml.jackson.databind.node.ObjectNode submission(IntakeFixture f,long file) {
         long req=jdbc.queryForObject("""
-            SELECT r.id FROM dbo.mghp_giay_to_bat_buoc r JOIN dbo.mghp_nhom_yeu_cau_giay_to g ON g.id=r.nhom_id
-            WHERE g.phien_ban_chinh_sach_id=? AND r.chu_the_minh_chung='sinh_vien'
+            SELECT TOP(1) r.id FROM dbo.mghp_giay_to_bat_buoc r JOIN dbo.mghp_nhom_yeu_cau_giay_to g ON g.id=r.nhom_id
+            WHERE g.phien_ban_chinh_sach_id=? AND r.chu_the_minh_chung='sinh_vien' ORDER BY r.id
             """,Long.class,f.policy());
         var n=JSON.createObjectNode();
         n.put("operationId",UUID.randomUUID().toString()).put("roundId",""+f.round()).put("studyProcessId",""+f.process())
@@ -466,17 +473,347 @@ class P06FileHttpIT {
     }
 
     private SupplementFixture supplementFixture(String policyCode) throws Exception {
-        if(!Boolean.getBoolean("p07.test.enabled"))throw new IllegalStateException("P07 requires its own guarded database");
+        return supplementFixture(policyCode,false);
+    }
+
+    private SupplementFixture supplementFixture(String policyCode,boolean retrospectiveDocument) throws Exception {
+        if(!Boolean.getBoolean("p07.test.enabled")&&!Boolean.getBoolean("p08.test.enabled"))throw new IllegalStateException("P07/P08 requires its own guarded database");
         var owner=actor("student");
         var fixture=intake(owner,false,policyCode);
         var sample=Path.of(java.util.Objects.requireNonNull(System.getenv("P07_SAMPLE_PDF")));
         var uploaded=upload("minh-chung",owner,"du lieu test.pdf",Files.readAllBytes(sample)).expect(201).json();
         var file=uploaded.path("id").asLong();
-        var ack=command("POST",APPLICATIONS,owner,submission(fixture,file),null).expect(201).json();
+        var content=submission(fixture,file);
+        if(retrospectiveDocument)((com.fasterxml.jackson.databind.node.ObjectNode)content.path("documents").get(0)).put("issuedOn","2026-10-15");
+        if("M6".equals(policyCode))addM6Parent(content,fixture,file);
+        if(Boolean.getBoolean("p08.test.enabled")&&"M2".equals(policyCode)){
+            long alternative=jdbc.queryForObject("SELECT d.id FROM dbo.mghp_giay_to_bat_buoc d JOIN dbo.mghp_nhom_yeu_cau_giay_to g ON g.id=d.nhom_id WHERE g.phien_ban_chinh_sach_id=? AND d.ma='TEST-ALT'",Long.class,fixture.policy());
+            content.withArray("documents").addObject().put("requirementId",Long.toString(alternative)).put("fileId",Long.toString(file)).putNull("documentNumber").putNull("issuer").putNull("issuedOn").putNull("expiresOn").putNull("relatedPersonIndex");
+        }
+        var ack=command("POST",APPLICATIONS,owner,content,null).expect(201).json();
         return new SupplementFixture(owner,fixture,file,APPLICATIONS+"/"+ack.path("applicationId").asText(),ack.path("versionId").asText());
     }
 
     private static String etag(Reply reply) { return reply.headers().firstValue("ETag").orElseThrow(); }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode evaluation(SupplementFixture f) throws Exception {
+        var b=JSON.createObjectNode().put("applicationId",f.root().substring(f.root().lastIndexOf('/')+1))
+            .put("submissionId",f.baseVersion()).putNull("benefitId").putNull("updateSubmissionId")
+            .put("processId",Long.toString(f.intake().process())).put("semesterId",Long.toString(f.intake().semester()))
+            .put("policyVersionId",Long.toString(f.intake().policy())).put("scopeCode","hoc_phi")
+            .put("result","can_xac_minh").put("reason","Synthetic: cần đối chiếu nội dung giấy")
+            .putNull("timeEvidence").putNull("ageReferenceDate").putNull("birthDateUsed").putNull("statusHistoryId");
+        var criteria=b.putArray("criteria");
+        jdbc.queryForList("SELECT id FROM dbo.mghp_tieu_chi_chinh_sach WHERE phien_ban_chinh_sach_id=?",Long.class,f.intake().policy())
+            .forEach(id->criteria.addObject().put("criterionId",id.toString()).put("result","can_xac_minh").putNull("reasonCode").put("note","Chờ xác minh giấy"));
+        var document=get(f.root(),f.owner()).expect(200).json().path("submittedVersions").get(0).path("documents").get(0).path("id").asText();
+        b.putArray("evidence").addObject().put("documentId",document).putNull("criterionId").putNull("from").putNull("to")
+            .put("result","can_xac_minh").put("reason","Chưa đủ nguồn để xác nhận");
+        b.putArray("eligiblePeriods");return b;
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08DraftConfirmRevisionAndAuthorization() throws Exception {
+        var f=supplementFixture();var body=evaluation(f);var base="/api/ctsv/mghp/danh-gia";
+        command("POST",base,admin,body,null).problem(403,"FORBIDDEN");
+        var created=command("POST",base,specialist,body,null).expect(201);
+        var url=created.location();var first=created.json().path("id").asText();
+        assertThat(created.json().path("chainHeadId").asText()).isEqualTo(first);
+        get(url,f.owner()).problem(403,"FORBIDDEN");
+        command("PUT",url,specialist,body,null).problem(428,"PRECONDITION_REQUIRED");
+        command("PUT",url,specialist,body,etag(created)).expect(200);
+        command("POST",url+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Xác nhận nhận định cần xác minh"),etag(created)).problem(412,"VERSION_CONFLICT");
+        var confirmed=command("POST",url+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Xác nhận nhận định cần xác minh"),etag(get(url,specialist).expect(200))).expect(200);
+        assertThat(confirmed.json().path("status").asText()).isEqualTo("confirmed");
+        assertThat(confirmed.json().path("eligiblePeriods").size()).isZero();
+        command("POST",f.root()+"/rut",f.owner(),JSON.createObjectNode().put("reason","Không được rút sau xác nhận"),etag(get(f.root(),f.owner()).expect(200)))
+            .problem(409,"APPLICATION_NOT_WITHDRAWABLE");
+        command("PUT",url,specialist,body,etag(confirmed)).problem(409,"EVALUATION_IMMUTABLE");
+        var revision=command("POST",url+"/phien-ban",specialist,JSON.createObjectNode().put("reason","Có thêm nguồn cần kiểm tra"),etag(confirmed)).expect(201);
+        assertThat(revision.json().path("revision").asInt()).isEqualTo(2);
+        assertThat(get(url,specialist).expect(200).json().path("status").asText()).isEqualTo("confirmed");
+        var next=command("POST",revision.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Xác nhận nhận định tiếp theo"),etag(revision)).expect(200);
+        assertThat(next.json().path("status").asText()).isEqualTo("confirmed");
+        assertThat(get(url,specialist).expect(200).json().path("status").asText()).isEqualTo("superseded");
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08BenefitObservationProjectionAndReview() throws Exception {
+        var f=supplementFixture("M4");long rootId=Long.parseLong(f.root().substring(f.root().lastIndexOf('/')+1));
+        long benefit=insert("""
+            INSERT dbo.mghp_quyen_huong(ma_quyen_huong,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,
+                ma_pham_vi,phien_ban_ho_so_nguon_id,chinh_sach_id,ty_le_giam,ngay_cong_nhan_tu,ngay_cong_nhan_den,trang_thai)
+            SELECT ?,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,'hoc_phi',?,chinh_sach_id,1,'2026-09-01','2027-01-31','recognized'
+            FROM dbo.mghp_ho_so WHERE id=?
+            ""","SYNTHETIC-P08-"+UUID.randomUUID(),Long.parseLong(f.baseVersion()),rootId);
+        var url="/api/ctsv/mghp/quyen-huong/"+benefit;
+        var initial=get(url,specialist).expect(200);var studentRead=get(url,f.owner()).expect(200);
+        assertThat(studentRead.headers().firstValue("ETag")).isEmpty();
+        get(url,other).problem(404,"NOT_FOUND");get(url,admin).problem(403,"FORBIDDEN");
+        var observation=JSON.createObjectNode().putNull("nextReviewOn").put("reviewReason","SYNTHETIC: chu kỳ cần đối chiếu")
+            .put("cycleVerificationStatus","unverified").putNull("updateMode").putNull("employmentUnitGroup");
+        var updated=command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(initial)).expect(201);
+        assertThat(updated.json().path("rate").asText()).isEqualTo(initial.json().path("rate").asText());
+        assertThat(updated.json().path("recognizedFrom")).isEqualTo(initial.json().path("recognizedFrom"));
+        var publicHistory=get(url,f.owner()).expect(200).json();
+        assertThat(publicHistory.path("events").get(0).has("reason")).isFalse();
+        assertThat(publicHistory.path("events").get(0).has("decisionLineId")).isFalse();
+        var list=get("/api/ctsv/mghp/quyen-huong/can-ra-soat?semesterId="+f.intake().semester()+"&policyCode=M4",specialist).expect(200).json();
+        assertThat(list.path("items").findValuesAsText("id")).contains(Long.toString(benefit));
+        observation.put("cycleVerificationStatus","verified");
+        command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(updated)).problem(400,"VALIDATION_ERROR");
+        command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(initial)).problem(412,"VERSION_CONFLICT");
+        jdbc.update("UPDATE dbo.hoc_ky SET trang_thai_xac_minh_moc='verified' WHERE id=?",f.intake().semester());
+        observation.put("cycleVerificationStatus","verified").put("updateMode","moi_hoc_ky").put("nextReviewOn","2026-12-15");
+        var latest=get(url,specialist).expect(200);
+        command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(latest)).expect(201);
+        var content=evaluation(f).putNull("applicationId").putNull("submissionId").put("benefitId",Long.toString(benefit)).put("result","khong_dat").put("reason","SYNTHETIC: tiêu chí bắt buộc được xác minh không đạt");
+        content.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","khong_dat"));
+        var evaluation=command("POST","/api/ctsv/mghp/danh-gia",specialist,content,null).expect(201);
+        command("POST",evaluation.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Nhận định không đạt đã có căn cứ"),etag(evaluation)).expect(200);
+        var after=get("/api/ctsv/mghp/quyen-huong/can-ra-soat?semesterId="+f.intake().semester()+"&policyCode=M4",specialist).expect(200).json();
+        assertThat(after.path("items").findValuesAsText("id")).doesNotContain(Long.toString(benefit));
+        var revision=command("POST",evaluation.location()+"/phien-ban",specialist,JSON.createObjectNode().put("reason","Phát sinh điểm cần xác minh"),etag(get(evaluation.location(),specialist).expect(200))).expect(201);
+        content.put("result","can_xac_minh");content.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","can_xac_minh"));
+        command("PUT",revision.location(),specialist,content,etag(revision)).expect(200);
+        command("POST",revision.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Chưa đủ căn cứ cho kỳ này"),etag(get(revision.location(),specialist).expect(200))).expect(200);
+        jdbc.update("UPDATE dbo.mghp_quyen_huong SET ly_do_can_ra_soat=NULL,thoi_diem_ra_soat_tiep='2030-01-01',che_do_cap_nhat_minh_chung='mot_lan_cap_nhat_khi_thay_doi' WHERE id=?",benefit);
+        var pending=get("/api/ctsv/mghp/quyen-huong/can-ra-soat?semesterId="+f.intake().semester(),specialist).expect(200).json();
+        assertThat(pending.path("items").findValuesAsText("id")).contains(Long.toString(benefit));
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08CannotConfirmAfterStudentWithdrawal() throws Exception {
+        var f=supplementFixture();var created=command("POST","/api/ctsv/mghp/danh-gia",specialist,evaluation(f),null).expect(201);
+        command("POST",f.root()+"/rut",f.owner(),JSON.createObjectNode().put("reason","Rút khi chưa có xác nhận"),etag(get(f.root(),f.owner()).expect(200))).expect(200);
+        command("POST",created.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Không được xác nhận nguồn đã rút"),etag(get(created.location(),specialist).expect(200))).problem(409,"EVALUATION_SOURCE_CONFLICT");
+        assertThat(get(created.location(),specialist).expect(200).json().path("status").asText()).isEqualTo("draft");
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08RevisionMayUseLaterSubmissionInSameChain() throws Exception {
+        var f=supplementFixture();var b=evaluation(f);
+        var supplement=command("POST",f.root()+"/yeu-cau-bo-sung",specialist,newSupplement(f),etag(get(f.root(),specialist).expect(200))).expect(201);
+        var ack=command("POST",supplement.location()+"/phan-hoi",f.owner(),submission(f.intake(),f.file()),etag(get(supplement.location()+"/phan-hoi",f.owner()).expect(200))).expect(201);
+        var first=command("POST","/api/ctsv/mghp/danh-gia",specialist,b,null).expect(201);
+        var reason=JSON.createObjectNode().put("reason","Xác nhận nhận định cần xác minh ở bản trước");
+        var confirmed=command("POST",first.location()+"/xac-nhan",specialist,reason,etag(first)).expect(200);
+        var next=command("POST",first.location()+"/phien-ban",specialist,reason,etag(confirmed)).expect(201);
+        var updated=evaluation(f).put("submissionId",ack.json().path("versionId").asText());
+        command("PUT",next.location(),specialist,updated,etag(next)).expect(200);
+        assertThat(get(first.location(),specialist).expect(200).json().path("submissionId").asText()).isEqualTo(f.baseVersion());
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08OrMinimumAndRetrospectiveEvidence() throws Exception {
+        var f=supplementFixture("M2",true);var b=evaluation(f);var root=get(f.root(),specialist).expect(200).json();
+        var docs=root.path("submittedVersions").get(0).path("documents");assertThat(docs.size()).isEqualTo(2);
+        jdbc.update("UPDATE dbo.hoc_ky SET trang_thai_xac_minh_moc='verified' WHERE id=?",f.intake().semester());
+        jdbc.update("UPDATE dbo.qua_trinh_theo_hoc SET trang_thai_doi_chieu='verified',thoi_diem_bat_dau='2026-09-01' WHERE id=?",f.intake().process());
+        b.put("result","khong_dat").put("timeEvidence","SYNTHETIC: giữ mốc nộp hợp lệ và giấy chứng minh hoàn cảnh trước ngày cấp");
+        b.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat"));
+        b.withArray("evidence").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat").put("from","2026-09-01").put("to","2026-12-31"));
+        b.withArray("evidence").addObject().put("documentId",docs.get(1).path("id").asText()).putNull("criterionId").putNull("from").putNull("to").put("result","khong_dat").put("reason","Giấy thay thế không đạt, nhưng giấy thứ nhất đạt nhóm OR");
+        var draft=command("POST","/api/ctsv/mghp/danh-gia",specialist,b,null).expect(201);var reason=JSON.createObjectNode().put("reason","Nhận định nhóm OR synthetic");
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(draft)).problem(409,"EVALUATION_NOT_READY");
+        b.put("result","dat");b.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-12-31").put("evidence","Khoảng chứng minh được CV xác minh, không lấy ngày cấp làm ngày hưởng");
+        command("PUT",draft.location(),specialist,b,etag(get(draft.location(),specialist).expect(200))).expect(200);
+        for(String kind:java.util.List.of("form","content","validity","subject"))command("POST","/api/ctsv/mghp/giay-to-da-nop/"+docs.get(0).path("id").asText()+"/kiem-tra",specialist,JSON.createObjectNode().put("kind",kind).put("result","pass").putNull("note").putNull("replacesCheckId"),etag(get(f.root(),specialist).expect(200))).expect(201);
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(get(draft.location(),specialist).expect(200))).expect(200);
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08SourceBoundaryIntervalsAndVerifiedPass() throws Exception {
+        var f=supplementFixture();var b=evaluation(f);var base="/api/ctsv/mghp/danh-gia";
+        command("POST",base,specialist,b.deepCopy().put("benefitId","1"),null).problem(400,"VALIDATION_ERROR");
+        command("POST",base,specialist,b.deepCopy().put("processId","9223372036854775806"),null).problem(409,"EVALUATION_SOURCE_CONFLICT");
+        command("POST",base,f.owner(),b,null).problem(403,"FORBIDDEN");
+        var draft=command("POST",base,specialist,b,null).expect(201);var url=draft.location();
+        command("POST",base,specialist,b,null).problem(409,"EVALUATION_SOURCE_CONFLICT");
+        b.put("result","dat").put("timeEvidence","SYNTHETIC: chuyên viên xác minh khoảng và mốc nộp hợp lệ");
+        b.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat").put("note","Đã đối chiếu căn cứ synthetic"));
+        b.withArray("evidence").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat").put("from","2026-09-01").put("to","2026-12-31"));
+        b.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-10-31").put("evidence","Căn cứ synthetic giai đoạn 1");
+        b.withArray("eligiblePeriods").addObject().put("from","2026-11-02").put("to","2026-12-31").put("evidence","Căn cứ synthetic giai đoạn 2, không lấp ngày gián đoạn");
+        command("PUT",url,specialist,b,etag(draft)).expect(200);
+        var reason=JSON.createObjectNode().put("reason","Xác nhận sau kiểm nguồn");
+        command("POST",url+"/xac-nhan",specialist,reason,etag(get(url,specialist).expect(200))).problem(409,"EVALUATION_NOT_READY");
+        jdbc.update("UPDATE dbo.hoc_ky SET trang_thai_xac_minh_moc='verified' WHERE id=?",f.intake().semester());
+        jdbc.update("UPDATE dbo.qua_trinh_theo_hoc SET trang_thai_doi_chieu='verified',thoi_diem_bat_dau='2026-09-01' WHERE id=?",f.intake().process());
+        var document=b.path("evidence").get(0).path("documentId").asText();
+        for(String kind:java.util.List.of("form","content","validity","subject")){
+            var check=JSON.createObjectNode().put("kind",kind).put("result","pass").putNull("note").putNull("replacesCheckId");
+            command("POST","/api/ctsv/mghp/giay-to-da-nop/"+document+"/kiem-tra",specialist,check,etag(get(f.root(),specialist).expect(200))).expect(201);
+        }
+        var before=jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_quyen_huong",Integer.class);
+        var confirmed=command("POST",url+"/xac-nhan",specialist,reason,etag(get(url,specialist).expect(200))).expect(200);
+        assertThat(confirmed.json().path("eligiblePeriods").size()).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_quyen_huong",Integer.class)).isEqualTo(before);
+        assertThatThrownBy(()->jdbc.update("UPDATE dbo.mghp_ket_qua_tieu_chi SET ket_qua='khong_dat' WHERE danh_gia_dieu_kien_id=?",confirmed.json().path("id").asLong()))
+            .isInstanceOf(org.springframework.dao.DataAccessException.class);
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08ChainRaceAndAuditRollback() throws Exception {
+        var f=supplementFixture();var b=evaluation(f);var base="/api/ctsv/mghp/danh-gia";
+        var count=jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_danh_gia_dieu_kien",Integer.class);
+        jdbc.execute("CREATE TRIGGER dbo.p08_fault_audit ON dbo.nhat_ky_thao_tac AFTER INSERT AS IF EXISTS(SELECT 1 FROM inserted WHERE hanh_dong='create_evaluation') THROW 51888,N'Synthetic P08 audit failure',1");
+        try{command("POST",base,specialist,b,null).problem(500,"INTERNAL_ERROR");}
+        finally{jdbc.execute("DROP TRIGGER dbo.p08_fault_audit");}
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_danh_gia_dieu_kien",Integer.class)).isEqualTo(count);
+        var draft=command("POST",base,specialist,b,null).expect(201);var reason=JSON.createObjectNode().put("reason","Nhận định cần xác minh có căn cứ");
+        var confirmed=command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(draft)).expect(200);
+        var race=raceP07(()->command("POST",draft.location()+"/phien-ban",specialist,reason,etag(confirmed)),
+            ()->command("POST",draft.location()+"/phien-ban",specialist,reason,etag(confirmed)));
+        assertThat(java.util.Arrays.stream(race).filter(r->r.status()==201).count()).isEqualTo(1);
+        assertThat(java.util.Arrays.stream(race).filter(r->r.status()==412||r.status()==409).count()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_danh_gia_dieu_kien WHERE danh_gia_truoc_id=?",Integer.class,confirmed.json().path("id").asLong())).isEqualTo(1);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"M1","M2","M3","M4","M5","M6","M7","M8","M9"})
+    @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08EveryPolicyRetainsUnverifiedSources(String code) throws Exception {
+        var f=supplementFixture(code);var b=evaluation(f);var base="/api/ctsv/mghp/danh-gia";
+        var created=command("POST",base,specialist,b,null).expect(201);
+        var reason=JSON.createObjectNode().put("reason","Nhận định synthetic, không suy điều kiện từ SIS");
+        var confirmed=command("POST",created.location()+"/xac-nhan",specialist,reason,etag(created)).expect(200);
+        assertThat(confirmed.json().path("result").asText()).isEqualTo("can_xac_minh");
+        assertThat(confirmed.json().path("eligiblePeriods").size()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_ung_vien_phien_ban_qd WHERE danh_gia_dieu_kien_id=?",Integer.class,confirmed.json().path("id").asLong())).isZero();
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08UpdateAndConfirmAuditFaultRollBackWholeAggregate() throws Exception {
+        var f=supplementFixture();var body=evaluation(f);var draft=command("POST","/api/ctsv/mghp/danh-gia",specialist,body,null).expect(201);
+        long id=draft.json().path("id").asLong();
+        var childIds=jdbc.queryForList("SELECT id FROM dbo.mghp_ket_qua_tieu_chi WHERE danh_gia_dieu_kien_id=? ORDER BY id",Long.class,id);
+        jdbc.execute("CREATE TRIGGER dbo.p08_update_fault ON dbo.nhat_ky_thao_tac AFTER INSERT AS IF EXISTS(SELECT 1 FROM inserted WHERE hanh_dong IN ('update_evaluation','confirm_evaluation')) THROW 51889,N'Synthetic P08 aggregate fault',1");
+        try {
+            body.put("reason","Synthetic attempted update must roll back");
+            command("PUT",draft.location(),specialist,body,etag(draft)).problem(500,"INTERNAL_ERROR");
+            var unchanged=get(draft.location(),specialist).expect(200);
+            assertThat(unchanged.json()).isEqualTo(draft.json());assertThat(etag(unchanged)).isEqualTo(etag(draft));
+            assertThat(jdbc.queryForList("SELECT id FROM dbo.mghp_ket_qua_tieu_chi WHERE danh_gia_dieu_kien_id=? ORDER BY id",Long.class,id)).isEqualTo(childIds);
+            command("POST",draft.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Synthetic rollback of confirm"),etag(unchanged)).problem(500,"INTERNAL_ERROR");
+            assertThat(get(draft.location(),specialist).expect(200).json()).isEqualTo(draft.json());
+        } finally {jdbc.execute("DROP TRIGGER dbo.p08_update_fault");}
+        command("POST",draft.location()+"/xac-nhan",specialist,JSON.createObjectNode().put("reason","Retry after fault removed"),etag(get(draft.location(),specialist).expect(200))).expect(200);
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08M8CycleAndObservationRaceRollback() throws Exception {
+        var f=supplementFixture("M8");
+        long benefit=insert("""
+            INSERT dbo.mghp_quyen_huong(ma_quyen_huong,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,
+                ma_pham_vi,phien_ban_ho_so_nguon_id,chinh_sach_id,ty_le_giam,ngay_cong_nhan_tu,ngay_cong_nhan_den,trang_thai)
+            SELECT ?,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,'hoc_phi',?,chinh_sach_id,1,'2026-09-01','2027-01-31','recognized'
+            FROM dbo.mghp_ho_so WHERE id=?
+            ""","SYNTHETIC-P08-M8-"+UUID.randomUUID(),Long.parseLong(f.baseVersion()),Long.parseLong(f.root().substring(f.root().lastIndexOf('/')+1)));
+        String url="/api/ctsv/mghp/quyen-huong/"+benefit;
+        var observed=get(url,specialist).expect(200);
+        var observation=JSON.createObjectNode().putNull("nextReviewOn").put("reviewReason","SYNTHETIC M8: chưa có căn cứ phân loại đơn vị")
+            .put("cycleVerificationStatus","verified").put("updateMode","theo_don_vi_cong_tac").put("employmentUnitGroup","unverified");
+        command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(observed)).problem(400,"VALIDATION_ERROR");
+        observation.put("cycleVerificationStatus","unverified").putNull("employmentUnitGroup");
+        observed=command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(observed)).expect(201);
+        assertThat(jdbc.queryForObject("SELECT nhom_don_vi_cong_tac FROM dbo.mghp_quyen_huong WHERE id=?",String.class,benefit)).isNull();
+        var content=evaluation(f).putNull("applicationId").putNull("submissionId").put("benefitId",Long.toString(benefit))
+            .put("result","dat").put("reason","SYNTHETIC: kiểm chu kỳ độc lập với các căn cứ đã xác minh").put("timeEvidence","SYNTHETIC khoảng đã xác minh, không lấy ngày cấp giấy làm ngày hưởng");
+        content.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat"));
+        content.withArray("evidence").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat").put("from","2026-09-01").put("to","2026-12-31"));
+        content.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-12-31").put("evidence","SYNTHETIC khoảng xác minh");
+        jdbc.update("UPDATE dbo.hoc_ky SET trang_thai_xac_minh_moc='verified' WHERE id=?",f.intake().semester());
+        jdbc.update("UPDATE dbo.qua_trinh_theo_hoc SET trang_thai_doi_chieu='verified',thoi_diem_bat_dau='2026-09-01' WHERE id=?",f.intake().process());
+        var document=content.path("evidence").get(0).path("documentId").asText();
+        for(String kind:java.util.List.of("form","content","validity","subject"))command("POST","/api/ctsv/mghp/giay-to-da-nop/"+document+"/kiem-tra",specialist,
+            JSON.createObjectNode().put("kind",kind).put("result","pass").putNull("note").putNull("replacesCheckId"),etag(get(f.root(),specialist).expect(200))).expect(201);
+        var draft=command("POST","/api/ctsv/mghp/danh-gia",specialist,content,null).expect(201);
+        var reason=JSON.createObjectNode().put("reason","SYNTHETIC xác minh chu kỳ M8");
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(draft)).problem(409,"EVALUATION_NOT_READY");
+        observation.put("cycleVerificationStatus","verified").put("employmentUnitGroup","dut").put("nextReviewOn","2026-12-15").put("reviewReason","SYNTHETIC: căn cứ phân nhóm DUT đã được chuyên viên đối chiếu");
+        command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,etag(get(url,specialist).expect(200))).expect(201);
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(get(draft.location(),specialist).expect(200))).expect(200);
+        String sharedTag=etag(get(url,specialist).expect(200));
+        var raced=raceP07(()->command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,sharedTag),()->command("POST",url+"/ghi-nhan-ra-soat",specialist,observation,sharedTag));
+        assertThat(java.util.Arrays.stream(raced).map(Reply::status).toList()).containsExactlyInAnyOrder(201,412);
+        var before=get(url,specialist).expect(200);
+        jdbc.execute("CREATE TRIGGER dbo.p08_observation_fault ON dbo.nhat_ky_thao_tac AFTER INSERT AS IF EXISTS(SELECT 1 FROM inserted WHERE hanh_dong='observe_benefit') THROW 51890,N'Synthetic P08 observation rollback',1");
+        try{command("POST",url+"/ghi-nhan-ra-soat",specialist,observation.deepCopy().put("nextReviewOn","2026-12-20"),etag(before)).problem(500,"INTERNAL_ERROR");}
+        finally{jdbc.execute("DROP TRIGGER dbo.p08_observation_fault");}
+        var after=get(url,specialist).expect(200);assertThat(after.json()).isEqualTo(before.json());assertThat(etag(after)).isEqualTo(etag(before));
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08MvcBoundaryAndSourceReadiness() throws Exception {
+        var f=supplementFixture("M3");var body=evaluation(f);var url="/api/ctsv/mghp/danh-gia";
+        var media=org.springframework.http.MediaType.APPLICATION_JSON;
+        assertThat(mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(url).contentType(media).content(JSON.writeValueAsBytes(body))).andReturn().getResponse().getStatus()).isEqualTo(401);
+        assertThat(mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(url).header("Authorization","Bearer "+specialist.token()).contentType(media).content("{\"result\":null,\"result\":\"dat\"}")).andReturn().getResponse().getStatus()).isEqualTo(400);
+        command("POST",url,specialist,body.deepCopy().put("assessedByUserId","1"),null).problem(400,"VALIDATION_ERROR");
+        var draft=command("POST",url,specialist,body,null).expect(201);
+        var reason=JSON.createObjectNode().put("reason","Synthetic M3 source boundaries");
+        body.withArray("criteria").removeAll();
+        command("PUT",draft.location(),specialist,body,etag(draft)).expect(200);
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(get(draft.location(),specialist).expect(200))).problem(409,"EVALUATION_NOT_READY");
+        body=evaluation(f).put("result","dat").put("birthDateUsed","2008-02-29").putNull("ageReferenceDate").put("timeEvidence","Synthetic missing confirmed age boundary");
+        body.withArray("criteria").forEach(c->((com.fasterxml.jackson.databind.node.ObjectNode)c).put("result","dat"));
+        body.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-12-31").put("evidence","Synthetic period cannot supply a missing age reference");
+        command("PUT",draft.location(),specialist,body,etag(get(draft.location(),specialist).expect(200))).expect(200);
+        command("POST",draft.location()+"/xac-nhan",specialist,reason,etag(get(draft.location(),specialist).expect(200))).problem(409,"EVALUATION_NOT_READY");
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.test.enabled",matches="true")
+    void p08BenefitUpdateUsesExistingSupplementEngine() throws Exception {
+        var f=supplementFixture("M4");var later=intake(f.owner(),false,"M4");
+        long rootId=Long.parseLong(f.root().substring(f.root().lastIndexOf('/')+1));
+        long benefit=insert("""
+            INSERT dbo.mghp_quyen_huong(ma_quyen_huong,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,ma_pham_vi,phien_ban_ho_so_nguon_id,chinh_sach_id,trang_thai)
+            SELECT ?,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,'hoc_phi',?,chinh_sach_id,'recognized' FROM dbo.mghp_ho_so WHERE id=?
+            ""","SYNTHETIC-P08-UPDATE-"+UUID.randomUUID(),Long.parseLong(f.baseVersion()),rootId);
+        jdbc.update("UPDATE dbo.mghp_ho_so SET trang_thai='completed' WHERE id=?",rootId);
+        var url="/api/ctsv/mghp/quyen-huong/"+benefit;
+        var body=newSupplement(f).put("benefitId",Long.toString(benefit)).put("updateType","periodic_update").put("receivingRoundId",Long.toString(later.round()));
+        var before=get(url,specialist).expect(200);
+        command("POST",url+"/yeu-cau-cap-nhat",specialist,body.deepCopy().putNull("benefitId"),etag(before)).problem(409,"BENEFIT_UPDATE_CONFLICT");
+        var created=command("POST",url+"/yeu-cau-cap-nhat",specialist,body,etag(before)).expect(201);
+        assertThat(created.json().path("applicationId").asText()).isEqualTo(Long.toString(rootId));
+        assertThat(created.json().path("benefitId").asText()).isEqualTo(Long.toString(benefit)); // SupplementView §2 includes benefitId
+        assertThat(get(f.root(),f.owner()).expect(200).json().path("status").asText()).isEqualTo("completed");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_phien_ban_ho_so WHERE quyen_huong_cap_nhat_id=?",Integer.class,benefit)).isZero();
+        assertThat(jdbc.queryForObject("SELECT quyen_huong_id FROM dbo.mghp_yeu_cau_bo_sung WHERE id=?",Long.class,created.json().path("id").asLong())).isEqualTo(benefit);
+        command("POST",url+"/yeu-cau-cap-nhat",specialist,body,etag(before)).problem(412,"VERSION_CONFLICT");
+        var reply=submission(new IntakeFixture(f.intake().code(),later.round(),f.intake().process(),later.policy(),later.semester(),f.intake().ethnicity(),f.intake().classId(),f.intake().cohort(),f.intake().unit()),f.file());
+        var response=command("POST","/api/ctsv/mghp/yeu-cau-bo-sung/"+created.json().path("id").asText()+"/phan-hoi",f.owner(),reply,
+            etag(get("/api/ctsv/mghp/yeu-cau-bo-sung/"+created.json().path("id").asText()+"/phan-hoi",f.owner()).expect(200))).expect(201);
+        var input=evaluation(f).putNull("applicationId").putNull("submissionId").put("benefitId",Long.toString(benefit)).put("updateSubmissionId",response.json().path("versionId").asText())
+            .put("policyVersionId",Long.toString(later.policy()));
+        input.putArray("criteria");input.putArray("evidence");
+        command("POST","/api/ctsv/mghp/danh-gia",specialist,input,null).problem(409,"EVALUATION_SOURCE_CONFLICT");
+        input.put("semesterId",Long.toString(later.semester()));
+        command("POST","/api/ctsv/mghp/danh-gia",specialist,input,null).expect(201);
+    }
+
+    @Test @EnabledIfSystemProperty(named="p08.browser.enabled",matches="true")
+    void p08ServeBrowser() throws Exception {
+        assertThat(Boolean.getBoolean("p08.test.enabled")).isTrue();
+        Path home=Path.of(java.util.Objects.requireNonNull(System.getenv("P08_BROWSER_HOME")));
+        assertThat(Files.exists(home.resolve("browser.done"))).isFalse();
+        String password="SYNTHETIC-P08-"+UUID.randomUUID(),staffName="p08.staff."+UUID.randomUUID(),studentName="p08.student."+UUID.randomUUID(),adminName="p08.admin."+UUID.randomUUID();
+        actor("specialist",staffName,password);actor("admin",adminName,password);var owner=actor("student",studentName,password);
+        var f=intake(owner,false,"M2");
+        long file=upload("minh-chung",owner,"du lieu test.pdf",Files.readAllBytes(Path.of(System.getenv("P07_SAMPLE_PDF")))).expect(201).json().path("id").asLong();
+        var ack=command("POST",APPLICATIONS,owner,submission(f,file),null).expect(201).json();
+        long benefit=insert("""
+            INSERT dbo.mghp_quyen_huong(ma_quyen_huong,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,ma_pham_vi,phien_ban_ho_so_nguon_id,chinh_sach_id,trang_thai)
+            SELECT ?,sinh_vien_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id,'hoc_phi',?,chinh_sach_id,'recognized' FROM dbo.mghp_ho_so WHERE id=?
+            ""","SYNTHETIC-P08-BROWSER-"+UUID.randomUUID(),ack.path("versionId").asLong(),ack.path("applicationId").asLong());
+        var credentials=Map.of("origin","https://127.0.0.1:5175","backend","https://127.0.0.1:"+port,"staff",staffName,"student",studentName,"admin",adminName,"password",password,
+            "applicationId",ack.path("applicationId").asText(),"semesterId",Long.toString(f.semester()),"database","ctsv_p08_test_20261118","benefitId",Long.toString(benefit));
+        Files.writeString(home.resolve("credentials.json"),JSON.writeValueAsString(credentials),java.nio.file.StandardOpenOption.CREATE_NEW);
+        long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.MINUTES.toNanos(8);
+        while(!Files.exists(home.resolve("browser.done"))&&System.nanoTime()<deadline)Thread.sleep(250);
+        assertThat(home.resolve("browser.done")).exists();assertThat(Files.readString(home.resolve("browser.done"))).isEqualTo("PASS");
+    }
 
     private com.fasterxml.jackson.databind.node.ObjectNode newSupplement(SupplementFixture f) {
         var body=JSON.createObjectNode().put("sourceVersionId",f.baseVersion())

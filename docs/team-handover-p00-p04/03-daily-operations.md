@@ -60,6 +60,17 @@ P07 dùng V12. Sau khi source có V12 và được phép cập nhật DEV, dùng
 
 Smoke thực hành chạy trên ứng dụng của launcher và `ctsv_dev`. Script `frontend/e2e/p07-dev.mjs` tạo riêng dữ liệu synthetic qua API/UI hiện có, dùng PDF do caller chỉ định, giữ dữ liệu đã có. Script cần template đợt synthetic `NAV-SYNTH-*` và tài khoản DEV đã setup. Cách nạp cấu hình và các ID dữ liệu mẫu đã kiểm nằm trong [runbook P07](../../../nghiepvu/09-trien-khai/p07-supplement-implementation-plan.md#bàn-giao-dev--18112026). Evidence có URL/DB/storage thực tế trong `browser-report.json`.
 
+## P08 — Đánh giá và rà soát MGHP
+
+DEV hiện đã nâng V13 bằng `dev.ps1 migrate`; `start` tiếp tục chỉ kiểm lịch sử rồi chạy ứng dụng. Entity/Hibernate và migration trong executable JAR đã được đối chiếu. Không chạy lại setup, đổi khóa/chứng thư hoặc reset tài khoản để sử dụng P08.
+
+- `dev.chuyenvien`: **Miễn giảm học phí → Đánh giá hồ sơ** (`/mghp/danh-gia`). Chọn hồ sơ, chuẩn bị/đọc bản nháp, ghi từng tiêu chí và giấy làm căn cứ rồi lưu. Xác nhận phải có nhận định/lý do; bản confirmed chỉ đọc, muốn đổi tạo bản đánh giá lại. Xác nhận cần xác minh cũng chặn rút, nhưng chưa tạo quyền hưởng.
+- Dữ liệu thực hành đã chuẩn bị: đợt **Thực hành đánh giá hồ sơ · Tháng 11**, ID20016; hồ sơ10011 của `dev.sinhvien`, bản nộp10020, đánh giá1 confirmed cần xác minh và đánh giá2 draft. Đây là dữ liệu synthetic; không sửa chính sách đã khóa để biến hồ sơ thành đạt.
+- Chuyên viên mở **Rà soát quyền hưởng** (`/mghp/quyen-huong`), chọn học kỳ, đọc quyền/lịch sử, mở riêng tác vụ quan sát hoặc yêu cầu cập nhật. Quan sát giữ nguyên tỷ lệ và mốc công nhận/thu hồi. Yêu cầu cập nhật dùng luồng bổ sung P07; sinh viên phản hồi thật, không tạo bản nộp giả.
+- Sinh viên chỉ đọc quyền của mình; admin Auth đơn thuần không có màn đánh giá/rà soát nghiệp vụ. Quyền công nhận thật sẽ phát sinh từ công bố P12. Chưa seed quyền giả vào DEV; các ca ghi quan sát với quyền giả có nhãn được kiểm trên DB P08 riêng.
+
+Smoke `frontend/e2e/p08-dev.mjs` dùng launcher DEV và Cloudinary REAL, không tắt xác minh TLS. Cách nạp cấu hình local qua DPAPI, lệnh chạy và kết quả nằm ở [Detailed Plan P08](../../../nghiepvu/09-trien-khai/p08-review-benefits-implementation-plan.md). Script có thể dùng lại hồ sơ synthetic P08 qua `P08_DEV_APPLICATION_ID`, không tạo thêm đợt/tài khoản/file khi chạy ở chế độ đó. Tạo fixture mới cần một đợt mẫu `NAV-SYNTH-*` có policy đã khóa được chuẩn bị qua P05 UI/API; trên máy mới phải chuẩn bị mẫu này trước, không copy DB tác giả hoặc fixture159hàng vào DEV.
+
 ## Status/stop có giới hạn gì?
 
 - Status đối chiếu PID + thời điểm tạo UTC + command line, rồi in URL/DB/log path. Nó **không** tự gọi DB hoặc kiểm HTTP liveness liên tục. `RUNNING` chỉ xác nhận process identity, không bảo đảm mọi API đang healthy.
