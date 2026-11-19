@@ -22,5 +22,9 @@
 .fieldError{color:var(--color-error-text);font-size:13px}
 .recovery{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-group)}
 .recovery p{flex:1 1 100%;overflow-wrap:anywhere}
+.readOnly{display:grid;gap:var(--space-3);width:100%;margin:0;min-width:0}
+.readOnly div{display:grid;gap:var(--space-1)}
+.readOnly dt{font-size:13px;color:var(--color-text-muted)}
+.readOnly dd{margin:0;overflow-wrap:anywhere}
 .formArea :is(button,input,[tabindex]):focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
 @media(max-width:650px){.search{align-items:stretch}.search label{max-width:none;flex-basis:100%}.sourcePaging{justify-content:center}.actions>button{flex:1 1 100%}}

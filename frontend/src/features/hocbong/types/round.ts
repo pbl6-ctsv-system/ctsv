@@ -22,3 +22,4 @@ export type SourceSemester={
 export type SourceSemesterPage={items:SourceSemester[];page:number;size:number;totalElements:number};
 export type SourceSemesterFilters={q?:string;page?:number;size?:number};
 export type CreateRoundCommand={sourceSemesterId:string;number:number;name:string};
+export type UpdateRoundCommand={number:number;name:string};

@@ -8,6 +8,7 @@ import {listRounds,readRound} from '../api/rounds';
 import type {RoundFilters,RoundPage,RoundView} from '../types/round';
 import {RoundDetails,roundStatus} from '../components/RoundDetails';
 import {CreateRoundForm} from '../components/CreateRoundForm';
+import {EditRoundForm} from '../components/EditRoundForm';
 import styles from './KkhtRoundsPage.module.css';
 
 type ListState={key:string;data:RoundPage|null;error:string;loading:boolean};
@@ -19,6 +20,7 @@ const requestError=(error:unknown)=>error instanceof DOMException&&error.name===
 export function KkhtRoundsPage({client}:FeaturePageProps){
  const [selectedId,setSelectedId]=useState(selectedFromUrl);
  const [creating,setCreating]=useState(false),[notice,setNotice]=useState('');
+ const [editing,setEditing]=useState<RoundView|null>(null);
  const [page,setPage]=useState(0);
  const [number,setNumber]=useState('');
  const [filters,setFilters]=useState<RoundFilters>({});
@@ -36,13 +38,13 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
  const currentDetail=detail?.id===selectedId?detail:null;
 
  useEffect(()=>{
-  const onBack=()=>{readbackAbort.current?.abort();setCreating(false);setNotice('');setSelectedId(selectedFromUrl());};
+  const onBack=()=>{readbackAbort.current?.abort();setCreating(false);setEditing(null);setNotice('');setSelectedId(selectedFromUrl());};
   window.addEventListener('popstate',onBack);
   return()=>{window.removeEventListener('popstate',onBack);readbackAbort.current?.abort();};
  },[]);
 
  useEffect(()=>{
-  if(selectedId!==null||forbidden||creating)return;
+  if(selectedId!==null||forbidden||creating||editing)return;
   const abort=new AbortController();
   setList({key:listKey,data:null,error:'',loading:true});
   void listRounds(client,{...filters,page,size:20},abort.signal).then(data=>{
@@ -53,10 +55,10 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
    setList({key:listKey,data:null,error:requestError(error),loading:false});
   });
   return()=>abort.abort();
- },[client,filters,page,revision,selectedId,forbidden,listKey,creating]);
+ },[client,filters,page,revision,selectedId,forbidden,listKey,creating,editing]);
 
  useEffect(()=>{
-  if(selectedId===null||forbidden||creating)return;
+  if(selectedId===null||forbidden||creating||editing)return;
   if(hydratedDetail.current===selectedId){hydratedDetail.current=null;return;}
   const abort=new AbortController();
   setDetail({id:selectedId,data:null,error:'',loading:true});
@@ -68,21 +70,21 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
    setDetail({id:selectedId,data:null,error:requestError(error),loading:false});
   });
   return()=>abort.abort();
- },[client,selectedId,revision,forbidden,creating]);
+ },[client,selectedId,revision,forbidden,creating,editing]);
 
  useEffect(()=>{
   if(selectedId!==null&&currentDetail?.data)detailHeading.current?.focus();
  },[selectedId,currentDetail?.data]);
 
  function select(id:string|null){
-  setCreating(false);setNotice('');
+  setCreating(false);setEditing(null);setNotice('');
   const url=new URL(window.location.href);
   if(id===null)url.searchParams.delete('dotXetId');else url.searchParams.set('dotXetId',id);
   window.history.pushState(null,'',url.pathname+url.search+url.hash);
   setSelectedId(id);
   if(id===null)requestAnimationFrame(()=>listHeading.current?.focus());
  }
- async function created(view:RoundView,recovered:boolean){
+ async function confirmRound(view:RoundView,message:string){
   readbackAbort.current?.abort();
   const abort=new AbortController();readbackAbort.current=abort;
   const confirmed=await readRound(client,view.round.id,abort.signal);
@@ -97,7 +99,7 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
   hydratedDetail.current=confirmed.round.id;
   setDetail({id:confirmed.round.id,data:confirmed,error:'',loading:false});
   select(confirmed.round.id);
-  setNotice(recovered?'Đã đối chiếu đợt xét hiện có.':'Đã tạo đợt xét ở trạng thái Nháp.');
+  setNotice(message);
  }
  function apply(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
@@ -126,12 +128,14 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
    <p>Xem các đợt xét theo học kỳ và thông tin cấu hình của từng đợt.</p>
   </header>
   {notice&&<p role="status">{notice}</p>}
-  {forbidden?<Alert>Bạn không có quyền truy cập các đợt xét KKHT. Vui lòng kiểm tra lại quyền hoặc đăng nhập lại.</Alert>:creating?
-   <CreateRoundForm client={client} onCancel={()=>{setCreating(false);requestAnimationFrame(()=>listHeading.current?.focus());}} onCreated={created} onForbidden={onForbidden}/>:selectedId!==null?
+  {forbidden?<Alert>Bạn không có quyền truy cập các đợt xét KKHT. Vui lòng kiểm tra lại quyền hoặc đăng nhập lại.</Alert>:editing?
+   <EditRoundForm key={editing.round.id} client={client} initial={editing} onCancel={()=>setEditing(null)} onSaved={(view,recovered)=>confirmRound(view,recovered?'Đã đối chiếu kết quả sửa đợt.':'Đã lưu thay đổi đợt xét.')} onForbidden={onForbidden}/>:creating?
+   <CreateRoundForm client={client} onCancel={()=>{setCreating(false);requestAnimationFrame(()=>listHeading.current?.focus());}} onCreated={(view,recovered)=>confirmRound(view,recovered?'Đã đối chiếu đợt xét hiện có.':'Đã tạo đợt xét ở trạng thái Nháp.')} onForbidden={onForbidden}/>:selectedId!==null?
    <section className={styles.content} aria-label="Chi tiết đợt xét">
     <div className={styles.toolbar}>
      <Button variant="secondary" onClick={()=>select(null)}>Quay lại danh sách</Button>
      <Button variant="secondary" disabled={currentDetail?.loading} onClick={()=>setRevision(value=>value+1)}>Đọc lại chi tiết</Button>
+     {round?.status==='draft'&&currentDetail?.data&&<Button onClick={()=>{setNotice('');setEditing(currentDetail.data);}}>Sửa đợt xét</Button>}
     </div>
     {(!currentDetail||currentDetail.loading)&&<p role="status">Đang tải chi tiết đợt xét…</p>}
     {currentDetail?.error&&<Alert>{currentDetail.error}</Alert>}

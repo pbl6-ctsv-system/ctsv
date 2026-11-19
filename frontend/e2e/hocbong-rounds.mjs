@@ -72,7 +72,8 @@ try{
   await expect(page.getByRole('heading',{name:'Đợt thực hành KKHT 1',exact:true})).toBeVisible();
   await expect(page.getByText('16/01/2026',{exact:true})).toBeVisible();
   await expect(page.getByText('Chưa cấu hình',{exact:true}).first()).toBeVisible();
-  await expect(page.getByRole('button',{name:/Tạo đợt|Sửa đợt|Mở đợt/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Sửa đợt xét',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Tạo đợt|Mở đợt/})).toHaveCount(0);
   assert(state.calls.some(call=>call.path.endsWith('/9007199254740993')));
  });
  await check('HB-T021-B02-student-denied',async({page,state})=>{

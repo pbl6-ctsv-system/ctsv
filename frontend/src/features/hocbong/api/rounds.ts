@@ -1,5 +1,5 @@
 import type {AuthClient} from '../../../shared/types/api';
-import type {CreateRoundCommand,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,SourceSemester,SourceSemesterFilters,SourceSemesterPage} from '../types/round';
+import type {CreateRoundCommand,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,SourceSemester,SourceSemesterFilters,SourceSemesterPage,UpdateRoundCommand} from '../types/round';
 
 const BASE='/api/ctsv/hoc-bong';
 const ROUNDS=BASE+'/kkht/dot-xet';
@@ -95,6 +95,24 @@ export async function createRound(client:AuthClient,command:CreateRoundCommand):
  const body:unknown=await response.json();
  if(response.status!==201||!detail(body)||body.sourceSemesterId!==command.sourceSemesterId||body.number!==command.number||body.status!=='draft'){
   throw new Error('Chưa xác nhận được kết quả tạo đợt. Hãy kiểm tra đợt đã lưu trước khi gửi lại.');
+ }
+ return{round:body,etag:response.headers.get('ETag')};
+}
+
+export const isRoundEtag=(value:unknown):value is string=>typeof value==='string'&&/^"[A-Za-z0-9_-]+"$/.test(value);
+
+export async function updateRound(client:AuthClient,roundId:string,command:UpdateRoundCommand,ifMatch:string|null):Promise<RoundView>{
+ if(!id(roundId))throw new Error('Đường dẫn đợt xét không hợp lệ.');
+ if(!isRoundEtag(ifMatch))throw new Error('Chưa có phiên dữ liệu hợp lệ. Hãy đọc bản mới trước khi lưu.');
+ if(!integer(command.number,1,2147483647))throw new Error('Số đợt phải là số nguyên từ 1 đến 2147483647.');
+ if(typeof command.name!=='string'||!command.name.trim()||command.name.trim().length>512)throw new Error('Tên đợt cần từ 1 đến 512 ký tự.');
+ const response=await client.request(ROUNDS+'/'+roundId,{
+  method:'PUT',headers:{'Content-Type':'application/json','If-Match':ifMatch},
+  body:JSON.stringify({number:command.number,name:command.name}),signal:requestSignal(),
+ });
+ const body:unknown=await response.json();
+ if(response.status!==200||!detail(body)||body.id!==roundId||body.number!==command.number||body.status!=='draft'){
+  throw new Error('Chưa xác nhận được kết quả sửa đợt. Hãy kiểm tra bản đang lưu trước khi gửi lại.');
  }
  return{round:body,etag:response.headers.get('ETag')};
 }
