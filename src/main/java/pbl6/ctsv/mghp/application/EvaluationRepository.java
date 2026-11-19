@@ -4,9 +4,11 @@ import jakarta.persistence.EntityManager;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import static pbl6.ctsv.mghp.application.EvaluationEntities.*;
 
 @Repository
+@ConditionalOnProperty(name="ctsv.mghp.applications.enabled",havingValue="true")
 class EvaluationRepository {
  @jakarta.persistence.PersistenceContext EntityManager em;
  final JdbcTemplate jdbc;

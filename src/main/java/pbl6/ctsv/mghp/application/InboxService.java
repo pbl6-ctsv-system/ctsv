@@ -5,10 +5,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import static pbl6.ctsv.mghp.application.ApplicationEntities.*;
 import static pbl6.ctsv.mghp.application.IntakeMapping.map;
 
 @Service
+@ConditionalOnProperty(name="ctsv.mghp.applications.enabled",havingValue="true")
 class InboxService {
     private final IntakeRepository repo;
     private final Clock clock;
