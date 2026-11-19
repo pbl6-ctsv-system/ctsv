@@ -1,16 +1,40 @@
 package pbl6.ctsv.foundation.web;
+import java.util.List;
 import org.springframework.context.annotation.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pbl6.ctsv.auth.AuthAccess;
+import pbl6.ctsv.foundation.api.FoundationUsage;
+import pbl6.ctsv.foundation.repository.FoundationRepository;
 @Configuration(proxyBeanMethods=false)
 @ConditionalOnProperty(name="ctsv.foundation.enabled",havingValue="true")
 class FoundationConfiguration {
  @Bean FoundationSecurity foundationSecurity(AuthAccess auth,JdbcTemplate jdbc){return new FoundationSecurity(auth,jdbc);}
  @Bean pbl6.ctsv.foundation.repository.FoundationRepository foundationRepository(jakarta.persistence.EntityManager em,JdbcTemplate jdbc){return new pbl6.ctsv.foundation.repository.FoundationRepository(em,jdbc);}
- @Bean FoundationService foundationService(FoundationSecurity security,pbl6.ctsv.foundation.repository.FoundationRepository repository,PlatformTransactionManager tx,ObjectMapper json,pbl6.ctsv.foundation.api.FoundationUsage usage){return new FoundationService(security,repository,tx,json,usage);}
+ @Bean
+ FoundationService foundationService(FoundationSecurity security, FoundationRepository repository,
+         PlatformTransactionManager tx, ObjectMapper json, List<FoundationUsage> usages) {
+  return new FoundationService(security, repository, tx, json, new CompositeFoundationUsage(usages));
+ }
+
+ private record CompositeFoundationUsage(List<FoundationUsage> usages) implements FoundationUsage {
+  private CompositeFoundationUsage {
+   usages = List.copyOf(usages);
+  }
+
+  @Override
+  public boolean semesterUsed(long id) {
+   return usages.stream().anyMatch(usage -> usage.semesterUsed(id));
+  }
+
+  @Override
+  public boolean processUsed(long id) {
+   return usages.stream().anyMatch(usage -> usage.processUsed(id));
+  }
+ }
+
  @Bean org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.CorsFilter> foundationCors(org.springframework.core.env.Environment env){
   var origins=org.springframework.boot.context.properties.bind.Binder.get(env).bind("ctsv.auth.origins",org.springframework.boot.context.properties.bind.Bindable.listOf(String.class)).orElseThrow(()->new IllegalStateException("Auth origins required"));
   var policy=new org.springframework.web.cors.CorsConfiguration();policy.setAllowedOrigins(origins);policy.setAllowCredentials(true);
