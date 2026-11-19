@@ -1,0 +1,9 @@
+{
+  "spring.jpa.properties.hibernate.hbm2ddl.jdbc_metadata_extraction_strategy": "individually",
+  "ctsv.shcn.persistence.enabled": true,
+  "ctsv.shcn.phan-cong-khoa.source-code": "DEV-SIS-SYNC",
+  "ctsv.shcn.phan-cong-khoa.staff-mapping-verified": true,
+  "ctsv.shcn.phan-cong-khoa.staff-code-column": "MA_CB",
+  "ctsv.shcn.phan-cong-khoa.employment-statuses": ["DEV_ACTIVE"],
+  "ctsv.shcn.phan-cong-khoa.employment-end-inclusive": true
+}

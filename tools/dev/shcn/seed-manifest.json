@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "packageId": "ctsv.shcn.dev",
+  "version": "1.1.0",
+  "sourceCode": "DEV-SIS-SYNC",
+  "fixtureCodes": {
+    "FacultyA": "DEV-SHCN-KHOA-A",
+    "FacultyB": "DEV-SHCN-KHOA-B",
+    "ProgramA": "DEV-SHCN-CT-A",
+    "ProgramB": "DEV-SHCN-CT-B",
+    "ClassA1": "DEV-SHCN-LOP-A1",
+    "ClassA2": "DEV-SHCN-LOP-A2",
+    "ClassB": "DEV-SHCN-LOP-B",
+    "StaffGV": "DEV-SHCN-GV-001",
+    "StaffHead": "DEV-SHCN-TK-001",
+    "StaffOther": "DEV-SHCN-GV-B"
+  },
+  "files": {
+    "Seed.Package.ps1": "66BA622E3EF4535EC8A03E7265646A8958856FC6D6E852E6497F2552DF4A8E0E",
+    "dev-shcn.ps1": "500E6BDBC7D5DE29A82DB3335940788485FE7F3DE0D38A411E5F70E437E175A9",
+    "shcn.policy.json": "5942E350CE65BE3247165EE6D7CEA6D811361F03364548DE9B0BB9EBFF1ED210",
+    "RBAC_INSPECT.sql": "536479F1336266A59DE6B496BEC269CDD4BE382021A6BAF9E7B6CC532F9EC50F"
+  },
+  "requiredCtsvMigration": "15",
+  "upgradesFrom": [
+    {
+      "version": "1.0.0",
+      "manifestSHA256": "3F86E56BDCE0F0A398C5E5A3A4FFE7F6B5208F707DC9C3A1488B63F38A584649"
+    }
+  ]
+}
