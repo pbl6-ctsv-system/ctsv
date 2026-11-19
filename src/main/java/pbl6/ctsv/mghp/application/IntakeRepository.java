@@ -5,9 +5,11 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import static pbl6.ctsv.mghp.application.ApplicationEntities.*;
 
 @Repository
+@ConditionalOnProperty(name="ctsv.mghp.applications.enabled",havingValue="true")
 class IntakeRepository {
     @jakarta.persistence.PersistenceContext private EntityManager em;
     private final JdbcTemplate jdbc;

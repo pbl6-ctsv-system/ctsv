@@ -1,8 +1,11 @@
 package pbl6.ctsv.foundation.web;
+import java.util.Optional;
 import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationAccess;
+import pbl6.ctsv.foundation.api.FoundationRoleAccess;
 import org.springframework.jdbc.core.JdbcTemplate;
-final class FoundationSecurity implements FoundationAccess {
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+final class FoundationSecurity implements FoundationAccess, FoundationRoleAccess {
  private final AuthAccess auth; private final JdbcTemplate jdbc;
  FoundationSecurity(AuthAccess auth,JdbcTemplate jdbc){this.auth=auth;this.jdbc=jdbc;}
  record MenuAccess(boolean student,boolean mghpSpecialist,boolean ctsvRoleAdmin){}
@@ -19,7 +22,7 @@ final class FoundationSecurity implements FoundationAccess {
   return identity;
  }
  public Identity identify(AuthAccess.Principal p,boolean online){
-  if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Foundation authorization requires a local transaction");
+  if(!TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Foundation authorization requires a local transaction");
   // Resolve the trusted binding before Auth, without retaining a local lock across its independent transaction.
   var mapped=jdbc.query("""
     SELECT u.id FROM dbo.dinh_danh_dang_nhap d JOIN dbo.nguoi_dung u ON u.id=d.nguoi_dung_id
@@ -40,6 +43,21 @@ final class FoundationSecurity implements FoundationAccess {
   if(students.size()>1)throw new FoundationFailure(503,"DEPENDENCY_UNAVAILABLE");
   return new Identity(user,students.isEmpty()?null:students.getFirst(),p);
  }
+
+ @Override
+ public Optional<ActiveRole> findActiveGlobalRole(long userId, String moduleCode, String roleCode) {
+  if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+   throw new IllegalStateException("Foundation role lookup requires a local transaction");
+  }
+  return jdbc.query("""
+    SELECT DISTINCT r.id FROM dbo.phan_quyen_nguoi_dung p WITH(UPDLOCK,HOLDLOCK)
+    JOIN dbo.vai_tro r WITH(HOLDLOCK) ON r.id=p.vai_tro_id
+    WHERE p.nguoi_dung_id=? AND p.ma_phan_he=? AND r.ma=? AND r.dang_hoat_dong=1 AND p.don_vi_id IS NULL
+      AND (p.hieu_luc_tu IS NULL OR p.hieu_luc_tu<=TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
+      AND (p.hieu_luc_den IS NULL OR p.hieu_luc_den>TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
+    """, (row, index) -> new ActiveRole(row.getLong(1)), userId, moduleCode, roleCode).stream().findFirst();
+ }
+
  private boolean role(long user,String code){
   return jdbc.queryForObject("""
     SELECT COUNT(*) FROM dbo.phan_quyen_nguoi_dung p WITH(UPDLOCK,HOLDLOCK)
