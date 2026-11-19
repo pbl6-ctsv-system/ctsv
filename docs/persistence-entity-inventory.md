@@ -70,3 +70,16 @@ Các entity sau thuộc `mghp.application.ApplicationEntities`. FK của luồng
 | BenefitEvent | `mghp_bien_dong_quyen_huong` | Quyền hưởng/predecessor; observation append, không ghi lại sự kiện cũ |
 
 `Evaluation.fence` và `Benefit.fence` ánh xạ read-only `rowversion` bằng JDBC BINARY. Strong ETag gắn đúng projection; khóa SQL Server và UNIQUE bảo vệ concurrency. Trigger giữ bất biến evaluation và các bảng con sau confirm, kể cả bản đã superseded. Confirm không cấp quyền hưởng; quyền synthetic chỉ có trong fixture DB P08, công bố thật thuộc P12.
+
+## Học bổng/T01
+
+Module Học bổng sở hữu bốn Entity trong `hocbong.kkht.round.entity` và bốn bảng mới của Flyway V14. Các quan hệ dùng ID scalar, với khóa ngoại trên SQL Server theo bảng dưới.
+
+| Entity | Bảng | Khóa ngoại và ràng buộc |
+|---|---|---|
+| `ScholarshipSemester` | `hb_hoc_ky` | PK CTSV độc lập. Khóa duy nhất theo `nam_hoc`, `thu_tu_ky`. Thứ tự kỳ dương và ngày bắt đầu ≤ ngày kết thúc |
+| `SourceSemesterMapping` | `hb_anh_xa_ky_nguon` | `hoc_ky_id` → `hb_hoc_ky`, `xac_nhan_boi` → `nguoi_dung`. Khóa duy nhất theo hệ thống, loại mã, mã kỳ và mã đợt, gồm ngữ cảnh `NULL`. Trigger bảo vệ alias đã dùng |
+| `ScholarshipRound` | `kkht_dot_xet` | `hoc_ky_id` → `hb_hoc_ky`, `nguoi_tao_id` → `nguoi_dung`, cặp `anh_xa_ky_nguon_id`, `hoc_ky_id` → cặp `id`, `hoc_ky_id` của `hb_anh_xa_ky_nguon`. Số đợt dương và duy nhất trong kỳ. `quy_tac_id` chờ bổ sung FK ở T03 |
+| `ScholarshipAudit` | `hb_nhat_ky` | `nguoi_dung_id` → `nguoi_dung`, `vai_tro_id` → `vai_tro`. `doi_tuong_id` là tham chiếu đa hình. Snapshot lưu JSON, thời điểm UTC và correlation UUID. Trigger từ chối sửa hoặc xóa bản ghi |
+
+Alias T01 dùng hệ thống `CTSV`, loại mã `ctsv_hoc_ky_id` và PK nguồn Foundation dưới dạng chuỗi. `ScholarshipRound.version` ánh xạ `phien_ban_ky_thuat` dưới dạng `byte[8]` chỉ đọc qua JDBC BINARY.
