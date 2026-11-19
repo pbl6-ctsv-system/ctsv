@@ -1,0 +1,26 @@
+.formArea,.form{display:grid;gap:var(--space-4);min-width:0}
+.formArea h2,.formArea p{margin:0}
+.formArea h2{font-size:22px}
+.picker,.information{display:grid;gap:var(--space-3);padding:var(--space-4);margin:0;border:1px solid var(--color-border);border-radius:var(--radius-group);min-width:0}
+.picker legend,.information legend{padding:0 var(--space-2);font-weight:600}
+.search,.actions,.sourcePaging,.recovery{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);min-width:0}
+.search{align-items:flex-end}
+.search label{flex:1 1 260px;max-width:480px;min-width:0}
+.sourceList{display:grid;gap:var(--space-2)}
+.sourceRow{padding:var(--space-3);background:var(--color-surface-muted);border:1px solid var(--color-border);border-radius:var(--radius-control);min-width:0}
+.sourceRow .sourceChoice{display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-3);font-size:15px;cursor:pointer}
+.sourceChoice input{margin-top:4px;flex:0 0 auto}
+.sourceChoice span{overflow-wrap:anywhere;min-width:0}
+.sourceRow .hint{margin-top:var(--space-2);margin-left:27px}
+.hint{font-size:13px;color:var(--color-text-muted)}
+.selected{padding:var(--space-3);background:var(--color-secondary-bg);border-radius:var(--radius-control);overflow-wrap:anywhere}
+.sourcePaging{justify-content:flex-end;font-size:13px}
+.information label{display:grid;gap:var(--space-2);font-size:14px;font-weight:600;min-width:0}
+.information input{box-sizing:border-box;width:100%}
+.information input[type=number]{max-width:240px}
+.form input[aria-invalid=true]{border-color:var(--color-danger)}
+.fieldError{color:var(--color-error-text);font-size:13px}
+.recovery{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-group)}
+.recovery p{flex:1 1 100%;overflow-wrap:anywhere}
+.formArea :is(button,input,[tabindex]):focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
+@media(max-width:650px){.search{align-items:stretch}.search label{max-width:none;flex-basis:100%}.sourcePaging{justify-content:center}.actions>button{flex:1 1 100%}}

@@ -8,7 +8,7 @@ test('navigation identifies implemented feature entries without publishing empty
  assert.equal(new Set(navigationItems.map(item=>item.id)).size,navigationItems.length);
  assert.deepEqual(navigationItems.map(item=>[item.id,item.feature]),[
   ['lookup','foundation'],['students','foundation'],['manage','foundation'],['roles','foundation'],['auth','auth'],['auth-rbac','auth'],['mghp-policies','mghp'],['mghp-rounds','mghp'],
-  ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-evaluations','mghp'],['mghp-benefits','mghp'],['mghp-inbox','mghp']]);
+  ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-evaluations','mghp'],['mghp-benefits','mghp'],['mghp-inbox','mghp'],['hocbong-rounds','hocbong']]);
  assert(navigationItems.every(item=>typeof item.label==='string'&&item.label.length>0));
 });
 test('student menu contains only the student workflow',()=>{
@@ -31,11 +31,11 @@ test('Auth account administration and CTSV permissions are separate and fail clo
 test('legacy auth import and modular auth import share the same implementation',()=>{
  assert.equal(movedClient,compatibleClient);
 });
-test('student sees six top-level entries, with real MGHP routes grouped and unimplemented modules disabled',()=>{
+test('student menu keeps implemented routes and disables only unavailable modules',()=>{
  const access={student:true,mghpSpecialist:false,ctsvRoleAdmin:false};
  const sections=navigationSections([],access);
- assert.deepEqual(sections.map(item=>item.id),['home','drl','mghp','shcn','notifications','scholarships']);
- assert.deepEqual(sections.filter(item=>item.kind==='disabled').map(item=>item.id),['drl','shcn','scholarships']);
+ assert.deepEqual(sections.map(item=>item.id),['home','drl','mghp','shcn','notifications']);
+ assert.deepEqual(sections.filter(item=>item.kind==='disabled').map(item=>item.id),['drl','shcn']);
  assert.deepEqual(sections.find(item=>item.id==='mghp').groups.flatMap(group=>group.items.map(item=>item.path)),
   ['/mghp/dot-xet','/mghp/ho-so','/mghp/quyen-huong']);
 });
