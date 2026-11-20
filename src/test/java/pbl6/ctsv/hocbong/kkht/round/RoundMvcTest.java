@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -107,7 +108,8 @@ class RoundMvcTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"GET, /hoc-ky-nguon", "GET, /kkht/dot-xet", "POST, /kkht/dot-xet",
+    @CsvSource({"GET, /hoc-ky-nguon", "GET, /hoc-ky-nguon/mac-dinh", "GET, /hoc-ky-nguon/bad-id",
+            "GET, /kkht/dot-xet", "POST, /kkht/dot-xet",
             "GET, /kkht/dot-xet/bad-id", "PUT, /kkht/dot-xet/bad-id"})
     void managerOperationsCheckAuthAndGroupBeforeBindingInvalidRequest(String method, String route)
             throws Exception {
@@ -157,6 +159,70 @@ class RoundMvcTest {
         identity(null, false);
         problem(mvc.perform(bearer(get(SOURCES))), 403, "FORBIDDEN");
         verify(service).sources(eq(null), aryEq(new int[]{0, 20}));
+    }
+
+    @Test
+    void defaultSemesterKeepsBothNullableFieldsAndWinsOverIdRoute() throws Exception {
+        when(service.defaultSemester()).thenReturn(new RoundDtos.DefaultSemester(null,"NO_ELIGIBLE_SEMESTER"));
+        mvc.perform(bearer(get(SOURCES+"/mac-dinh")))
+            .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL,"no-store"))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(content().json("{\"semester\":null,\"reason\":\"NO_ELIGIBLE_SEMESTER\"}",JsonCompareMode.STRICT));
+        verify(service).defaultSemester();
+    }
+
+    @Test
+    void defaultSelectionProtectsOffsetPagesInOneSerializableReadTransaction() throws Exception {
+        when(service.defaultSemester()).thenReturn(new RoundDtos.DefaultSemester(null,"NO_ELIGIBLE_SEMESTER"));
+        mvc.perform(bearer(get(SOURCES+"/mac-dinh"))).andExpect(status().isOk());
+        verify(manager).getTransaction(argThat(definition -> definition.isReadOnly()
+            && definition.getIsolationLevel()==org.springframework.transaction.TransactionDefinition.ISOLATION_SERIALIZABLE));
+    }
+
+    @Test
+    void defaultAndDirectSourceReturnTheSameWhitelistedProjection() throws Exception {
+        var projection = new RoundDtos.SourceSemesterDto("9223372036854775807","2610",null,"2026-2027",1,
+            "2026-09-01","2027-01-15",null,true,null);
+        when(service.defaultSemester()).thenReturn(new RoundDtos.DefaultSemester(projection,null));
+        when(service.sourceById(Long.MAX_VALUE)).thenReturn(projection);
+        String expected="""
+            {"sourceSemesterId":"9223372036854775807","code":"2610","name":null,
+             "academicYear":"2026-2027","semesterOrder":1,"startDate":"2026-09-01",
+             "endDate":"2027-01-15","scholarshipSemesterId":null,"selectable":true,"unavailableReason":null}
+            """;
+        mvc.perform(bearer(get(SOURCES+"/mac-dinh")))
+            .andExpect(status().isOk())
+            .andExpect(content().json("{\"semester\":"+expected+",\"reason\":null}",JsonCompareMode.STRICT));
+        mvc.perform(bearer(get(SOURCES+"/9223372036854775807")))
+            .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL,"no-store"))
+            .andExpect(content().json(expected,JsonCompareMode.STRICT));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={"0","01","-1","9223372036854775808","bad-id"})
+    void directSourceRejectsNonCanonicalIds(String id) throws Exception {
+        problem(mvc.perform(bearer(get(SOURCES+"/"+id))),400,"VALIDATION_ERROR")
+            .andExpect(jsonPath("$.errors[0].field").value("sourceSemesterId"));
+        verifyNoInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={"/hoc-ky-nguon/mac-dinh","/hoc-ky-nguon/21"})
+    void sourceReadRoutesRejectQueryBodyAndUnsupportedWriteMethod(String path) throws Exception {
+        problem(mvc.perform(bearer(get(BASE+path).queryParam("page","0"))),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(get(BASE+path).content("{}"))),400,"VALIDATION_ERROR");
+        problem(mvc.perform(post(BASE+path)),405,"METHOD_NOT_ALLOWED");
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void missingSourceAndUnavailableDefaultAreDistinctProblems() throws Exception {
+        when(service.sourceById(999)).thenThrow(new RoundFailure(404,"NOT_FOUND"));
+        when(service.defaultSemester()).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic outage"));
+        problem(mvc.perform(bearer(get(SOURCES+"/999"))),404,"NOT_FOUND");
+        problem(mvc.perform(bearer(get(SOURCES+"/mac-dinh"))),503,"DEPENDENCY_UNAVAILABLE");
     }
 
     @Test

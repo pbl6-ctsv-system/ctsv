@@ -13,18 +13,21 @@ export const navigationItems=Object.freeze([
  {id:'mghp-evaluations',label:'Đánh giá hồ sơ',feature:'mghp',view:'evaluations',path:'/mghp/danh-gia',group:'review',allow:['mghpSpecialist']},
  {id:'mghp-benefits',label:'Rà soát quyền hưởng',feature:'mghp',view:'benefits',studentView:'own-benefits',preferSpecialist:true,path:'/mghp/quyen-huong',group:'review',allow:['student','mghpSpecialist']},
  {id:'mghp-inbox',label:'Thông báo',feature:'mghp',view:'inbox',path:'/thong-bao',group:'notifications',allow:['ctsvIdentity']},
+ {id:'hocbong-rounds',label:'Đợt xét KKHT',feature:'hocbong',view:'rounds',path:'/hoc-bong/kkht/dot-xet',group:'scholarship-kkht',allow:['hocBongSpecialist']},
 ].map(item=>Object.freeze(item)));
 
 /**
  * @param {{code:string,active:boolean}[]} functions
  * @param {{student:boolean,mghpSpecialist:boolean,ctsvRoleAdmin:boolean}|null} access
+ * @param {{student:boolean,specialist:boolean}|null} [scholarship]
  */
-export function visibleNavigation(functions,access) {
+export function visibleNavigation(functions,access,scholarship=null) {
  const capabilities=new Set(functions.filter(fn=>fn?.active===true&&typeof fn.code==='string'&&fn.code.startsWith('auth.')).map(fn=>fn.code));
  if(access?.student===true)capabilities.add('student');
  if(access?.mghpSpecialist===true)capabilities.add('mghpSpecialist');
  if(access?.ctsvRoleAdmin===true)capabilities.add('ctsvRoleAdmin');
  if(access)capabilities.add('ctsvIdentity');
+ if(scholarship?.specialist===true)capabilities.add('hocBongSpecialist');
  return navigationItems.filter(item=>item.allow.some(permission=>capabilities.has(permission)))
   .map(item=>access?.student===true&&item.studentView&&!(item.preferSpecialist&&access?.mghpSpecialist)?{...item,view:item.studentView}:item);
 }
@@ -39,7 +42,9 @@ const sections=[
  ]},
  {id:'shcn',label:'Lịch SHCN',kind:'disabled'},
  {id:'notifications',label:'Thông báo',kind:'link',entryId:'mghp-inbox'},
- {id:'scholarships',label:'Học bổng',kind:'disabled'},
+ {id:'scholarships',label:'Học bổng',kind:'dropdown',groups:[
+  {id:'scholarship-kkht',label:'Khuyến khích học tập'},
+ ]},
  {id:'foundation',label:'Dữ liệu nền',kind:'dropdown',groups:[
   {id:'reference',label:'Tra cứu'},
   {id:'verification',label:'Quản lý dữ liệu'},

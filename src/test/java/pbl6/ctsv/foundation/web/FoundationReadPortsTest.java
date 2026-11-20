@@ -136,6 +136,50 @@ class FoundationReadPortsTest {
     }
 
     @Test
+    void datedSemesterCandidatesBindCutoffAndPageTheFullProjectionByStartDate() {
+        TypedQuery<Object[]> pageQuery = mock();
+        TypedQuery<Long> countQuery = mock();
+        var cutoff = LocalDate.of(2026,11,20);
+        when(em.createQuery(anyString(), eq(Object[].class))).thenAnswer(invocation -> {
+            assertThat(invocation.<String>getArgument(0).replaceAll("\\s+", " "))
+                .contains("h.id, h.ma, h.ten, h.namHocNguon, h.ngayBatDau, h.ngayKetThuc",
+                    "h.trangThaiXacMinhMoc, h.dangHienDienNguon, h.phienBan",
+                    "where h.ngayBatDau<=:cutoff", "order by h.ngayBatDau desc,h.ma,h.id")
+                .doesNotContain("soThuTu", "select h from");
+            return pageQuery;
+        });
+        when(em.createQuery(anyString(), eq(Long.class))).thenAnswer(invocation -> {
+            assertThat(invocation.<String>getArgument(0))
+                .contains("count(h)","where h.ngayBatDau<=:cutoff").doesNotContain("order by");
+            return countQuery;
+        });
+        when(pageQuery.setParameter("cutoff",cutoff)).thenReturn(pageQuery);
+        when(countQuery.setParameter("cutoff",cutoff)).thenReturn(countQuery);
+        when(pageQuery.setFirstResult(4)).thenReturn(pageQuery);
+        when(pageQuery.setMaxResults(2)).thenReturn(pageQuery);
+        when(countQuery.getSingleResult()).thenReturn(7L);
+        Object[] row={21L,"2610",null,"raw-year",LocalDate.of(2026,9,1),null,"verified",false,new byte[8]};
+        when(pageQuery.getResultList()).thenReturn(List.<Object[]>of(row));
+        context.run(application -> {
+            var result=application.getBean(AcademicSemesterSource.class).findStartedPage(cutoff,2,2);
+            assertThat(result.page()).isEqualTo(2);
+            assertThat(result.size()).isEqualTo(2);
+            assertThat(result.totalElements()).isEqualTo(7);
+            assertThat(result.items()).singleElement().satisfies(value -> {
+                assertThat(value.id()).isEqualTo(21);
+                assertThat(value.code()).isEqualTo("2610");
+                assertThat(value.name()).isNull();
+                assertThat(value.sourceAcademicYear()).isEqualTo("raw-year");
+                assertThat(value.startDate()).isEqualTo(LocalDate.of(2026,9,1));
+                assertThat(value.endDate()).isNull();
+                assertThat(value.milestoneVerificationStatus()).isEqualTo("verified");
+                assertThat(value.present()).isFalse();
+                assertThat(value.version()).hasSize(8);
+            });
+        });
+    }
+
+    @Test
     void sourceLookupReadsAndLocksOneWhitelistedSnapshot() throws Exception {
         ResultSet row = mock(ResultSet.class);
         when(row.getLong("id")).thenReturn(23L);
@@ -184,6 +228,7 @@ class FoundationReadPortsTest {
             clearInvocations(em, jdbc);
             assertThatIllegalStateException().isThrownBy(() -> roles.findActiveGlobalRole(301L, "HOC_BONG", "hoc_bong_chuyen_vien"));
             assertThatIllegalStateException().isThrownBy(() -> source.findPage(null, 0, 20));
+            assertThatIllegalStateException().isThrownBy(() -> source.findStartedPage(LocalDate.of(2026,11,20),0,20));
             assertThatIllegalStateException().isThrownBy(() -> source.findById(23L));
             verifyNoInteractions(em, jdbc);
         });
