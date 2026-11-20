@@ -3,6 +3,8 @@ package pbl6.ctsv.hocbong.kkht.round;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
 import pbl6.ctsv.foundation.api.AcademicSemesterSource;
@@ -10,6 +12,14 @@ import pbl6.ctsv.hocbong.kkht.round.entity.*;
 
 /** Caller owns the authenticated transaction. T01 deliberately does not load grades or finance. */
 class RoundService {
+    private static final int CANDIDATE_PAGE_SIZE=100;
+    private static final ZoneId VIETNAM=ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final Comparator<RoundDtos.SourceSemesterDto> DEFAULT_ORDER=
+        Comparator.comparing(RoundDtos.SourceSemesterDto::startDate).reversed()
+            .thenComparing(RoundDtos.SourceSemesterDto::academicYear,Comparator.reverseOrder())
+            .thenComparing(RoundDtos.SourceSemesterDto::semesterOrder,Comparator.reverseOrder())
+            .thenComparing(RoundDtos.SourceSemesterDto::code)
+            .thenComparingLong(value->Long.parseLong(value.sourceSemesterId()));
     private final RoundRepository repo;
     private final AcademicSemesterSource source;
     private final ObjectMapper json;
@@ -18,18 +28,41 @@ class RoundService {
     RoundService(RoundRepository repo,AcademicSemesterSource source,ObjectMapper json,Clock clock) {
         this.repo=repo; this.source=source; this.json=json; this.clock=clock;
     }
+    RoundDtos.DefaultSemester defaultSemester() {
+        var today=LocalDate.ofInstant(clock.instant(),VIETNAM);
+        RoundDtos.SourceSemesterDto best=null;
+        for(int page=0;;page++) {
+            var candidates=source.findStartedPage(today,page,CANDIDATE_PAGE_SIZE);
+            if(candidates.items().isEmpty()) break;
+            for(var candidate:sourceDtos(candidates.items())) {
+                // Candidates are date-descending. Finish the whole best-date group, including page boundaries.
+                if(best!=null && candidate.startDate()!=null && candidate.startDate().compareTo(best.startDate())<0)
+                    return new RoundDtos.DefaultSemester(best,null);
+                if(candidate.selectable() && !LocalDate.parse(candidate.startDate()).isAfter(today)
+                        && (best==null || DEFAULT_ORDER.compare(candidate,best)<0)) best=candidate;
+            }
+            if(((long)page+1)*CANDIDATE_PAGE_SIZE>=candidates.totalElements()) break;
+        }
+        return new RoundDtos.DefaultSemester(best,best==null?"NO_ELIGIBLE_SEMESTER":null);
+    }
+    RoundDtos.SourceSemesterDto sourceById(long id) {
+        var value=source.findById(id).orElseThrow(()->new RoundFailure(404,"NOT_FOUND"));
+        return sourceDto(value,assess(value));
+    }
     RoundDtos.Page<RoundDtos.SourceSemesterDto> sources(String q,int[] page) {
         var result=source.findPage(q,page[0],page[1]);
-        var mapped=repo.semestersBySources(result.items().stream().map(AcademicSemesterSource.Semester::id).toList());
-        var periods=result.items().stream().flatMap(value->RoundRules.period(value.code()).stream()).toList();
+        return new RoundDtos.Page<>(sourceDtos(result.items()),result.page(),result.size(),result.totalElements());
+    }
+    private List<RoundDtos.SourceSemesterDto> sourceDtos(List<AcademicSemesterSource.Semester> values) {
+        var mapped=repo.semestersBySources(values.stream().map(AcademicSemesterSource.Semester::id).toList());
+        var periods=values.stream().flatMap(value->RoundRules.period(value.code()).stream()).toList();
         var canonical=repo.semestersByPeriods(periods);
-        var items=result.items().stream().map(value -> {
+        return values.stream().map(value -> {
             var period=RoundRules.period(value.code()).orElse(null);
             var semester=mapped.get(value.id());
             if(semester==null&&period!=null) semester=canonical.get(RoundRepository.periodKey(period.academicYear(),period.semesterOrder()));
             return sourceDto(value,assess(value,period,semester));
         }).toList();
-        return new RoundDtos.Page<>(items,result.page(),result.size(),result.totalElements());
     }
     private record Assessment(RoundRules.Period period,ScholarshipSemester semester,String reason) {}
 

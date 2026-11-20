@@ -26,6 +26,12 @@ public interface AcademicSemesterSource {
 
     Page findPage(String q, int page, int size);
 
+    /**
+     * All dated candidates on/before cutoff, ordered by start date descending, code/id ascending.
+     * Consumers traversing multiple pages need a single SERIALIZABLE transaction to keep offsets stable.
+     */
+    Page findStartedPage(LocalDate cutoff, int page, int size);
+
     /** Locks the source through the end of the caller's transaction. */
     Optional<Semester> findById(long id);
 }

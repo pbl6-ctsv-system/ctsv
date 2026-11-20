@@ -56,6 +56,25 @@ class RoundController {
         return response(HttpStatus.OK).body(body);
     }
 
+    @GetMapping("/hoc-ky-nguon/mac-dinh")
+    ResponseEntity<RoundDtos.DefaultSemester> defaultSemester(HttpServletRequest request) {
+        var body = access.executeConsistentRead(RoundHttp.principal(request, auth), actor -> {
+            RoundHttp.getQuery(request);
+            return service.defaultSemester();
+        });
+        return response(HttpStatus.OK).body(body);
+    }
+
+    @GetMapping("/hoc-ky-nguon/{sourceSemesterId}")
+    ResponseEntity<RoundDtos.SourceSemesterDto> sourceById(
+            @PathVariable("sourceSemesterId") String sourceSemesterId, HttpServletRequest request) {
+        var body = access.execute(RoundHttp.principal(request, auth), true, actor -> {
+            RoundHttp.getQuery(request);
+            return service.sourceById(RoundRules.id("sourceSemesterId", sourceSemesterId));
+        });
+        return response(HttpStatus.OK).body(body);
+    }
+
     @GetMapping(ROUNDS)
     ResponseEntity<RoundDtos.Page<RoundDtos.RoundSummary>> list(HttpServletRequest request) {
         var body = access.execute(RoundHttp.principal(request, auth), true, actor -> {

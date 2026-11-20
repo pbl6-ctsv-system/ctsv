@@ -73,6 +73,29 @@ public final class FoundationRepository implements AcademicSemesterSource {
     }
 
     @Override
+    public Page findStartedPage(LocalDate cutoff, int page, int size) {
+        requireSemesterSourceTransaction();
+        Objects.requireNonNull(cutoff, "cutoff");
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Invalid semester candidate page");
+        }
+        int offset = Math.toIntExact((long) page * size);
+        var rows = em.createQuery("""
+            select h.id, h.ma, h.ten, h.namHocNguon, h.ngayBatDau, h.ngayKetThuc,
+                   h.trangThaiXacMinhMoc, h.dangHienDienNguon, h.phienBan
+            from HocKy h where h.ngayBatDau<=:cutoff
+            order by h.ngayBatDau desc,h.ma,h.id
+            """, Object[].class).setParameter("cutoff", cutoff);
+        var count = em.createQuery("select count(h) from HocKy h where h.ngayBatDau<=:cutoff", Long.class)
+            .setParameter("cutoff", cutoff);
+        var items = rows.setFirstResult(offset).setMaxResults(size).getResultList().stream()
+            .map(row -> new Semester((Long) row[0], (String) row[1], (String) row[2], (String) row[3],
+                (LocalDate) row[4], (LocalDate) row[5], (String) row[6], Boolean.TRUE.equals(row[7]),
+                (byte[]) row[8])).toList();
+        return new Page(items, page, size, count.getSingleResult());
+    }
+
+    @Override
     public Optional<Semester> findById(long id) {
         requireSemesterSourceTransaction();
         em.flush();

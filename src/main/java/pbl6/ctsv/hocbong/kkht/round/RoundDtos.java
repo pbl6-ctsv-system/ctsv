@@ -5,6 +5,7 @@ import java.util.List;
 /** HTTP whitelist. Foundation and persistence objects never cross this boundary. */
 final class RoundDtos {
     record Groups(boolean student,boolean specialist) {}
+    record DefaultSemester(SourceSemesterDto semester,String reason) {}
     record Page<T>(List<T> items,int page,int size,long totalElements) {
         Page { items=List.copyOf(items); }
     }
