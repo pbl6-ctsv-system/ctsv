@@ -15,7 +15,7 @@ async function check(id,run){
  if(process.env.CTSV_HB_CASE&&!id.includes(process.env.CTSV_HB_CASE))return;
  const context=await browser.newContext({ignoreHTTPSErrors:false,viewport:{width:1280,height:900}});
  const page=await context.newPage();page.setDefaultTimeout(7000);
- const state={groups:{student:false,specialist:true},rows:[],details:new Map(),calls:[],cancelled:[],errors:[],postStatus:201,postCode:null,lost:false,holdPost:null,changeAfterPost:false,detailStatus:200,sourceStatus:200,slowQuery:null,releaseSource:null};
+ const state={groups:{student:false,specialist:true},rows:[],details:new Map(),calls:[],cancelled:[],errors:[],postStatus:201,postCode:null,lost:false,holdPost:null,changeAfterPost:false,detailStatus:200,sourceStatus:200,directStatus:200,slowQuery:null,releaseSource:null};
  page.on('pageerror',error=>state.errors.push(error.message));
  page.on('requestfailed',request=>{const url=new URL(request.url());if(url.pathname===api+'/hoc-ky-nguon')state.cancelled.push(url.searchParams.get('q'));});
  await page.route(url=>url.pathname.startsWith('/api/'),async route=>{
@@ -27,6 +27,8 @@ async function check(id,run){
   if(p===api+'/toi/nhom-chuc-nang')return route.fulfill({json:state.groups});
   state.calls.push({path:p,method:request.method(),query:Object.fromEntries(url.searchParams)});
   if(!state.groups.specialist)return route.fulfill({status:403,json:{code:'FORBIDDEN'}});
+  if(p===api+'/hoc-ky-nguon/mac-dinh')return route.fulfill({json:{semester:base,reason:null}});
+  if(p.startsWith(api+'/hoc-ky-nguon/'))return route.fulfill({status:state.directStatus,json:state.directStatus===200?sources.find(item=>item.sourceSemesterId===p.split('/').at(-1)):{code:'DEPENDENCY_UNAVAILABLE'}});
   if(p===api+'/hoc-ky-nguon'){
    if(state.sourceStatus!==200)return route.fulfill({status:state.sourceStatus,json:{code:state.sourceStatus===403?'FORBIDDEN':'DEPENDENCY_UNAVAILABLE'}});
    const q=url.searchParams.get('q')??'';
@@ -63,18 +65,21 @@ async function check(id,run){
   if(detail)return route.fulfill({status:state.detailStatus,headers:{ETag:'"AAAAAAAAAAE="'},json:state.detailStatus===200?detail:{code:'DEPENDENCY_UNAVAILABLE'}});
   throw new Error('Unexpected synthetic request '+p);
  });
- const open=async()=>{
+ const openPicker=async()=>{
   await page.goto(origin+routePath);
-  await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Tạo đợt xét',exact:true})).toBeVisible();
   await expect(page.getByRole('radio',{name:'2510 · Học kỳ 1',exact:true})).toBeVisible();
  };
+ const open=async()=>{
+  await openPicker();
+  await expect(page.getByRole('button',{name:'Tạo đợt xét',exact:true})).toBeEnabled();
+  await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Tạo đợt xét',exact:true})).toBeVisible();
+ };
  const fill=async(name='Đợt tạo mới',number='3')=>{
-  await page.getByRole('radio',{name:'2510 · Học kỳ 1',exact:true}).check();
   await page.getByLabel('Số đợt',{exact:true}).fill(number);
   await page.getByLabel('Tên đợt',{exact:true}).fill(name);
  };
- try{await run({page,state,open,fill});assert.deepEqual(state.errors,[]);cases.push(id);console.log(id+' PASS (STUB)');}
+ try{await run({page,state,open,openPicker,fill});assert.deepEqual(state.errors,[]);cases.push(id);console.log(id+' PASS (STUB)');}
  finally{state.releaseSource?.();await context.close();}
 }
 try{
@@ -86,10 +91,10 @@ try{
   await page.getByRole('button',{name:'Quay lại danh sách',exact:true}).click();
   await expect(page.getByText('Đợt tạo mới',{exact:true})).toBeVisible();
   assert.equal(state.calls.filter(call=>call.method==='POST').length,1);
-  assert(state.calls.some(call=>call.method==='GET'&&call.query.number==='3'&&call.query.semesterId==='501'));
+  assert(state.calls.some(call=>call.method==='GET'&&call.query.number==='3'&&call.query.sourceSemesterId==='21'));
  });
- await check('HB-T022-B02-unavailable-and-source-search',async({page,state,open})=>{
-  await open();
+ await check('HB-T022-B02-unavailable-and-source-search',async({page,state,openPicker})=>{
+  await openPicker();
   await expect(page.getByRole('radio',{name:'2521 · Học kỳ hè',exact:true})).toBeDisabled();
   await expect(page.getByText('Học kỳ hè không tạo đợt riêng; chọn học kỳ 2.',{exact:true})).toBeVisible();
   await expect(page.getByRole('radio',{name:'2610 · Chưa có tên',exact:true})).toBeDisabled();
@@ -107,7 +112,7 @@ try{
   await expect(page.getByRole('alert')).toContainText('Số đợt đã tồn tại trong học kỳ');
   await expect(page.getByLabel('Tên đợt',{exact:true})).toHaveValue('Giữ tên khi lỗi');
   await expect(page.getByLabel('Số đợt',{exact:true})).toHaveValue('7');
-  await expect(page.getByRole('radio',{name:'2510 · Học kỳ 1',exact:true})).toBeChecked();
+  await expect(page.getByText('2510 · Học kỳ 1',{exact:true})).toBeVisible();
   state.postStatus=400;
   await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
   await expect(page.getByLabel('Tên đợt',{exact:true})).toHaveAttribute('aria-invalid','true');
@@ -143,8 +148,8 @@ try{
   assert.equal(state.calls.filter(call=>call.method==='POST').length,1);
   assert(state.calls.some(call=>call.query.sourceSemesterId==='21'&&call.query.number==='3'));
  });
- await check('HB-T022-B07-source-error-empty-cancel-mobile',async({page,state,open})=>{
-  await open();
+ await check('HB-T022-B07-source-error-empty-cancel-mobile',async({page,state,openPicker})=>{
+  await openPicker();
   await page.setViewportSize({width:360,height:800});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
   await page.getByLabel('Tìm học kỳ',{exact:true}).fill('không tồn tại');
@@ -155,6 +160,7 @@ try{
   await expect(page.getByRole('alert')).toContainText('Chưa thể kiểm tra trạng thái bảo mật');
   // Shared persistent feedback overlays the mobile footer until the user dismisses it.
   await page.getByRole('button',{name:'Đóng thông báo lỗi',exact:true}).click();
+  await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
   await page.getByRole('button',{name:'Quay lại danh sách',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Danh sách đợt xét',exact:true})).toBeVisible();
   assert.equal(state.calls.filter(call=>call.method==='POST').length,0);
@@ -164,8 +170,8 @@ try{
   await expect(page.getByText('Bạn không có quyền truy cập trang này.',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Tạo đợt xét',exact:true})).toHaveCount(0);
  });
- await check('HB-T022-B09-source-query-race',async({page,state,open})=>{
-  await open();state.slowQuery='2510';
+ await check('HB-T022-B09-source-query-race',async({page,state,openPicker})=>{
+  await openPicker();state.slowQuery='2510';
   await page.getByLabel('Tìm học kỳ',{exact:true}).fill('2510');
   await page.getByLabel('Tìm học kỳ',{exact:true}).press('Enter');
   await expect(page.getByText('Đang tải học kỳ…',{exact:true})).toBeVisible();
@@ -187,8 +193,8 @@ try{
   await expect(page.getByLabel('Số đợt',{exact:true})).toHaveValue('19');
   assert.equal(state.calls.filter(call=>call.method==='POST').length,1);
  });
- await check('HB-T022-B11-source-permission-revoked',async({page,state,open,fill})=>{
-  await open();await fill();state.sourceStatus=403;
+ await check('HB-T022-B11-source-permission-revoked',async({page,state,openPicker,fill})=>{
+  await openPicker();state.sourceStatus=403;
   await page.getByRole('button',{name:'Đọc lại học kỳ',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('Bạn không có quyền truy cập các đợt xét KKHT');
   await expect(page.getByLabel('Tên đợt',{exact:true})).toHaveCount(0);
@@ -199,8 +205,13 @@ try{
   await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('Học kỳ nguồn chưa đủ điều kiện hoặc đã thay đổi');
   await expect(page.getByLabel('Tên đợt',{exact:true})).toHaveValue('Giữ tên khi kỳ đổi');
-  await expect(page.getByText('Chưa chọn học kỳ.',{exact:true})).toBeVisible();
+  await expect(page.getByText('2510 · Học kỳ 1',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Tạo đợt xét',exact:true})).toBeDisabled();
+  const before=state.calls.filter(call=>call.path===api+'/hoc-ky-nguon/21').length;
+  state.directStatus=503;await page.getByRole('button',{name:'Quay lại danh sách',exact:true}).click();
+  await expect(page.getByRole('alert')).toBeVisible();await expect(page).toHaveURL(/hocKyNguonId=21/);
+  await expect(page.getByRole('button',{name:'Tạo đợt xét',exact:true})).toBeDisabled();
+  assert(state.calls.filter(call=>call.path===api+'/hoc-ky-nguon/21').length>before,'cancel after source conflict must revalidate the selected source');
  });
  await check('HB-T022-B13-current-readback-after-other-writer',async({page,state,open,fill})=>{
   await open();await fill('Tên ban đầu','3');state.changeAfterPost=true;
@@ -208,7 +219,7 @@ try{
   await expect(page.getByRole('heading',{name:'Đợt đã được cập nhật',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Quay lại danh sách',exact:true}).click();
   await expect(page.getByText('Đợt đã được cập nhật',{exact:true})).toBeVisible();
-  assert(state.calls.some(call=>call.method==='GET'&&call.query.number==='4'&&call.query.semesterId==='501'));
+  assert(state.calls.some(call=>call.method==='GET'&&call.query.number==='4'&&call.query.sourceSemesterId==='21'));
   assert.equal(state.calls.filter(call=>call.method==='POST').length,1);
  });
 }finally{console.log('HB create browser: '+cases.length+' PASS');await browser.close();}

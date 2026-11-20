@@ -15,6 +15,7 @@ const reasons:Record<string,string>={
  SEMESTER_MAPPING_REQUIRED:'Chưa xác định được năm học hoặc học kỳ học bổng.',
  SEMESTER_MAPPING_CONFLICT:'Thông tin học kỳ đang có mâu thuẫn ánh xạ.',
 };
+export const sourceReason=(source:SourceSemester)=>reasons[source.unavailableReason??'']??'Học kỳ này chưa đủ điều kiện để tạo đợt.';
 type Props={client:AuthClient;value:SourceSemester|null;onChange:(source:SourceSemester|null)=>void;
  disabled:boolean;refresh:number;error?:string;onBusy:(busy:boolean)=>void;onForbidden:()=>void};
 type State={key:string;data:SourceSemesterPage|null;error:string};
@@ -31,15 +32,13 @@ export function SourceSemesterPicker({client,value,onChange,disabled,refresh,err
   void listSourceSemesters(client,{q:query,page,size:20},abort.signal).then(data=>{
    if(abort.signal.aborted)return;
    setState({key,data,error:''});
-   const selected=data.items.find(item=>item.sourceSemesterId===selectedId);
-   if(selected)onChange(selected);
   }).catch(error=>{
    if(abort.signal.aborted)return;
    if(error instanceof ApiError&&error.status===403)onForbidden();
    setState({key,data:null,error:error instanceof DOMException&&error.name==='TimeoutError'?'Tải học kỳ quá lâu. Vui lòng thử lại.':errorMessage(error)});
   }).finally(()=>{if(!abort.signal.aborted)onBusy(false);});
   return()=>abort.abort();
- },[client,query,page,revision,refresh,key,selectedId,onChange,onBusy,onForbidden]);
+ },[client,query,page,revision,refresh,key,onBusy,onForbidden]);
  function search(){setQuery(input.trim());setPage(0);setRevision(value=>value+1);}
  const data=current?.data;
  const pages=data?Math.max(1,Math.ceil(data.totalElements/data.size)):1;

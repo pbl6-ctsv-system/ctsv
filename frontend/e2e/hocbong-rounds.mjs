@@ -7,7 +7,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const routePath='/hoc-bong/kkht/dot-xet';
 const api='/api/ctsv/hoc-bong';
 const cases=[];
-const rows=Array.from({length:21},(_,i)=>({id:i===0?'9007199254740993':String(1001+i),sourceSemesterId:'21',semesterId:i===20?'502':'501',academicYear:i===20?'2024-2025':'2025-2026',semesterOrder:2,number:i+1,name:`Đợt thực hành KKHT ${i+1}`,status:'draft'}));
+const rows=Array.from({length:21},(_,i)=>({id:i===0?'9007199254740993':String(1001+i),sourceSemesterId:'21',semesterId:'501',academicYear:'2025-2026',semesterOrder:2,number:i+1,name:`Đợt thực hành KKHT ${i+1}`,status:'draft'}));
 const roundDetail=row=>({id:row.id,sourceSemesterId:row.sourceSemesterId,number:row.number,name:row.name,status:row.status,createdBy:'301',semester:{id:row.semesterId,academicYear:row.academicYear,semesterOrder:2,startDate:'2026-01-16',endDate:'2026-06-30',status:'draft'},opensAt:null,closedAt:null,tuitionSnapshotAt:null,ruleVersionId:null});
 
 async function check(id,run){
@@ -31,6 +31,10 @@ async function check(id,run){
   if(pathname.startsWith(api+'/')){
    state.calls.push({method:request.method(),path:pathname,query:Object.fromEntries(url.searchParams)});
    assert.equal(request.method(),'GET','T02.1 must not mutate scholarship data');
+   const source={sourceSemesterId:'21',code:'2520',name:'Học kỳ 2',academicYear:'2025-2026',semesterOrder:2,startDate:'2026-01-16',endDate:'2026-06-30',scholarshipSemesterId:'501',selectable:true,unavailableReason:null};
+   if(pathname===api+'/hoc-ky-nguon/mac-dinh')return route.fulfill({json:{semester:source,reason:null}});
+   if(pathname===api+'/hoc-ky-nguon/21')return route.fulfill({json:source});
+   if(pathname===api+'/hoc-ky-nguon')return route.fulfill({json:{items:[source],page:0,size:20,totalElements:1}});
    if(pathname===api+'/kkht/dot-xet'){
     if(state.holdList)await state.holdList;
     if(state.listStatus!==200)return route.fulfill({status:state.listStatus,json:{code:state.listStatus===403?'FORBIDDEN':'DEPENDENCY_UNAVAILABLE'}});
@@ -111,11 +115,11 @@ try{
  await check('HB-T021-B06-empty-error-retry',async({page,state,open})=>{
   state.records=[];
   await open();
-  await expect(page.getByText('Không có đợt xét phù hợp.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Không có đợt xét phù hợp trong học kỳ đã chọn.',{exact:true})).toBeVisible();
   state.listStatus=503;
   await page.getByRole('button',{name:'Đọc lại danh sách',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('Chưa thể kiểm tra trạng thái bảo mật');
-  await expect(page.getByText('Không có đợt xét phù hợp.',{exact:true})).toHaveCount(0);
+  await expect(page.getByText('Không có đợt xét phù hợp trong học kỳ đã chọn.',{exact:true})).toHaveCount(0);
   state.listStatus=200;state.records=[rows[0]];
   await page.getByRole('button',{name:'Đọc lại danh sách',exact:true}).click();
   await expect(page.getByText(rows[0].name,{exact:true})).toBeVisible();
@@ -132,8 +136,8 @@ try{
   await page.getByRole('button',{name:'Lọc danh sách',exact:true}).click();
   await expect(page.getByText('1 đợt xét',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Lọc học kỳ 2 năm học 2025-2026',exact:true}).click();
-  await expect(page.getByText('Học kỳ 2 · 2025-2026',{exact:true})).toBeVisible();
-  assert(state.calls.some(call=>call.query.semesterId==='501'&&call.query.number==='1'&&call.query.page==='0'));
+  await expect(page.getByText('Học kỳ đã chọn: 2520 · Học kỳ 2',{exact:true})).toBeVisible();
+  assert(state.calls.some(call=>call.query.sourceSemesterId==='21'&&call.query.number===undefined&&call.query.page==='0'));
  });
  await check('HB-T021-B08-detail-errors-stale-response',async({page,state,open})=>{
   await open();

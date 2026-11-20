@@ -20,6 +20,7 @@ export type SourceSemester={
  selectable:boolean;unavailableReason:string|null;
 };
 export type SourceSemesterPage={items:SourceSemester[];page:number;size:number;totalElements:number};
+export type DefaultSemester={semester:SourceSemester|null;reason:'NO_ELIGIBLE_SEMESTER'|null};
 export type SourceSemesterFilters={q?:string;page?:number;size?:number};
 export type CreateRoundCommand={sourceSemesterId:string;number:number;name:string};
 export type UpdateRoundCommand={number:number;name:string};

@@ -6,19 +6,19 @@ import {Alert} from '../../../shared/ui/Alert';
 import {Button} from '../../../shared/ui/Button';
 import {createRound,listRounds,readRound} from '../api/rounds';
 import type {CreateRoundCommand,RoundView,SourceSemester} from '../types/round';
-import {SourceSemesterPicker} from './SourceSemesterPicker';
 import styles from './CreateRoundForm.module.css';
 
-type Props={client:AuthClient;onCancel:()=>void;onCreated:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
+type Props={client:AuthClient;initialSource:SourceSemester;onCancel:()=>void;onCreated:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
 type FieldErrors=Partial<Record<'sourceSemesterId'|'number'|'name',string>>;
 const savedError='Đợt đã được tạo nhưng chưa tải lại đầy đủ. Hãy đọc lại kết quả; hệ thống không gửi lại lệnh tạo.';
 const unknownError='Chưa xác nhận được kết quả tạo đợt. Hãy kiểm tra đợt đã lưu trước khi gửi lại; hệ thống không tự tạo lại.';
 
-export function CreateRoundForm({client,onCancel,onCreated,onForbidden}:Props){
- const [source,setSource]=useState<SourceSemester|null>(null);
+export function CreateRoundForm({client,initialSource,onCancel,onCreated,onForbidden}:Props){
+ const source=initialSource;
+ const [sourceBlocked,setSourceBlocked]=useState(false);
  const [number,setNumber]=useState('1'),[name,setName]=useState('');
  const [error,setError]=useState(''),[fields,setFields]=useState<FieldErrors>({});
- const [busy,setBusy]=useState(false),[sourceBusy,setSourceBusy]=useState(true),[refresh,setRefresh]=useState(0);
+ const [busy,setBusy]=useState(false);
  const [saved,setSaved]=useState<RoundView|null>(null),[uncertain,setUncertain]=useState<CreateRoundCommand|null>(null),[found,setFound]=useState<RoundView|null>(null);
  const pending=useRef(false),alive=useRef(true),heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{alive.current=true;heading.current?.focus();return()=>{alive.current=false;};},[]);
@@ -27,7 +27,7 @@ export function CreateRoundForm({client,onCancel,onCreated,onForbidden}:Props){
  function forbidden(error:unknown){if(error instanceof ApiError&&error.status===403){onForbidden();return true;}return false;}
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(pending.current||saved||uncertain||sourceBusy)return;
+  if(pending.current||saved||uncertain||sourceBlocked)return;
   const invalid:FieldErrors={};
   if(!source?.selectable)invalid.sourceSemesterId='Chọn một học kỳ đủ điều kiện.';
   if(!Number.isInteger(Number(number))||Number(number)<1||Number(number)>2147483647)invalid.number='Số đợt phải là số nguyên từ 1 đến 2147483647.';
@@ -49,7 +49,7 @@ export function CreateRoundForm({client,onCancel,onCreated,onForbidden}:Props){
     if(error.code==='ROUND_EXISTS')setError('Số đợt đã tồn tại trong học kỳ. Hãy chọn số đợt khác.');
     else if(['SOURCE_SEMESTER_UNAVAILABLE','SEMESTER_MAPPING_REQUIRED','SEMESTER_MAPPING_CONFLICT'].includes(error.code)){
      setError('Học kỳ nguồn chưa đủ điều kiện hoặc đã thay đổi. Hãy chọn lại sau khi dữ liệu được đọc mới.');
-     setSource(null);setRefresh(value=>value+1);
+     setSourceBlocked(true);
     }else if(error.code==='VALIDATION_ERROR'){
      setError('Thông tin tạo đợt chưa hợp lệ. Hãy kiểm tra các trường được đánh dấu.');
      const next:FieldErrors={};
@@ -80,9 +80,14 @@ export function CreateRoundForm({client,onCancel,onCreated,onForbidden}:Props){
  }
  return <section className={styles.formArea} aria-labelledby="create-round-title">
   <h2 id="create-round-title" ref={heading} tabIndex={-1}>Tạo đợt xét</h2>
-  <p>Chọn học kỳ có sẵn và nhập thông tin đợt. Đợt được lưu ở trạng thái Nháp để cấu hình trước khi mở.</p>
+  <p>Nhập thông tin đợt trong học kỳ đã chọn. Đợt được lưu ở trạng thái Nháp để cấu hình trước khi mở.</p>
   <form aria-label="Tạo đợt xét KKHT" onSubmit={submit} className={styles.form}>
-   <SourceSemesterPicker client={client} value={source} onChange={setSource} disabled={busy||!!saved||!!uncertain} refresh={refresh} error={fields.sourceSemesterId} onBusy={setSourceBusy} onForbidden={onForbidden}/>
+   <fieldset className={styles.information}>
+    <legend>Học kỳ xét</legend><p>{source.code} · {source.name??'Chưa có tên'}</p>
+    <p>{source.academicYear} · Học kỳ {source.semesterOrder}</p>
+    <p className={styles.hint}>Để đổi học kỳ, hủy tạo đợt và chọn lại từ danh sách.</p>
+    {fields.sourceSemesterId&&<p className={styles.fieldError}>{fields.sourceSemesterId}</p>}
+   </fieldset>
    <fieldset className={styles.information} disabled={busy||!!saved||!!uncertain}>
     <legend>Thông tin đợt</legend>
     <label htmlFor="create-round-number">Số đợt<input id="create-round-number" type="number" min="1" max="2147483647" step="1" required value={number} onChange={event=>{setNumber(event.target.value);setFields(current=>({...current,number:undefined}));}} aria-invalid={!!fields.number} aria-describedby={fields.number?'create-number-error':undefined}/></label>
@@ -98,7 +103,7 @@ export function CreateRoundForm({client,onCancel,onCreated,onForbidden}:Props){
     <Button variant="secondary" disabled={busy} onClick={()=>{setUncertain(null);setFound(null);setError('');}}>Quay lại chỉnh sửa</Button>
    </div>}
    <div className={styles.actions}>
-    {!saved&&!uncertain&&<Button type="submit" disabled={busy||sourceBusy||!source?.selectable}>{busy?'Đang tạo…':'Tạo đợt xét'}</Button>}
+    {!saved&&!uncertain&&<Button type="submit" disabled={busy||sourceBlocked||!source.selectable}>{busy?'Đang tạo…':'Tạo đợt xét'}</Button>}
     {saved&&<Button disabled={busy} onClick={()=>void retrySaved(saved)}>Đọc lại kết quả</Button>}
     <Button variant="secondary" disabled={busy} onClick={onCancel}>Quay lại danh sách</Button>
    </div>

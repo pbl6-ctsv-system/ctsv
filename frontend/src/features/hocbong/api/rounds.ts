@@ -1,5 +1,5 @@
 import type {AuthClient} from '../../../shared/types/api';
-import type {CreateRoundCommand,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,SourceSemester,SourceSemesterFilters,SourceSemesterPage,UpdateRoundCommand} from '../types/round';
+import type {CreateRoundCommand,DefaultSemester,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,SourceSemester,SourceSemesterFilters,SourceSemesterPage,UpdateRoundCommand} from '../types/round';
 
 const BASE='/api/ctsv/hoc-bong';
 const ROUNDS=BASE+'/kkht/dot-xet';
@@ -81,6 +81,22 @@ export async function listSourceSemesters(client:AuthClient,filters:SourceSemest
  if(!body||!Array.isArray(body.items)||!body.items.every(sourceSemester)||!integer(body.page,0,100000)
   ||!integer(body.size,1,100)||!integer(body.totalElements,0,Number.MAX_SAFE_INTEGER))throw invalid();
  return body as SourceSemesterPage;
+}
+
+export async function readDefaultSemester(client:AuthClient,signal?:AbortSignal):Promise<DefaultSemester>{
+ const response=await client.request(BASE+'/hoc-ky-nguon/mac-dinh',{signal:requestSignal(signal)});
+ const body=record(await response.json());
+ if(!body||(body.semester===null?body.reason!=='NO_ELIGIBLE_SEMESTER'
+  :!sourceSemester(body.semester)||!body.semester.selectable||body.reason!==null))throw invalid();
+ return{semester:body.semester as SourceSemester|null,reason:body.reason as DefaultSemester['reason']};
+}
+
+export async function readSourceSemester(client:AuthClient,sourceId:string,signal?:AbortSignal):Promise<SourceSemester>{
+ if(!id(sourceId))throw new Error('Đường dẫn học kỳ không hợp lệ. Hãy chọn lại học kỳ.');
+ const response=await client.request(BASE+'/hoc-ky-nguon/'+sourceId,{signal:requestSignal(signal)});
+ const body:unknown=await response.json();
+ if(!sourceSemester(body)||body.sourceSemesterId!==sourceId)throw invalid();
+ return body;
 }
 
 export async function createRound(client:AuthClient,command:CreateRoundCommand):Promise<RoundView>{

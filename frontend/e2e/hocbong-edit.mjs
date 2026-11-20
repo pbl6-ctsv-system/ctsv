@@ -21,6 +21,10 @@ async function check(id,run){
   if(p===api+'/toi/nhom-chuc-nang')return route.fulfill({json:state.groups});
   state.calls.push({path:p,method:request.method(),query:Object.fromEntries(url.searchParams)});
   if(!state.groups.specialist)return route.fulfill({status:403,json:{code:'FORBIDDEN'}});
+  const source={sourceSemesterId:'21',code:'2520',name:'Học kỳ 2',academicYear:state.record.semester.academicYear,semesterOrder:2,startDate:state.record.semester.startDate,endDate:state.record.semester.endDate,scholarshipSemesterId:'501',selectable:true,unavailableReason:null};
+  if(p===api+'/hoc-ky-nguon/mac-dinh')return route.fulfill({json:{semester:source,reason:null}});
+  if(p===api+'/hoc-ky-nguon/21')return route.fulfill({json:source});
+  if(p===api+'/hoc-ky-nguon')return route.fulfill({json:{items:[source],page:0,size:20,totalElements:1}});
   if(p===api+'/kkht/dot-xet'){
    const d=state.record;
    const items=url.searchParams.has('number')&&Number(url.searchParams.get('number'))!==d.number?[]:[{id:d.id,sourceSemesterId:d.sourceSemesterId,semesterId:d.semester.id,academicYear:d.semester.academicYear,semesterOrder:d.semester.semesterOrder,number:d.number,name:d.name,status:d.status}];
@@ -152,7 +156,7 @@ try{
   await page.goBack();
   await expect(page.getByRole('heading',{name:'Danh sách đợt xét',exact:true})).toBeVisible();
   await expect.poll(()=>state.cancelled).toBeGreaterThan(0);state.releaseReadback();
-  await expect(page).toHaveURL(origin+routePath);
+  await expect(page).toHaveURL(origin+routePath+'?hocKyNguonId=21');
  });
  await check('HB-T023-B11-precondition-and-replace-input',async({page,state,edit,fill})=>{
   await edit();await fill('Nội dung chưa lưu','9');state.putStatus=428;state.putCode='PRECONDITION_REQUIRED';
@@ -178,7 +182,7 @@ try{
   state.releasePut();await pending;
   await page.getByRole('button',{name:'Đọc lại danh sách',exact:true}).click();
   await expect(page.getByText('Đợt đã sửa',{exact:true})).toBeVisible();
-  await expect(page).toHaveURL(origin+routePath);
+  await expect(page).toHaveURL(origin+routePath+'?hocKyNguonId=21');
   await expect(page.getByText('Đã lưu thay đổi đợt xét.',{exact:true})).toHaveCount(0);
  });
 }finally{console.log('HB edit browser: '+passed.length+' PASS');await browser.close();}
