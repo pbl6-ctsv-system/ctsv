@@ -1,0 +1,1825 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SHCN TASK-CV-02 and semester lookup CV-001",
+    "version": "0.2.0",
+    "description": "Owner approved implementation. Global SHCN specialist scope. Backend/frontend source implemented; SQL/DEV verification pending owner migration and account grants. No migration or seed executed."
+  },
+  "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+  "x-task-id": "TASK-CV-02",
+  "x-pending-decisions": [],
+  "security": [
+    {
+      "ctsvBearer": []
+    }
+  ],
+  "paths": {
+    "/api/shcn/dot-sinh-hoat": {
+      "get": {
+        "operationId": "SHCN_CV_006",
+        "tags": [
+          "02. Chuẩn bị đợt"
+        ],
+        "summary": "Xem danh sách đợt",
+        "description": "D01 confirmed: global SHCN specialist scope; no author or faculty ownership restriction. Permission, state and CAS guards apply. See 02_CONTRACT.md.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647,
+              "default": 0
+            },
+            "description": "Mặc định 0; raw query phải là số nguyên thập phân không dấu."
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Mặc định 25, tối đa 100; offset <=100000."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id:asc",
+                "id:desc"
+              ],
+              "default": "id:asc"
+            },
+            "description": "Mặc định id:asc; luôn ổn định bằng ID."
+          },
+          {
+            "name": "maHocKy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BusinessCode"
+            },
+            "description": ""
+          },
+          {
+            "name": "maKhoa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BusinessCode"
+            },
+            "description": "Within authorized scope and resolved target faculties only; no inferred author faculty. Resolver is a future TASK-CV-03/05 dependency; unavailable returns 503. Minimal UI does not send this filter."
+          },
+          {
+            "name": "trangThai",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NHAP",
+                "CHO_DUYET",
+                "BI_TRA_LAI",
+                "DA_DUYET",
+                "DA_PHAT_HANH",
+                "DA_HUY"
+              ]
+            },
+            "description": ""
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "x-max-utf16-code-units": 200
+            },
+            "description": "Literal substring search in tenDot. Omit q when input is empty. UTF-16 limit 200."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DTO trực tiếp, field presence/nullable theo schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDot"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "1001",
+                      "version": "AAAAAAAAB9E=",
+                      "maHocKy": "TEST-KY-01",
+                      "tenDot": "Đợt SHCN kiểm thử",
+                      "khungNgayBatDau": "2026-11-20",
+                      "khungNgayKetThuc": "2026-11-30",
+                      "khungTietChoPhep": [
+                        {
+                          "tietDau": 11,
+                          "tietCuoi": 12
+                        }
+                      ],
+                      "hanChotDangKyLich": "2026-11-18T03:00:00Z",
+                      "trangThai": "NHAP",
+                      "trangThaiPhanCong": "CHUA_DONG_BO",
+                      "phienBanPhanCongApDung": null,
+                      "trangThaiLichTongHop": "DANG_CHOT",
+                      "phienBanLichTongHop": null,
+                      "ngayPhatHanh": null,
+                      "ngayCongBoLich": null,
+                      "ngayTao": "2026-11-07T02:00:00Z",
+                      "ngayCapNhat": "2026-11-07T02:00:00Z"
+                    }
+                  ],
+                  "page": 0,
+                  "size": 25,
+                  "totalElements": 1
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "private, no-store"
+              },
+              "X-SHCN-Can-Prepare": {
+                "description": "Current global SHCN prepare permission, verified with scope in the same transaction. Does not bypass server authorization.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dữ liệu không hợp lệ",
+                  "status": 400,
+                  "detail": "Kiểm tra trường bị báo lỗi.",
+                  "instance": "/api/shcn/dot-sinh-hoat",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "test-trace-01",
+                  "errors": [
+                    {
+                      "field": "page",
+                      "code": "INVALID_VALUE",
+                      "message": "Trường không hợp lệ theo contract."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 401,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNAUTHENTICATED",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không đủ quyền",
+                  "status": 403,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "FORBIDDEN",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 500,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: scope/source resolver unavailable; not an empty result.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Unable to verify the required dependency.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "DEPENDENCY_UNAVAILABLE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "shcn.dot.read",
+        "x-scope-policy": "SERVER_VERIFIED_GLOBAL_SHCN_SCOPE",
+        "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+        "x-business-gaps": [],
+        "x-integration-dependencies": [
+          "AUTH_SCOPE"
+        ],
+        "x-business-source": "Nghiệp vụ 4.2, 6.2, 7.2; ERD bảng đợt/đối tượng/mẫu",
+        "x-erd-tables": [
+          "shcn_dot_sinh_hoat"
+        ],
+        "x-task-id": "TASK-CV-02",
+        "x-permission-any-of": [
+          "shcn.dot.read",
+          "shcn.dot.prepare"
+        ]
+      },
+      "post": {
+        "operationId": "SHCN_CV_007",
+        "tags": [
+          "02. Chuẩn bị đợt"
+        ],
+        "summary": "Tạo đợt nháp",
+        "description": "D01 confirmed: global SHCN specialist scope; no author or faculty ownership restriction. Permission, state and CAS guards apply. See 02_CONTRACT.md.",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "DTO trực tiếp, field presence/nullable theo schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DotDTO"
+                },
+                "example": {
+                  "id": "1001",
+                  "version": "AAAAAAAAB9I=",
+                  "maHocKy": "TEST-KY-01",
+                  "tenDot": "Đợt SHCN kiểm thử",
+                  "khungNgayBatDau": "2026-11-20",
+                  "khungNgayKetThuc": "2026-11-30",
+                  "khungTietChoPhep": [
+                    {
+                      "tietDau": 11,
+                      "tietCuoi": 12
+                    }
+                  ],
+                  "hanChotDangKyLich": "2026-11-18T03:00:00Z",
+                  "trangThai": "NHAP",
+                  "trangThaiPhanCong": "CHUA_DONG_BO",
+                  "phienBanPhanCongApDung": null,
+                  "trangThaiLichTongHop": "DANG_CHOT",
+                  "phienBanLichTongHop": null,
+                  "ngayPhatHanh": null,
+                  "ngayCongBoLich": null,
+                  "ngayTao": "2026-11-07T02:00:00Z",
+                  "ngayCapNhat": "2026-11-07T02:00:00Z"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "/api/shcn/dot-sinh-hoat/{new dotId}"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "private, no-store"
+              },
+              "X-SHCN-Can-Prepare": {
+                "description": "Current global SHCN prepare permission, verified with scope in the same transaction. Does not bypass server authorization.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dữ liệu không hợp lệ",
+                  "status": 400,
+                  "detail": "Kiểm tra trường bị báo lỗi.",
+                  "instance": "/api/shcn/dot-sinh-hoat",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "test-trace-01",
+                  "errors": [
+                    {
+                      "field": "maHocKy",
+                      "code": "INVALID_VALUE",
+                      "message": "Trường không hợp lệ theo contract."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 401,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNAUTHENTICATED",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không đủ quyền",
+                  "status": 403,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "FORBIDDEN",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "STATE_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 409,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "STATE_CONFLICT",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 413,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "PAYLOAD_TOO_LARGE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 415,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNSUPPORTED_MEDIA_TYPE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 500,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 503,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "DEPENDENCY_UNAVAILABLE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "shcn.dot.prepare",
+        "x-scope-policy": "SERVER_VERIFIED_GLOBAL_SHCN_SCOPE",
+        "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+        "x-business-gaps": [],
+        "x-integration-dependencies": [
+          "AUTH_SCOPE",
+          "REFERENCE"
+        ],
+        "x-business-source": "Nghiệp vụ 4.2, 6.2, 7.2; ERD bảng đợt/đối tượng/mẫu",
+        "x-erd-tables": [
+          "shcn_dot_sinh_hoat"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaoDotRequest"
+              },
+              "example": {
+                "maHocKy": "TEST-KY-01",
+                "tenDot": "Đợt SHCN kiểm thử",
+                "khungNgayBatDau": "2026-11-20",
+                "khungNgayKetThuc": "2026-11-30",
+                "khungTietChoPhep": [
+                  {
+                    "tietDau": 11,
+                    "tietCuoi": 12
+                  }
+                ],
+                "hanChotDangKyLich": "2026-11-18T10:00:00+07:00"
+              }
+            }
+          }
+        },
+        "x-task-id": "TASK-CV-02"
+      }
+    },
+    "/api/shcn/dot-sinh-hoat/{dotId}": {
+      "get": {
+        "operationId": "SHCN_CV_008",
+        "tags": [
+          "02. Chuẩn bị đợt"
+        ],
+        "summary": "Xem chi tiết đợt và version",
+        "description": "D01 confirmed: global SHCN specialist scope; no author or faculty ownership restriction. Permission, state and CAS guards apply. See 02_CONTRACT.md.",
+        "parameters": [
+          {
+            "name": "dotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "description": "ID nghiệp vụ của đúng loại tài nguyên, kiểm scope backend."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DTO trực tiếp, field presence/nullable theo schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DotDTO"
+                },
+                "example": {
+                  "id": "1001",
+                  "version": "AAAAAAAAB9E=",
+                  "maHocKy": "TEST-KY-01",
+                  "tenDot": "Đợt SHCN kiểm thử",
+                  "khungNgayBatDau": "2026-11-20",
+                  "khungNgayKetThuc": "2026-11-30",
+                  "khungTietChoPhep": [
+                    {
+                      "tietDau": 11,
+                      "tietCuoi": 12
+                    }
+                  ],
+                  "hanChotDangKyLich": "2026-11-18T03:00:00Z",
+                  "trangThai": "NHAP",
+                  "trangThaiPhanCong": "CHUA_DONG_BO",
+                  "phienBanPhanCongApDung": null,
+                  "trangThaiLichTongHop": "DANG_CHOT",
+                  "phienBanLichTongHop": null,
+                  "ngayPhatHanh": null,
+                  "ngayCongBoLich": null,
+                  "ngayTao": "2026-11-07T02:00:00Z",
+                  "ngayCapNhat": "2026-11-07T02:00:00Z"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "private, no-store"
+              },
+              "X-SHCN-Can-Prepare": {
+                "description": "Current global SHCN prepare permission, verified with scope in the same transaction. Does not bypass server authorization.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dữ liệu không hợp lệ",
+                  "status": 400,
+                  "detail": "Kiểm tra trường bị báo lỗi.",
+                  "instance": "/api/shcn/dot-sinh-hoat",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "test-trace-01",
+                  "errors": [
+                    {
+                      "field": "dotId",
+                      "code": "INVALID_VALUE",
+                      "message": "Trường không hợp lệ theo contract."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 401,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNAUTHENTICATED",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không đủ quyền",
+                  "status": 403,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "FORBIDDEN",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: round ID does not exist. An authorized global specialist is not excluded by a different creator.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không tìm thấy",
+                  "status": 404,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "NOT_FOUND",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 500,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: scope/source resolver unavailable; not an empty result.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Unable to verify the required dependency.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "DEPENDENCY_UNAVAILABLE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "shcn.dot.read",
+        "x-scope-policy": "SERVER_VERIFIED_GLOBAL_SHCN_SCOPE",
+        "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+        "x-business-gaps": [],
+        "x-integration-dependencies": [
+          "AUTH_SCOPE"
+        ],
+        "x-business-source": "Nghiệp vụ 4.2, 6.2, 7.2; ERD bảng đợt/đối tượng/mẫu",
+        "x-erd-tables": [
+          "shcn_dot_sinh_hoat"
+        ],
+        "x-task-id": "TASK-CV-02",
+        "x-permission-any-of": [
+          "shcn.dot.read",
+          "shcn.dot.prepare"
+        ]
+      },
+      "patch": {
+        "operationId": "SHCN_CV_009",
+        "tags": [
+          "02. Chuẩn bị đợt"
+        ],
+        "summary": "Sửa cấu hình chung đợt nháp",
+        "description": "D01 confirmed: global SHCN specialist scope; no author or faculty ownership restriction. Permission, state and CAS guards apply. See 02_CONTRACT.md.",
+        "parameters": [
+          {
+            "name": "dotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "description": "ID nghiệp vụ của đúng loại tài nguyên, kiểm scope backend."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DTO trực tiếp, field presence/nullable theo schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DotDTO"
+                },
+                "example": {
+                  "id": "1001",
+                  "version": "AAAAAAAAB9I=",
+                  "maHocKy": "TEST-KY-01",
+                  "tenDot": "Đợt SHCN kiểm thử",
+                  "khungNgayBatDau": "2026-11-20",
+                  "khungNgayKetThuc": "2026-11-30",
+                  "khungTietChoPhep": [
+                    {
+                      "tietDau": 11,
+                      "tietCuoi": 12
+                    }
+                  ],
+                  "hanChotDangKyLich": "2026-11-18T03:00:00Z",
+                  "trangThai": "NHAP",
+                  "trangThaiPhanCong": "CHUA_DONG_BO",
+                  "phienBanPhanCongApDung": null,
+                  "trangThaiLichTongHop": "DANG_CHOT",
+                  "phienBanLichTongHop": null,
+                  "ngayPhatHanh": null,
+                  "ngayCongBoLich": null,
+                  "ngayTao": "2026-11-07T02:00:00Z",
+                  "ngayCapNhat": "2026-11-07T02:00:00Z"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "private, no-store"
+              },
+              "X-SHCN-Can-Prepare": {
+                "description": "Current global SHCN prepare permission, verified with scope in the same transaction. Does not bypass server authorization.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dữ liệu không hợp lệ",
+                  "status": 400,
+                  "detail": "Kiểm tra trường bị báo lỗi.",
+                  "instance": "/api/shcn/dot-sinh-hoat",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "test-trace-01",
+                  "errors": [
+                    {
+                      "field": "expectedVersion",
+                      "code": "INVALID_VALUE",
+                      "message": "Trường không hợp lệ theo contract."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 401,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNAUTHENTICATED",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không đủ quyền",
+                  "status": 403,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "FORBIDDEN",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: round ID does not exist. An authorized global specialist is not excluded by a different creator.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không tìm thấy",
+                  "status": 404,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "NOT_FOUND",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VERSION_CONFLICT / STATE_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 409,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "VERSION_CONFLICT",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 413,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "PAYLOAD_TOO_LARGE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 415,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNSUPPORTED_MEDIA_TYPE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 500,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: scope/source resolver unavailable; not an empty result.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Unable to verify the required dependency.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "DEPENDENCY_UNAVAILABLE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "shcn.dot.prepare",
+        "x-scope-policy": "SERVER_VERIFIED_GLOBAL_SHCN_SCOPE",
+        "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+        "x-business-gaps": [],
+        "x-integration-dependencies": [
+          "AUTH_SCOPE"
+        ],
+        "x-business-source": "Nghiệp vụ 4.2, 6.2, 7.2; ERD bảng đợt/đối tượng/mẫu",
+        "x-erd-tables": [
+          "shcn_dot_sinh_hoat"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuaDotRequest"
+              },
+              "example": {
+                "expectedVersion": "AAAAAAAAB9E=",
+                "maHocKy": "TEST-KY-01",
+                "tenDot": "Đợt SHCN kiểm thử",
+                "khungNgayBatDau": "2026-11-20",
+                "khungNgayKetThuc": "2026-11-30",
+                "khungTietChoPhep": [
+                  {
+                    "tietDau": 11,
+                    "tietCuoi": 12
+                  }
+                ],
+                "hanChotDangKyLich": "2026-11-18T10:00:00+07:00"
+              }
+            }
+          }
+        },
+        "x-task-id": "TASK-CV-02"
+      }
+    },
+    "/api/shcn/tra-cuu/hoc-ky": {
+      "get": {
+        "operationId": "SHCN_CV_001",
+        "tags": [
+          "02. Chuẩn bị đợt"
+        ],
+        "summary": "Tra cứu học kỳ phục vụ đợt SHCN",
+        "description": "Exact configured present source; code is business identifier, academic year may be null; no MGHP milestone verification requirement.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647,
+              "default": 0
+            },
+            "description": "Mặc định 0; raw query phải là số nguyên thập phân không dấu."
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Mặc định 25, tối đa 100; offset <=100000."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id:asc",
+                "id:desc"
+              ],
+              "default": "id:asc"
+            },
+            "description": "Mặc định id:asc; luôn ổn định bằng ID."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "x-max-utf16-code-units": 200
+            },
+            "description": "Literal substring search in tenDot. Omit q when input is empty. UTF-16 limit 200."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DTO trực tiếp, field presence/nullable theo schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageHocKy"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "ma": "0010",
+                      "ten": "Học kỳ thực hành",
+                      "namHoc": null
+                    }
+                  ],
+                  "page": 0,
+                  "size": 25,
+                  "totalElements": 1
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "private, no-store"
+              },
+              "X-SHCN-Can-Prepare": {
+                "description": "Current global SHCN prepare permission, verified with scope in the same transaction. Does not bypass server authorization.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dữ liệu không hợp lệ",
+                  "status": 400,
+                  "detail": "Kiểm tra trường bị báo lỗi.",
+                  "instance": "/api/shcn/dot-sinh-hoat",
+                  "code": "VALIDATION_ERROR",
+                  "traceId": "test-trace-01",
+                  "errors": [
+                    {
+                      "field": "page",
+                      "code": "INVALID_VALUE",
+                      "message": "Trường không hợp lệ theo contract."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 401,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "UNAUTHENTICATED",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không đủ quyền",
+                  "status": 403,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "FORBIDDEN",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Không thể thực hiện",
+                  "status": 500,
+                  "detail": "Yêu cầu không đáp ứng điều kiện đã mô tả.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "INTERNAL_ERROR",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: scope/source resolver unavailable; not an empty result.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "Dependency unavailable",
+                  "status": 503,
+                  "detail": "Unable to verify the required dependency.",
+                  "instance": "/api/shcn/dot-sinh-hoat/1001",
+                  "code": "DEPENDENCY_UNAVAILABLE",
+                  "traceId": "test-trace-01"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "shcn.reference.read",
+        "x-scope-policy": "SERVER_VERIFIED_GLOBAL_SHCN_SCOPE",
+        "x-design-status": "APPROVED_IMPLEMENTATION_PENDING_SQL_DEV",
+        "x-business-gaps": [],
+        "x-integration-dependencies": [
+          "AUTH_SCOPE"
+        ],
+        "x-business-source": "Nghiệp vụ 4.2, 6.2, 7.2; ERD bảng đợt/đối tượng/mẫu",
+        "x-erd-tables": [],
+        "x-task-id": "TASK-CV-01 (semester lookup subset only)",
+        "x-permission-any-of": [
+          "shcn.reference.read"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ctsvBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Existing CTSV AuthAccess Bearer access token transport confirmed from source; consumers treat tokens as opaque. No change to JWT/cookie/refresh configuration."
+      }
+    },
+    "schemas": {
+      "SuaDotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/VersionToken"
+          },
+          "maHocKy": {
+            "$ref": "#/components/schemas/BusinessCode",
+            "description": "Business code from the configured present semester source; unique verified mapping required. Not the local hoc_ky.id."
+          },
+          "tenDot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200,
+            "pattern": "^\\S(?:[\\s\\S]*\\S)?$",
+            "description": "Nonblank, no leading/trailing whitespace; <=200 UTF-16 code units checked at runtime."
+          },
+          "khungNgayBatDau": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungNgayKetThuc": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungTietChoPhep": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KhoangTiet"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Keep interval array as submitted. Each interval must additionally satisfy tietDau <= tietCuoi; no inferred 11-12-only policy."
+          },
+          "hanChotDangKyLich": {
+            "$ref": "#/components/schemas/Instant",
+            "description": "Offset required; no rule that this deadline must precede the first round date. SQL datetimeoffset(7) range checked at runtime."
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "maHocKy",
+          "tenDot",
+          "khungNgayBatDau",
+          "khungNgayKetThuc",
+          "khungTietChoPhep",
+          "hanChotDangKyLich"
+        ],
+        "description": "Typed PATCH: expectedVersion plus all six fields are required. Not JSON Merge Patch. No state/actor fields accepted."
+      },
+      "Instant": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 có offset; response UTC Z."
+      },
+      "KhoangTiet": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tietDau": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32767
+          },
+          "tietCuoi": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32767
+          }
+        },
+        "required": [
+          "tietDau",
+          "tietCuoi"
+        ]
+      },
+      "Date": {
+        "type": "string",
+        "format": "date",
+        "description": "YYYY-MM-DD; kiểm ngày thực tế ở backend."
+      },
+      "BusinessCode": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32,
+        "x-max-utf16-code-units": 32,
+        "pattern": "^[^\\s]+$",
+        "description": "Mã nghiệp vụ đúng reference; giữ nguyên chữ/số/0 đầu, không chép vào ID của hệ khác."
+      },
+      "VersionToken": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9+/]{11}=$",
+        "description": "Base64 chuẩn của 8 byte rowversion SQL Server. Token opaque; không phải ETag HTTP, phiên bản lịch hay lần duyệt."
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "x-max-utf16-code-units": 500
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "x-max-utf16-code-units": 2000
+          },
+          "instance": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "x-max-utf16-code-units": 500
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "x-max-utf16-code-units": 80
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "x-max-utf16-code-units": 128
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code",
+          "traceId"
+        ]
+      },
+      "ValidationProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "x-max-utf16-code-units": 500
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "x-max-utf16-code-units": 2000
+          },
+          "instance": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "x-max-utf16-code-units": 500
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "x-max-utf16-code-units": 80
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "x-max-utf16-code-units": 128
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationItem"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code",
+          "traceId",
+          "errors"
+        ]
+      },
+      "ValidationItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "x-max-utf16-code-units": 80
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "x-max-utf16-code-units": 1000
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message"
+        ]
+      },
+      "DotDTO": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "version": {
+            "$ref": "#/components/schemas/VersionToken"
+          },
+          "maHocKy": {
+            "$ref": "#/components/schemas/BusinessCode"
+          },
+          "tenDot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200
+          },
+          "khungNgayBatDau": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungNgayKetThuc": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungTietChoPhep": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KhoangTiet"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "hanChotDangKyLich": {
+            "$ref": "#/components/schemas/Instant"
+          },
+          "trangThai": {
+            "type": "string",
+            "enum": [
+              "NHAP",
+              "CHO_DUYET",
+              "BI_TRA_LAI",
+              "DA_DUYET",
+              "DA_PHAT_HANH",
+              "DA_HUY"
+            ]
+          },
+          "trangThaiPhanCong": {
+            "type": "string",
+            "enum": [
+              "CHUA_DONG_BO",
+              "NHAP",
+              "CHO_PHO_PHONG_DUYET",
+              "BI_TRA_LAI",
+              "CHO_BGH_KY",
+              "CO_HIEU_LUC"
+            ]
+          },
+          "phienBanPhanCongApDung": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trangThaiLichTongHop": {
+            "type": "string",
+            "enum": [
+              "DANG_CHOT",
+              "CHO_XAC_NHAN",
+              "BI_TRA_LAI",
+              "DA_XAC_NHAN",
+              "DANG_XEP_PHONG",
+              "DU_DIEU_KIEN_CONG_BO",
+              "DA_CONG_BO"
+            ]
+          },
+          "phienBanLichTongHop": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ngayPhatHanh": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Instant"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ngayCongBoLich": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Instant"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ngayTao": {
+            "$ref": "#/components/schemas/Instant"
+          },
+          "ngayCapNhat": {
+            "$ref": "#/components/schemas/Instant"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "maHocKy",
+          "tenDot",
+          "khungNgayBatDau",
+          "khungNgayKetThuc",
+          "khungTietChoPhep",
+          "hanChotDangKyLich",
+          "trangThai",
+          "trangThaiPhanCong",
+          "phienBanPhanCongApDung",
+          "trangThaiLichTongHop",
+          "phienBanLichTongHop",
+          "ngayPhatHanh",
+          "ngayCongBoLich",
+          "ngayTao",
+          "ngayCapNhat"
+        ]
+      },
+      "Id": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]{0,18}$",
+        "description": "Số nguyên dương biểu diễn bằng chuỗi; backend còn phải kiểm <= 9223372036854775807, không chỉ regex."
+      },
+      "TaoDotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maHocKy": {
+            "$ref": "#/components/schemas/BusinessCode",
+            "description": "Business code from the configured present semester source; unique verified mapping required. Not the local hoc_ky.id."
+          },
+          "tenDot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "x-max-utf16-code-units": 200,
+            "pattern": "^\\S(?:[\\s\\S]*\\S)?$",
+            "description": "Nonblank, no leading/trailing whitespace; <=200 UTF-16 code units checked at runtime."
+          },
+          "khungNgayBatDau": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungNgayKetThuc": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "khungTietChoPhep": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KhoangTiet"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Keep interval array as submitted. Each interval must additionally satisfy tietDau <= tietCuoi; no inferred 11-12-only policy."
+          },
+          "hanChotDangKyLich": {
+            "$ref": "#/components/schemas/Instant",
+            "description": "Offset required; no rule that this deadline must precede the first round date. SQL datetimeoffset(7) range checked at runtime."
+          }
+        },
+        "required": [
+          "maHocKy",
+          "tenDot",
+          "khungNgayBatDau",
+          "khungNgayKetThuc",
+          "khungTietChoPhep",
+          "hanChotDangKyLich"
+        ]
+      },
+      "PageDot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DotDTO"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      },
+      "HocKyDTO": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ma",
+          "ten",
+          "namHoc"
+        ],
+        "properties": {
+          "ma": {
+            "$ref": "#/components/schemas/BusinessCode"
+          },
+          "ten": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "namHoc": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PageHocKy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HocKyDTO"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      }
+    }
+  },
+  "x-decisions": {
+    "D01": {
+      "status": "CONFIRMED",
+      "date": "2026-11-21",
+      "policy": "GLOBAL_SHCN_SPECIALIST_SCOPE",
+      "description": "Specialists with the applicable SHCN permission and global SHCN grant manage all institution rounds, including drafts created by another specialist. Creator is audit metadata, not ownership. State and version guards remain."
+    }
+  }
+}

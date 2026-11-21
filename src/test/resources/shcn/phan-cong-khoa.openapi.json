@@ -4,7 +4,7 @@
   "info": {
     "title": "SHCN — Trưởng khoa lập phân công nháp",
     "version": "0.1.0",
-    "description": "Contract được chủ dự án thống nhất ngày 18/11/2026. Không sửa schema/Entity Đào tạo/Foundation. Tầng dữ liệu bước 2 triển khai riêng; chưa có endpoint runtime, không dùng làm bằng chứng API đã chạy."
+    "description": "Contract được chủ dự án thống nhất ngày 18/11/2026; backend bước 3 ngày 19/11/2026. Không sửa schema/Entity Đào tạo/Foundation. Xem 08_KET_QUA_BUOC_3.md để biết bằng chứng thực thi và giới hạn nguồn/DEV; OpenAPI tự nó không chứng minh API đã chạy."
   },
   "paths": {
     "/api/shcn/khoa/pham-vi": {
@@ -14,7 +14,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -108,7 +108,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -244,7 +244,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -388,7 +388,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -524,7 +524,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -666,7 +666,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -817,7 +817,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -918,7 +918,7 @@
         "tags": [
           "SHCN — Phân công khoa nháp"
         ],
-        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; endpoint chưa triển khai. Quyền qua RBAC chung; mapping/transaction theo các file Markdown cùng thư mục.",
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
         "security": [
           {
             "BearerAuth": []
@@ -1047,6 +1047,153 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LuuNhapRequest"
+              },
+              "example": {
+                "expectedVersion": "AAAAAAAAAAE=",
+                "hieuLucTu": "2026-08-01T00:00:00+07:00",
+                "hieuLucDen": null,
+                "lyDoDieuChinh": null,
+                "cacPhanCong": [
+                  {
+                    "maLop": "1062302",
+                    "maGiaoVien": "GV-001",
+                    "ghiChu": null
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "x-max-request-bytes": 1048576
+      },
+      "delete": {
+        "operationId": "xoaNhapPhanCongKhoa",
+        "summary": "Xóa bản nháp trong khoa",
+        "tags": [
+          "SHCN — Phân công khoa nháp"
+        ],
+        "description": "Contract đã được chủ dự án thống nhất ngày 18/11/2026; triển khai backend bước 3 ngày 19/11/2026. Quyền qua RBAC chung; bằng chứng kiểm thử, cấu hình nguồn và giới hạn DEV xem 08_KET_QUA_BUOC_3.md.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "danhSachId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "HTTP 400; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "HTTP 401; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "HTTP 403; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "HTTP 404; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "HTTP 409; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "HTTP 413; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "HTTP 415; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "HTTP 500; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "HTTP 503; xem ma trận lỗi ở contract.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Bản nháp được bỏ khỏi danh sách, giữ lịch sử và số phiên bản."
+          }
+        },
+        "x-capability-any-of": [
+          "shcn.phanCongKhoa.prepare"
+        ],
+        "x-reject-unknown-and-duplicate-query": true,
+        "x-design-status": "OWNER_APPROVED",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XoaNhapRequest"
               },
               "example": {
                 "expectedVersion": "AAAAAAAAAAE=",
@@ -1668,7 +1815,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Không bắt buộc có nội dung, kể cả khi kế thừa; gửi null khi bỏ trống. Giữ giới hạn 4000 đơn vị UTF-16."
           }
         },
         "required": [
@@ -1848,13 +1996,19 @@
           "totalElements": {
             "type": "integer",
             "minimum": 0
+          },
+          "phienBanLonNhat": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
           }
         },
         "required": [
           "items",
           "page",
           "size",
-          "totalElements"
+          "totalElements",
+          "phienBanLonNhat"
         ]
       },
       "Problem": {
@@ -1957,6 +2111,18 @@
           "traceId",
           "errors"
         ]
+      },
+      "XoaNhapRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedVersion"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
       }
     }
   }

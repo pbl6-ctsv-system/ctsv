@@ -34,7 +34,7 @@ public class PhanCongKhoaConfiguration {
     @Bean FilterRegistrationBean<CorsFilter> shcnFacultyCors(Environment env){
         var origins=Binder.get(env).bind("ctsv.auth.origins",Bindable.listOf(String.class)).orElse(List.of());
         var policy=new CorsConfiguration();policy.setAllowedOrigins(origins);
-        policy.setAllowedMethods(List.of("GET","POST","PUT","OPTIONS"));
+        policy.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         policy.setAllowedHeaders(List.of("Authorization","Content-Type","If-Match"));policy.setExposedHeaders(List.of("Location"));
         policy.setAllowCredentials(true);policy.setMaxAge(600L);
         var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/api/shcn/khoa/**",policy);
