@@ -13,6 +13,7 @@ import org.hibernate.annotations.TimeZoneStorageType;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "kkht_dot_xet", schema = "dbo")
@@ -57,6 +58,17 @@ public class ScholarshipRound {
     @Column(name = "nguoi_tao_id", nullable = false)
     private Long createdBy;
 
+    @Column(name="pham_vi_hien_tai_id")
+    private Long currentScopeId;
+
+    @JdbcTypeCode(SqlTypes.UUID)
+    @Column(name="ma_lenh_khoi_tao", columnDefinition="uniqueidentifier")
+    private UUID creationRequestId;
+
+    @JdbcTypeCode(SqlTypes.BINARY)
+    @Column(name="bam_lenh_khoi_tao", length=32, columnDefinition="binary(32)")
+    private byte[] creationHash;
+
     @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "phien_ban_ky_thuat", nullable = false, length = 8,
             columnDefinition = "rowversion", insertable = false, updatable = false)
@@ -84,4 +96,10 @@ public class ScholarshipRound {
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
     public byte[] getVersion() { return version == null ? null : version.clone(); }
+    public Long getCurrentScopeId() { return currentScopeId; }
+    public void setCurrentScopeId(Long value) { currentScopeId=value; }
+    public UUID getCreationRequestId() { return creationRequestId; }
+    public void setCreationRequestId(UUID value) { creationRequestId=value; }
+    public byte[] getCreationHash() { return creationHash==null?null:creationHash.clone(); }
+    public void setCreationHash(byte[] value) { creationHash=value==null?null:value.clone(); }
 }

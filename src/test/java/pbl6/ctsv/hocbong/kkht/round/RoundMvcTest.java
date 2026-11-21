@@ -71,8 +71,10 @@ class RoundMvcTest {
     private static final String ORIGIN = "https://ctsv.example.test";
     private static final String TAG = "\"round_1001\"";
     private static final String NEW_TAG = "\"round_1001_changed\"";
-    private static final String CREATE = "{\"sourceSemesterId\":\"21\",\"number\":1,\"name\":\"  SYN-HB  \"}";
-    private static final String UPDATE = "{\"number\":2,\"name\":\"SYN-HB update\"}";
+    private static final UUID KEY=UUID.fromString("a1234567-1234-4234-8234-123456789012");
+    private static final String REVISION="A".repeat(43);
+    private static final String CREATE = "{\"sourceSemesterId\":\"21\",\"catalogRevision\":\""+REVISION+"\",\"scope\":{\"mode\":\"all\"}}";
+    private static final String UPDATE = "{\"catalogRevision\":\""+REVISION+"\",\"scope\":{\"mode\":\"all\"}}";
 
     // MOCK: public Auth and Foundation boundaries, local transaction manager and round service.
     private final AuthAccess auth = mock(AuthAccess.class);
@@ -80,6 +82,7 @@ class RoundMvcTest {
     private final FoundationRoleAccess roles = mock(FoundationRoleAccess.class);
     private final PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
     private final RoundService service = mock(RoundService.class);
+    private final ScopeService scopes=mock(ScopeService.class);
     private final AuthAccess.Principal principal = new AuthAccess.Principal(
             "synthetic", UUID.fromString("23456789-1234-1234-1234-123456789012"), 0);
     private final SimpleTransactionStatus transaction = new SimpleTransactionStatus();
@@ -93,7 +96,7 @@ class RoundMvcTest {
         var access = new RoundAccess(manager, identities, roles);
         var cors = new ScholarshipConfiguration().scholarshipCors(
                 new MockEnvironment().withProperty("ctsv.auth.origins[0]", ORIGIN));
-        mvc = MockMvcBuilders.standaloneSetup(new RoundController(auth, access, service, new ObjectMapper()),
+        mvc = MockMvcBuilders.standaloneSetup(new RoundController(auth, access, service, new ObjectMapper(), scopes),
                         new OtherController())
                 .setControllerAdvice(new RoundErrors(), new RoundErrors.MethodErrors())
                 .addFilter(cors.getFilter(), BASE + "/*")
@@ -110,7 +113,8 @@ class RoundMvcTest {
     @ParameterizedTest
     @CsvSource({"GET, /hoc-ky-nguon", "GET, /hoc-ky-nguon/mac-dinh", "GET, /hoc-ky-nguon/bad-id",
             "GET, /kkht/dot-xet", "POST, /kkht/dot-xet",
-            "GET, /kkht/dot-xet/bad-id", "PUT, /kkht/dot-xet/bad-id"})
+            "GET, /kkht/dot-xet/bad-id", "PUT, /kkht/dot-xet/bad-id",
+            "GET, /kkht/pham-vi-nguon", "GET, /kkht/lenh-tao-dot/bad-key", "GET, /kkht/dot-xet/bad-id/pham-vi"})
     void managerOperationsCheckAuthAndGroupBeforeBindingInvalidRequest(String method, String route)
             throws Exception {
         identity(71L, false);
@@ -324,7 +328,7 @@ class RoundMvcTest {
     @Test
     void rejectsMalformedUtf8BeforeCommandParsing() throws Exception {
         byte[] invalid = CREATE.getBytes(StandardCharsets.UTF_8);
-        invalid[CREATE.indexOf("SYN")] = (byte) 0xC3;
+        invalid[CREATE.indexOf(REVISION)] = (byte) 0xC3;
         problem(mvc.perform(bearer(post(ROUNDS).contentType(MediaType.APPLICATION_JSON).content(invalid))),
                 400, "VALIDATION_ERROR").andExpect(jsonPath("$.errors[0].field").value("body"));
         verifyNoInteractions(service);
@@ -343,12 +347,12 @@ class RoundMvcTest {
 
     @Test
     void createReturnsLocationAndTagWithinAuthorizedTransaction() throws Exception {
-        var command = new RoundDtos.CreateCommand(21, 1, "SYN-HB");
+        var command = ScopeRules.create(new ObjectMapper().readTree(CREATE));
         var actor = new RoundAccess.Actor(301, null, 74L);
-        when(service.create(command, actor)).thenReturn(view(1, "SYN-HB", TAG));
+        when(scopes.create(command, KEY, actor)).thenReturn(new ScopeDtos.Created(view(1, "SYN-HB", TAG),false));
 
         mvc.perform(bearer(post(ROUNDS).contentType("application/json; charset=UTF-8")
-                        .header(HttpHeaders.CONTENT_ENCODING, "identity").content(CREATE)))
+                        .header(HttpHeaders.CONTENT_ENCODING, "identity").header("Idempotency-Key",KEY).content(CREATE)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(HttpHeaders.LOCATION, DETAIL))
                 .andExpect(header().string(HttpHeaders.ETAG, TAG))
@@ -360,20 +364,20 @@ class RoundMvcTest {
                           "opensAt":null,"closedAt":null,"tuitionSnapshotAt":null,"ruleVersionId":null}
                         """, JsonCompareMode.STRICT));
 
-        var ordered = inOrder(auth, manager, identities, roles, service);
+        var ordered = inOrder(auth, manager, identities, roles, scopes);
         ordered.verify(auth).verifyAccessToken("synthetic");
         ordered.verify(manager).getTransaction(any());
         ordered.verify(identities).identify(principal, true);
         ordered.verify(roles).findActiveGlobalRole(301, "HOC_BONG", "hoc_bong_chuyen_vien");
-        ordered.verify(service).create(command, actor);
+        ordered.verify(scopes).create(command, KEY, actor);
         ordered.verify(manager).commit(transaction);
     }
 
     @Test
     void detailAndUpdateReturnTagOfServiceRepresentation() throws Exception {
         when(service.detail(1001)).thenReturn(view(1, "SYN-HB", TAG));
-        when(service.update(1001, new RoundDtos.UpdateCommand(2, "SYN-HB update"), TAG,
-                new RoundAccess.Actor(301, null, 74L))).thenReturn(view(2, "SYN-HB update", NEW_TAG));
+        when(scopes.update(1001, ScopeRules.update(new ObjectMapper().readTree(UPDATE)), TAG,
+                new RoundAccess.Actor(301, null, 74L))).thenReturn(view(1, "SYN-HB", NEW_TAG));
 
         mvc.perform(bearer(get(DETAIL))).andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ETAG, TAG));
@@ -382,17 +386,17 @@ class RoundMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ETAG, NEW_TAG))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
-                .andExpect(jsonPath("$.number").value(2))
-                .andExpect(jsonPath("$.name").value("SYN-HB update"));
+                .andExpect(jsonPath("$.number").value(1))
+                .andExpect(jsonPath("$.name").value("SYN-HB"));
     }
 
     @Test
     void updatePreservesPreconditionFailureAfterServiceLookup() throws Exception {
-        var command = new RoundDtos.UpdateCommand(2, "SYN-HB update");
+        var command = ScopeRules.update(new ObjectMapper().readTree(UPDATE));
         var actor = new RoundAccess.Actor(301, null, 74L);
-        when(service.update(1001, command, null, actor))
+        when(scopes.update(1001, command, null, actor))
                 .thenThrow(new RoundFailure(428, "PRECONDITION_REQUIRED"));
-        when(service.update(1001, command, TAG, actor))
+        when(scopes.update(1001, command, TAG, actor))
                 .thenThrow(new RoundFailure(412, "VERSION_CONFLICT"));
 
         problem(mvc.perform(bearer(put(DETAIL).contentType(MediaType.APPLICATION_JSON).content(UPDATE))),
@@ -411,12 +415,12 @@ class RoundMvcTest {
             "2627, unrelated_constraint, 500, INTERNAL_ERROR"})
     void mapsOnlyKnownDependencyOrConstraintErrors(int sqlCode, String diagnostic, int status, String code)
             throws Exception {
-        when(service.create(any(), any())).thenThrow(new DataIntegrityViolationException("SQL",
+        when(scopes.create(any(), any(), any())).thenThrow(new DataIntegrityViolationException("SQL",
                 new SQLException(diagnostic, "23000", sqlCode)));
 
         problem(mvc.perform(jsonPost(CREATE)), status, code)
                 .andExpect(content().string(not(containsString(diagnostic))));
-        verify(service).create(any(), any());
+        verify(scopes).create(any(), any(), any());
         verify(manager).rollback(transaction);
     }
 
@@ -460,6 +464,49 @@ class RoundMvcTest {
                 .andExpect(content().string(""));
     }
 
+    @Test void createReplayHasCurrentTagLocationAndExposedReplayHeader() throws Exception {
+        when(scopes.create(any(),eq(KEY),any())).thenReturn(new ScopeDtos.Created(view(1,"current",NEW_TAG),true));
+        mvc.perform(jsonPost(CREATE).header(HttpHeaders.ORIGIN,ORIGIN))
+            .andExpect(status().isOk()).andExpect(header().string("Idempotency-Replayed","true"))
+            .andExpect(header().string(HttpHeaders.ETAG,NEW_TAG)).andExpect(header().string(HttpHeaders.LOCATION,DETAIL))
+            .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS,containsString("Idempotency-Replayed")));
+    }
+
+    @Test void missingInvalidAndDuplicateCreationKeyAreRejectedAfterRoleBeforeService() throws Exception {
+        problem(mvc.perform(bearer(post(ROUNDS).contentType(MediaType.APPLICATION_JSON).content(CREATE))),400,"VALIDATION_ERROR")
+            .andExpect(jsonPath("$.errors[0].field").value("Idempotency-Key"));
+        problem(mvc.perform(jsonPost(CREATE).header("Idempotency-Key",KEY)),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(post(ROUNDS).header("Idempotency-Key","BAD").contentType(MediaType.APPLICATION_JSON).content(CREATE))),400,"VALIDATION_ERROR");
+        verifyNoInteractions(scopes);
+    }
+
+    @Test void oldWriteShapeCannotReachScopeMutation() throws Exception {
+        problem(mvc.perform(jsonPost("{\"sourceSemesterId\":\"21\",\"number\":1,\"name\":\"manual\"}")),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(put(DETAIL).header(HttpHeaders.IF_MATCH,TAG).contentType(MediaType.APPLICATION_JSON).content("{\"number\":2,\"name\":\"manual\"}"))),400,"VALIDATION_ERROR");
+        verifyNoInteractions(scopes);
+    }
+
+    @Test void catalogScopeAndActorCommandLookupUseWhitelistedResponses() throws Exception {
+        when(scopes.catalog(eq(21L),eq(10L),eq(null),eq("%_"),aryEq(new int[]{0,20})))
+            .thenReturn(new ScopeDtos.Catalog(REVISION,List.of(new ScopeDtos.Group("10",null,"20",null,null,2)),0,20,1));
+        mvc.perform(bearer(get(BASE+"/kkht/pham-vi-nguon").param("sourceSemesterId","21").param("cohortId","10").param("q"," %_ ")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.catalogRevision").value(REVISION))
+            .andExpect(jsonPath("$.items[0].studentCount").value(2)).andExpect(jsonPath("$.items[0].majorName").isEmpty());
+        when(scopes.scope(1001)).thenReturn(new ScopeDtos.View("1001",TAG,null));
+        mvc.perform(bearer(get(DETAIL+"/pham-vi"))).andExpect(status().isOk())
+            .andExpect(content().json("{\"roundId\":\"1001\",\"roundEtag\":\"\\\"round_1001\\\"\",\"scope\":null}",JsonCompareMode.STRICT));
+        when(scopes.lookup(KEY,new RoundAccess.Actor(301,null,74L))).thenReturn(new ScopeDtos.CreationLookup(KEY.toString(),"1001"));
+        mvc.perform(bearer(get(BASE+"/kkht/lenh-tao-dot/"+KEY))).andExpect(status().isOk()).andExpect(jsonPath("$.roundId").value("1001"));
+    }
+
+    @Test void newReadRoutesRejectExtraBodyQueryBadIdsAndMissingSource() throws Exception {
+        problem(mvc.perform(bearer(get(BASE+"/kkht/pham-vi-nguon"))),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(get(BASE+"/kkht/pham-vi-nguon").param("sourceSemesterId","21","22"))),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(get(DETAIL+"/pham-vi").param("page","0"))),400,"VALIDATION_ERROR");
+        problem(mvc.perform(bearer(get(BASE+"/kkht/lenh-tao-dot/BAD"))),400,"VALIDATION_ERROR");
+        verifyNoInteractions(scopes);
+    }
+
     private void identity(Long student, boolean specialist) {
         when(identities.identify(principal, true)).thenReturn(new FoundationAccess.Identity(301, student, principal));
         when(roles.findActiveGlobalRole(301, "HOC_BONG", "hoc_bong_chuyen_vien"))
@@ -471,7 +518,7 @@ class RoundMvcTest {
     }
 
     private static MockHttpServletRequestBuilder jsonPost(String body) {
-        return bearer(post(ROUNDS).contentType(MediaType.APPLICATION_JSON).content(body));
+        return bearer(post(ROUNDS).header("Idempotency-Key",KEY).contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
     private static RoundDtos.View view(int number, String name, String tag) {

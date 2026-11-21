@@ -69,6 +69,7 @@ class RoundMultipartHttpTest extends RoundMultipartCases {
         @Bean FoundationRoleAccess roles() { return mock(FoundationRoleAccess.class); }
         @Bean PlatformTransactionManager manager() { return mock(PlatformTransactionManager.class); }
         @Bean RoundService roundService() { return mock(RoundService.class); }
+        @Bean ScopeService scopeService() { return mock(ScopeService.class); }
         @Bean JdbcTemplate jdbc() { return mock(JdbcTemplate.class); }
         @Bean AtomicInteger multipartParsingAttempts() { return new AtomicInteger(); }
 

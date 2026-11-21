@@ -9,8 +9,8 @@ final class RoundDtos {
     record Page<T>(List<T> items,int page,int size,long totalElements) {
         Page { items=List.copyOf(items); }
     }
-    record CreateCommand(long sourceSemesterId,int number,String name) {}
-    record UpdateCommand(int number,String name) {}
+
+
     record SourceSemesterDto(String sourceSemesterId,String code,String name,String academicYear,
         Integer semesterOrder,String startDate,String endDate,String scholarshipSemesterId,
         boolean selectable,String unavailableReason) {}

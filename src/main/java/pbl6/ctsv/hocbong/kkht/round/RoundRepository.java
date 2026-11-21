@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import pbl6.ctsv.hocbong.kkht.round.entity.*;
+import pbl6.ctsv.hocbong.kkht.scope.entity.*;
+import java.util.UUID;
 
 /** JPA for HB persistence; SQL is limited to transaction fencing and rowversion CAS. */
 class RoundRepository {
@@ -76,19 +78,31 @@ class RoundRepository {
         em.clear();
         return rows.getFirst();
     }
-    boolean numberTaken(long semester,int number,Long excluded) {
-        String hql="select count(r) from ScholarshipRound r where r.semesterId=:semester and r.number=:number";
-        if(excluded!=null) hql+=" and r.id<>:excluded";
-        var query=em.createQuery(hql,Long.class).setParameter("semester",semester).setParameter("number",number);
-        if(excluded!=null) query.setParameter("excluded",excluded);
-        return query.getSingleResult()>0;
-    }
     void persist(Object entity) { em.persist(entity); em.flush(); }
     void persistAudit(ScholarshipAudit entity) { persist(entity); }
 
-    void changeRound(long id,byte[] version,int number,String name) {
+    Optional<ScholarshipRound> creation(long actor,UUID request) {
+        return em.createQuery("from ScholarshipRound where createdBy=:actor and creationRequestId=:request",ScholarshipRound.class)
+            .setParameter("actor",actor).setParameter("request",request).getResultList().stream().findFirst();
+    }
+    List<ScholarshipRound> periodRounds(long period) {
+        // serializeWrites fences concurrent HB mutations; callers keep it through commit.
+        return em.createQuery("from ScholarshipRound where semesterId=:period order by number desc,id desc",ScholarshipRound.class)
+            .setParameter("period",period).getResultList();
+    }
+    void lockPeriod(long period) {
         em.flush();
-        int changed=jdbc.update("UPDATE dbo.kkht_dot_xet SET so_dot=?,ten_dot=? WHERE id=? AND phien_ban_ky_thuat=?",number,name,id,version);
+        var ids=jdbc.queryForList("SELECT id FROM dbo.hb_hoc_ky WITH(UPDLOCK,HOLDLOCK) WHERE id=?",Long.class,period);
+        if(ids.isEmpty()) throw new RoundFailure(404,"NOT_FOUND");
+    }
+    RoundScopeVersion scope(long id) { return required(RoundScopeVersion.class,id); }
+    List<RoundScopeGroup> scopeGroups(long id) {
+        return em.createQuery("from RoundScopeGroup where scopeId=:id order by cohortId,majorId",RoundScopeGroup.class)
+            .setParameter("id",id).getResultList();
+    }
+    void changeScope(long id,byte[] version,long scopeId) {
+        em.flush();
+        int changed=jdbc.update("UPDATE dbo.kkht_dot_xet SET pham_vi_hien_tai_id=? WHERE id=? AND phien_ban_ky_thuat=?",scopeId,id,version);
         if(changed!=1) throw new RoundFailure(412,"VERSION_CONFLICT");
         em.clear();
     }

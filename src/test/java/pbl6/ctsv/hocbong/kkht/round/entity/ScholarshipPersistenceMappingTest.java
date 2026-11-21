@@ -48,10 +48,33 @@ class ScholarshipPersistenceMappingTest {
             assertColumn(metadata, entity, "ruleVersionId", "quy_tac_id", "bigint", true);
             assertColumn(metadata, entity, "status", "trang_thai", "nvarchar(32)", false);
             assertColumn(metadata, entity, "createdBy", "nguoi_tao_id", "bigint", false);
+            assertColumn(metadata, entity, "currentScopeId", "pham_vi_hien_tai_id", "bigint", true);
+            assertColumn(metadata, entity, "creationRequestId", "ma_lenh_khoi_tao", "uniqueidentifier", true);
+            assertColumn(metadata, entity, "creationHash", "bam_lenh_khoi_tao", "binary(32)", true);
             assertColumn(metadata, entity, "version", "phien_ban_ky_thuat", "rowversion", false);
             assertThat(entity.getProperty("version").isInsertable()).isFalse();
             assertThat(entity.getProperty("version").isUpdateable()).isFalse();
             assertThat(entity.isVersioned()).isFalse();
+        });
+    }
+
+    @Test void mapsAppendOnlyScopeVersionsAndNullableGroupLabels() {
+        withMapping("pbl6.ctsv.hocbong.kkht.scope.entity.RoundScopeVersion","kkht_pham_vi_dot",(metadata,entity)->{
+            assertColumn(metadata,entity,"roundId","dot_xet_id","bigint",false);
+            assertColumn(metadata,entity,"revision","phien_ban","int",false);
+            assertColumn(metadata,entity,"mode","cach_chon","nvarchar(16)",false);
+            assertColumn(metadata,entity,"catalogRevision","phien_nguon","varchar(43)",false);
+            assertColumn(metadata,entity,"createdBy","tao_boi","bigint",false);
+            assertColumn(metadata,entity,"createdAt","tao_luc","datetimeoffset(7)",false);
+        });
+        withMapping("pbl6.ctsv.hocbong.kkht.scope.entity.RoundScopeGroup","kkht_nhom_pham_vi",(metadata,entity)->{
+            assertColumn(metadata,entity,"scopeId","pham_vi_id","bigint",false);
+            assertColumn(metadata,entity,"cohortId","khoa_hoc_id","bigint",false);
+            assertColumn(metadata,entity,"majorId","nganh_noi_bo_id","bigint",false);
+            assertColumn(metadata,entity,"cohortCode","ma_khoa_snapshot","nvarchar(128)",true);
+            assertColumn(metadata,entity,"majorCode","ma_nganh_snapshot","nvarchar(128)",true);
+            assertColumn(metadata,entity,"majorName","ten_nganh_snapshot","nvarchar(512)",true);
+            assertColumn(metadata,entity,"studentCount","so_sv_nguon","int",false);
         });
     }
 
@@ -75,7 +98,7 @@ class ScholarshipPersistenceMappingTest {
     private static void withMapping(String className, String tableName, MappingAssertions assertions) {
         Class<?> type;
         try {
-            type = Class.forName(PACKAGE + className);
+            type = Class.forName(className.contains(".")?className:PACKAGE + className);
         } catch (ClassNotFoundException e) {
             throw new AssertionError("Missing T01 mapping for dbo." + tableName, e);
         }

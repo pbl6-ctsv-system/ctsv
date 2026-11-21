@@ -101,6 +101,8 @@ class ScholarshipSchemaIT {
                     .addAnnotatedClass(SourceSemesterMapping.class)
                     .addAnnotatedClass(ScholarshipRound.class)
                     .addAnnotatedClass(ScholarshipAudit.class)
+                    .addAnnotatedClass(pbl6.ctsv.hocbong.kkht.scope.entity.RoundScopeVersion.class)
+                    .addAnnotatedClass(pbl6.ctsv.hocbong.kkht.scope.entity.RoundScopeGroup.class)
                     .buildMetadata();
             try (var factory = metadata.buildSessionFactory(); var session = factory.openSession()) {
                 var transaction = session.beginTransaction();
