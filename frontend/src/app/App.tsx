@@ -5,6 +5,7 @@ import {navigationSections,normalizePath,resolveRoute} from './navigation/module
 import {Navbar} from './navigation/Navbar';
 import {ApiError} from '../shared/auth/auth-client.mjs';
 import {LoginPage,readCurrentAccount} from '../features/auth';
+import {probeRoundAccess} from '../features/shcn';
 import {featurePages} from './navigation/featureRegistry';
 import {Alert} from '../shared/ui/Alert';
 import {FeedbackProvider} from '../shared/ui/Feedback';
@@ -25,6 +26,7 @@ function Workspace(){
   void auth.restore().finally(()=>setRestoring(false));
  },[auth.restore,restoring]);
  function go(next:string,replace=false){
+  if(!window.dispatchEvent(new Event('shcn-leave',{cancelable:true})))return;
   if(window.location.pathname!==next)window.history[replace?'replaceState':'pushState'](null,'',next);
   setPath(next);
  }
@@ -40,7 +42,7 @@ function Workspace(){
 
 type Auth=ReturnType<typeof useAuth>;
 type MenuPermissions=Parameters<typeof navigationSections>;
-type PermissionCheck={path:string;functions:MenuPermissions[0];access:MenuPermissions[1];failed:boolean;sessionEnded:boolean};
+type PermissionCheck={path:string;functions:MenuPermissions[0];access:MenuPermissions[1];failed:boolean;sessionEnded:boolean;shcnError:boolean};
 
 function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Auth['me']>;path:string;onNavigate:(path:string)=>void}){
  const {client}=auth;
@@ -53,23 +55,29 @@ function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Au
    if(pending||ended.current)return;
    const abort=new AbortController();
    pending=abort;
-   const [account,menu]=await Promise.allSettled([
+   const [account,menu,shcn]=await Promise.allSettled([
     readCurrentAccount(client),
     client.request('/api/ctsv/nen-tang/toi/quyen-giao-dien',{
      signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)]),
     }).then(response=>response.json()),
+    client.request('/api/shcn/khoa/pham-vi',{signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)])}).then(response=>response.json()),
    ]);
    if(abort.signal.aborted)return;
-   pending=undefined;
-   const sessionEnded=[account,menu].some(result=>result.status==='rejected'&&result.reason instanceof ApiError&&result.reason.status===401);
+   const sessionEnded=[account,menu,shcn].some(result=>result.status==='rejected'&&result.reason instanceof ApiError&&result.reason.status===401);
    ended.current=sessionEnded;
    const sameAccount=account.status==='fulfilled'&&account.value?.accountId===accountId;
    const functions=sameAccount&&Array.isArray(account.value.functions)?account.value.functions:null;
    const value=menu.status==='fulfilled'?menu.value:null;
    const validMenu=value&&typeof value.student==='boolean'&&typeof value.mghpSpecialist==='boolean'&&typeof value.ctsvRoleAdmin==='boolean';
+   const shcnAllowed=shcn.status==='fulfilled'&&Array.isArray(shcn.value?.khoa)&&shcn.value.khoa.some((k:{duocDoc:boolean;duocLapNhap:boolean})=>k.duocDoc||k.duocLapNhap);
+   const round=await probeRoundAccess(client,functions??[],AbortSignal.any([abort.signal,AbortSignal.timeout(20000)]));
+   if(abort.signal.aborted)return;
+   ended.current=sessionEnded||round.sessionEnded;
+   pending=undefined;
    const noCtsvAccess=menu.status==='rejected'&&menu.reason instanceof ApiError&&menu.reason.status===403;
-   setVerified({path,functions:sessionEnded?[]:functions??[],access:!sessionEnded&&functions&&validMenu?value:null,
-    failed:!functions||(!validMenu&&!noCtsvAccess),sessionEnded});
+   setVerified({path,functions:ended.current?[]:functions??[],access:!ended.current&&functions&&(validMenu||shcnAllowed||round.read)?{...(validMenu?value:{student:false,mghpSpecialist:false,ctsvRoleAdmin:false}),shcnFacultyRead:shcnAllowed,shcnRoundRead:round.read}:null,
+    shcnError:round.error||shcn.status==='rejected'&&!(shcn.reason instanceof ApiError&&shcn.reason.status===403),
+    failed:!functions||(!validMenu&&!noCtsvAccess&&!shcnAllowed&&!round.read),sessionEnded:ended.current});
   }
   function onVisible(){if(document.visibilityState==='visible')void recheck();}
   if(ended.current)return;
@@ -83,7 +91,7 @@ function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Au
  },[client,accountId,path]);
  const current=verified?.path===path?verified:null;
  const loading=current===null;
- const {functions=[],access=null,failed=false}=current??{};
+ const {functions=[],access=null,failed=false,shcnError=false}=current??{};
  const route=resolveRoute(path,functions,access);
  const entry=route.kind==='page'?route.entry:null;
  const ActiveFeature=entry&&featurePages[entry.feature];
@@ -98,7 +106,8 @@ function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Au
   {failed&&<Alert>Chưa tải được quyền CTSV. Hãy tải lại trang để thử lại.</Alert>}
   {route.kind==='home'&&<section><h1>Trang chủ CTSV</h1><p>Chào mừng bạn đến với Cổng công tác sinh viên.</p></section>}
   {route.kind==='missing'&&<Alert>Trang này không có trong Cổng công tác sinh viên.</Alert>}
-  {route.kind==='denied'&&!loading&&!failed&&<Alert>Bạn không có quyền truy cập trang này.</Alert>}
+  {(path.startsWith('/shcn/')||functions.some(fn=>fn.active&&fn.code.startsWith('shcn.')))&&shcnError&&!loading&&<Alert>Chưa kiểm tra được quyền SHCN. Vui lòng thử lại sau.</Alert>}
+  {route.kind==='denied'&&!loading&&!failed&&!(path.startsWith('/shcn/')&&shcnError)&&<Alert>Bạn không có quyền truy cập trang này.</Alert>}
   {entry&&ActiveFeature&&<ActiveFeature key={entry.id+':'+entry.view} client={client} view={entry.view}/>}
  </AppShell>;
 }

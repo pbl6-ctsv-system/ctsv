@@ -7,6 +7,9 @@ public final class PhanCongKhoaDtos {
     public record Page<T>(List<T> items,int page,int size,long totalElements){
         public Page{items=List.copyOf(items);}
     }
+    public record TrangDanhSachDTO(List<DanhSachTomTatDTO> items,int page,int size,long totalElements,int phienBanLonNhat){
+        public TrangDanhSachDTO{items=List.copyOf(items);}
+    }
     public record KhoaDTO(String id,String maKhoa,String tenKhoa,boolean duocDoc,boolean duocLapNhap,
                           boolean coTheChon,String lyDoKhongTheChon){}
     public record PhamViDTO(List<KhoaDTO> khoa){public PhamViDTO{khoa=List.copyOf(khoa);}}

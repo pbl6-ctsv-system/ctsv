@@ -7,7 +7,7 @@ import {createAuthClient as compatibleClient} from '../src/shared/auth-client.mj
 test('navigation identifies implemented feature entries without publishing empty modules',()=>{
  assert.equal(new Set(navigationItems.map(item=>item.id)).size,navigationItems.length);
  assert.deepEqual(navigationItems.map(item=>[item.id,item.feature]),[
-  ['lookup','foundation'],['students','foundation'],['manage','foundation'],['roles','foundation'],['auth','auth'],['auth-rbac','auth'],['mghp-policies','mghp'],['mghp-rounds','mghp'],
+  ['shcn-rounds','shcn'],['shcn-assignments','shcn'],['lookup','foundation'],['students','foundation'],['manage','foundation'],['roles','foundation'],['auth','auth'],['auth-rbac','auth'],['mghp-policies','mghp'],['mghp-rounds','mghp'],
   ['mghp-applications','mghp'],['mghp-casework','mghp'],['mghp-evaluations','mghp'],['mghp-benefits','mghp'],['mghp-inbox','mghp']]);
  assert(navigationItems.every(item=>typeof item.label==='string'&&item.label.length>0));
 });

@@ -16,7 +16,7 @@ final class ShcnApiDatabase {
         try(var c=ds.getConnection();var s=c.createStatement();var r=s.executeQuery("SELECT DB_NAME(),CONVERT(nvarchar(128),SERVERPROPERTY('InstanceName')),SUSER_SNAME(owner_sid),SUSER_SNAME(),compatibility_level,collation_name,(SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='shcn_api_owner') FROM sys.databases WHERE database_id=DB_ID()")){
             if(!r.next()||!NAME.equals(r.getString(1))||!"DEV2022".equals(r.getString(2))||!Objects.equals(r.getString(3),r.getString(4))||r.getInt(5)!=160||!"Vietnamese_100_CI_AS_SC".equals(r.getString(6))||!"ctsv-shcn-step3-20261119".equals(r.getString(7)))throw new IllegalStateException("SHCN API exact target/owner/marker mismatch");
         }
-        var f=Flyway.configure().dataSource(ds).cleanDisabled(true).baselineOnMigrate(false).load();f.migrate();f.validate();return ds;
+        var f=Flyway.configure().dataSource(ds).cleanDisabled(true).baselineOnMigrate(false).ignoreMigrationPatterns("*:pending").load();f.validate();return ds; // Validate applied checksums only; pending migrations are left to the owner. Tests must never migrate.
     }
     private ShcnApiDatabase(){}
 }

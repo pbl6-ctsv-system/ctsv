@@ -1,0 +1,32 @@
+{
+  "sql": "NONE",
+  "authReferenceRepository": "MOCK",
+  "transactionResource": "IN_MEMORY_BOUNDARY_ONLY",
+  "suites": [
+    {
+      "name": "pbl6.ctsv.shcn.dotsinhhoat.DotRequestsTest",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.384"
+    },
+    {
+      "name": "pbl6.ctsv.shcn.dotsinhhoat.DotServiceTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.091"
+    },
+    {
+      "name": "pbl6.ctsv.shcn.dotsinhhoat.DotHttpTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "5.322"
+    }
+  ],
+  "tests": 58
+}

@@ -1,2 +1,5 @@
 node_modules/
 test-results/
+
+# Synthetic SHCN browser output (not source)
+shcn-evidence/

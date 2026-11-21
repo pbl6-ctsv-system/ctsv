@@ -227,19 +227,19 @@ class PhanCongKhoaWorkflowHttpIT {
     @Test void inheritImmutablePreviousYearCreatesNewIdsWithoutMutatingSource()throws Exception{
         var src=saved(draft(),line(f.lopA1,f.gvA,"copied"),line(f.lopA2,f.gvA,null));
         jdbc.update("UPDATE shcn.shcn_danh_sach_phan_cong_khoa SET trang_thai='DA_GUI_CHUYEN_VIEN' WHERE id=?",src.path("id").asLong());
-        var before=detail(src);var body=createBody(f.khoaA,f.year()).put("maDanhSachTruoc",src.path("id").asText()).put("lyDoDieuChinh","Kế thừa năm trước");
+        var before=detail(src);var body=createBody(f.khoaA,f.year()).put("maDanhSachTruoc",src.path("id").asText()).putNull("lyDoDieuChinh");
         var copy=create(f.a,body);assertThat(copy.path("trangThai").asText()).isEqualTo("NHAP");assertThat(copy.path("hieuLucDen").isNull()).isTrue();
-        assertThat(copy.path("cacPhanCong").size()).isEqualTo(2);
+        assertThat(copy.path("lyDoDieuChinh").isNull()).isTrue();assertThat(copy.path("cacPhanCong").size()).isEqualTo(2);
         var oldLineIds=new ArrayList<String>();before.path("cacPhanCong").forEach(row->oldLineIds.add(row.path("id").asText()));
         for(JsonNode row:copy.path("cacPhanCong"))assertThat(oldLineIds).doesNotContain(row.path("id").asText());
         assertThat(detail(src)).isEqualTo(before);
     }
-    @Test void invalidInheritanceScopeStateAndReasonAreRejected()throws Exception{
+    @Test void invalidInheritanceScopeAndStateAreRejected()throws Exception{
         for(String state:List.of("NHAP","CHO_KY","DA_HUY")){
             var src=draft();if(!state.equals("NHAP"))jdbc.update("UPDATE shcn.shcn_danh_sach_phan_cong_khoa SET trang_thai=? WHERE id=?",state,src.path("id").asLong());
             var body=createBody(f.khoaA,f.year()).put("maDanhSachTruoc",src.path("id").asText()).put("lyDoDieuChinh","Copy");
             error(call("POST","/phan-cong",f.a,body),409,"SHCN_NGUON_KE_THUA_KHONG_HOP_LE");
-            body.putNull("lyDoDieuChinh");error(call("POST","/phan-cong",f.a,body),400,"VALIDATION_ERROR");
+            body.putNull("lyDoDieuChinh");error(call("POST","/phan-cong",f.a,body),409,"SHCN_NGUON_KE_THUA_KHONG_HOP_LE");
         }
         var other=create(f.b,createBody(f.khoaB,f.year()));var body=createBody(f.khoaA,f.year()).put("maDanhSachTruoc",other.path("id").asText()).put("lyDoDieuChinh","Copy");
         error(call("POST","/phan-cong",f.a,body),404,"NOT_FOUND");
