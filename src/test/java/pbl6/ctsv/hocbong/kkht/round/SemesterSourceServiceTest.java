@@ -27,7 +27,7 @@ class SemesterSourceServiceTest {
         verify(repo, never()).persist(any());
         verify(repo, never()).persistAudit(any());
         verify(repo, never()).serializeWrites();
-        verify(repo, never()).changeRound(anyLong(), any(), anyInt(), anyString());
+        verify(repo, never()).changeScope(anyLong(), any(), anyLong());
     }
 
     @Test void nearestUsesVerifiedStartDateRatherThanHighestCodeOrId() {

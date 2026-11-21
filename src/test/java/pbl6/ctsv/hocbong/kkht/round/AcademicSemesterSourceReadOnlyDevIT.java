@@ -60,7 +60,8 @@ class AcademicSemesterSourceReadOnlyDevIT {
         jdbc=new JdbcTemplate(dataSource);
         factory=new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(dataSource);
-        factory.setPackagesToScan("pbl6.ctsv.foundation","pbl6.ctsv.hocbong.kkht.round.entity");
+        // This fixture-free smoke validates Foundation only; HB V19 validation belongs to the guarded test suite.
+        factory.setPackagesToScan("pbl6.ctsv.foundation");
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.getJpaPropertyMap().put("hibernate.hbm2ddl.auto","validate");
         // All CTSV tables live in dbo; avoid scanning unrelated/system schemas for metadata.
@@ -76,6 +77,24 @@ class AcademicSemesterSourceReadOnlyDevIT {
 
     @AfterAll void closePersistenceWithoutCleaningData() {
         if (factory!=null) factory.destroy();
+    }
+
+    @Test void scopeProviderExecutesRealReadAndReportsMissingAdmissionMappingWithoutInventingRoster() {
+        tx.executeWithoutResult(status->{
+            var candidates=jdbc.queryForList("SELECT id FROM dbo.hoc_ky WHERE dang_hien_dien_nguon=1 AND ma LIKE '[0-9][0-9]10' ORDER BY id",Long.class);
+            assertThat(candidates).as("existing main source semester required for read smoke").isNotEmpty();
+            var provider=new pbl6.ctsv.foundation.repository.ScholarshipScopeRepository(jdbc,source,new com.fasterxml.jackson.databind.ObjectMapper());
+            long missing=jdbc.queryForObject("SELECT COUNT_BIG(*) FROM dbo.sinh_vien WHERE dang_hien_dien_nguon=1 AND hoc_ky_bat_dau_nguon_id IS NULL",Long.class);
+            if(missing>0) {
+                assertThatThrownBy(()->provider.catalog(candidates.getFirst())).isInstanceOfSatisfying(FoundationAccess.Failure.class,e->{
+                    assertThat(e.status()).isEqualTo(503);assertThat(e.code()).isEqualTo("SCOPE_SOURCE_UNAVAILABLE");
+                });
+            } else {
+                var catalog=provider.catalog(candidates.getFirst());
+                assertThat(catalog.revision()).matches("[A-Za-z0-9_-]{43}");
+                assertThat(catalog.groups()).allSatisfy(group->assertThat(group.studentCount()).isPositive());
+            }
+        });
     }
 
     @Test void candidatePagesMatchLiveSourceDatesWithoutDependingOnFixedIdsOrRows() {
