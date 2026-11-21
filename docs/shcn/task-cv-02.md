@@ -10,7 +10,7 @@ Ngày 21/11/2026. Repo code: `G:\26-27\PBL6-CTSV\ctsv`. D01: chuyên viên có q
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Entity, repository, service, DTO, validation, controller, lỗi và cấu hình SHCN | `src/main/java/pbl6/ctsv/shcn/dotsinhhoat/`                                                                                                      |
 | Adapter chỉ đọc quyền/học kỳ                                                   | `shcn/dotsinhhoat/reference/JdbcDotReference.java`; dùng public `FoundationAccess`, `AcademicSemesterSource`; không sửa Entity/schema Foundation |
-| Migration mới, **chưa chạy**                                                   | `src/main/resources/db/migration/V17__shcn_draft_round.sql`                                                                                      |
+| Migration mới, **chưa chạy**                                                   | `src/main/resources/db/migration/V18__shcn_draft_round.sql`                                                                                      |
 | Màn hình danh sách/tạo/chi tiết/sửa                                            | `frontend/src/features/shcn/pages/RoundsPage.tsx`, `components/RoundEditor.tsx`, `pages/Rounds.module.css`                                       |
 | API, DTO và đối chiếu dữ liệu frontend                                         | `frontend/src/features/shcn/api/rounds.ts`, `types/rounds.ts`, `model/round.mjs`                                                                 |
 | Tích hợp tối thiểu menu/route                                                  | `ShcnWorkspace.tsx`, public index SHCN, `app/App.tsx`, `app/navigation/modules.mjs`, `featureRegistry.tsx`                                       |
@@ -21,7 +21,7 @@ Giữ màn hình phân công khoa hiện có. Không sửa Foundation/Đào tạ
 
 ## 2. Bảng và quyền
 
-V17 tạo đúng **một bảng SHCN đã có trong ERD**: `shcn.shcn_dot_sinh_hoat`, 27 cột. Không thêm field nghiệp vụ vào ERD, không thêm FK mã học kỳ sang ID nội bộ Foundation.
+V18 tạo đúng **một bảng SHCN đã có trong ERD**: `shcn.shcn_dot_sinh_hoat`, 27 cột. Không thêm field nghiệp vụ vào ERD, không thêm FK mã học kỳ sang ID nội bộ Foundation.
 
 - Bảng có PK identity, rowversion, CHECK ngày/JSON/enum/phiên bản và trigger bảo vệ người tạo/ngày tạo, thông tin chung đã khóa.
 - Tạo mới: `NHAP`, `CHUA_DONG_BO`, `DANG_CHOT`; các con trỏ hồ sơ/phiên bản/thời điểm workflow đều NULL.
@@ -31,9 +31,9 @@ V17 tạo đúng **một bảng SHCN đã có trong ERD**: `shcn.shcn_dot_sinh_h
 
 ## 3. Chuẩn bị DEV — chủ dự án tự thực hiện
 
-Các bước dưới đây là hướng dẫn, **chưa được chạy**. V17 còn pending nên backend cũ không có API này; không đổi `ddl-auto`, tắt Flyway hoặc sửa history để bỏ qua migration.
+Các bước dưới đây là hướng dẫn, **chưa được chạy**. V18 còn pending nên backend cũ không có API này; không đổi `ddl-auto`, tắt Flyway hoặc sửa history để bỏ qua migration.
 
-1. Review file V17 và kiểm không trùng số migration với phần nhóm vừa merge. Không sửa V14/V15 đã áp dụng.
+1. Review file V18 và kiểm không trùng số migration với phần nhóm vừa merge. Không sửa V14/V15 đã áp dụng.
 2. Khi chủ dự án quyết định migrate: ở root `ctsv`, dùng launcher DEV hiện có theo thứ tự `build` → `migrate` → `start`. Kiểm status/log để xác nhận đúng instance/DB DEV, Flyway và Hibernate validation. Lượt này Codex không chạy các bước ghi DB đó.
 3. Dùng màn hình quản trị Auth hiện có gán role `shcn_chuyen_vien` cho tài khoản chuyên viên được chọn, ví dụ `dev.chuyenvien` nếu account đó tồn tại. Giữ role CTSV_USER/quyền cũ; không cần tài khoản mới hoặc mật khẩu mới. Đăng nhập lại sau khi cấp quyền.
 4. Người quản trị dữ liệu cấp grant Foundation: đúng `nguoi_dung_id` đã mapping với account/issuer đó; role `vai_tro.ma='shcn_chuyen_vien'`; `ma_phan_he='SHCN'`; `don_vi_id=NULL`; thời gian hiệu lực phù hợp. Chỉ gán role Auth chưa đủ. Không dùng trang phân quyền **MGHP** để tạo scope SHCN hoặc lấy ID số của role Auth thay ID Foundation. Nếu chưa có thao tác quản trị SHCN cho scope này, đây là bước chuẩn bị dữ liệu DEV của owner; task này không bổ sung một màn hình quản trị quyền mới.
@@ -57,7 +57,7 @@ Chưa có xóa/phát hành/trình duyệt ở màn hình đợt. Đợt đã kh�
 
 Kết quả máy và lệnh thực chạy: [EVIDENCE](evidence/task-cv-02/results.json), [bảng kiểm chứng](task-cv-02-tests.md). Đây là Chrome thật với **HTTP fixture**, không phải backend/DB thật. Không dùng ảnh fixture để khẳng định đã seed hoặc migrate DEV.
 
-Phải xác minh sau khi owner áp dụng migration/cấp quyền: cú pháp và transaction SQL Server của V17; Hibernate schema validation; CAS khi hai writer thật; rollback audit thật; JOIN permission–scope/thu hồi trên DB thật; học kỳ theo nguồn DEV; smoke giao diện qua launcher DEV. Các mục này hiện **NOT VERIFIED**, không chuyển tất cả 40 ca thiết kế thành PASS.
+Phải xác minh sau khi owner áp dụng migration/cấp quyền: cú pháp và transaction SQL Server của V18; Hibernate schema validation; CAS khi hai writer thật; rollback audit thật; JOIN permission–scope/thu hồi trên DB thật; học kỳ theo nguồn DEV; smoke giao diện qua launcher DEV. Các mục này hiện **NOT VERIFIED**, không chuyển tất cả 40 ca thiết kế thành PASS.
 
 Hồ sơ workflow dùng chung chưa có public contract kiểm trạng thái hoàn tất trong slice này. Vì vậy root có một trong các `ma_ho_so_*` khác NULL sẽ bị chặn sửa an toàn; chưa tuyên bố hỗ trợ chỉnh lại một hồ sơ đã từng trình và đã kết thúc. Nhánh đó hoàn thiện cùng task workflow, không mặc định hồ sơ cũ là hoàn tất.
 

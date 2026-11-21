@@ -64,7 +64,8 @@ INSERT dbo.vai_tro(ma,ten,dang_hoat_dong)
  SELECT @role,N'Chuyên viên SHCN',1 WHERE NOT EXISTS(SELECT 1 FROM dbo.vai_tro WHERE ma=@role);
 IF EXISTS(SELECT 1 FROM dbo.vai_tro WHERE ma=@role AND ma COLLATE Latin1_General_100_BIN2<>@role COLLATE Latin1_General_100_BIN2)
  THROW 51703,'SHCN specialist role code is not canonical.',1;
-DECLARE @p TABLE(code nvarchar(128),label nvarchar(512));
+-- Auth permission codes are BIN2; match the table variable to avoid database-default collation conflicts.
+DECLARE @p TABLE(code nvarchar(128) COLLATE Latin1_General_100_BIN2,label nvarchar(512));
 INSERT @p VALUES(N'shcn.dot.read',N'Xem đợt SHCN toàn trường'),(N'shcn.dot.prepare',N'Tạo và sửa nháp đợt SHCN toàn trường'),(N'shcn.reference.read',N'Tra cứu học kỳ phục vụ SHCN');
 INSERT dbo.ChucNang(MaChucNang,TenChucNang,TrangThai)
  SELECT p.code,p.label,1 FROM @p p WHERE NOT EXISTS(SELECT 1 FROM dbo.ChucNang c WHERE c.MaChucNang=p.code COLLATE Latin1_General_100_BIN2);

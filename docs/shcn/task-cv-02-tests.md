@@ -67,7 +67,7 @@ Không quy đổi58 unit/MockMvc thành40 ca acceptance SQL đã PASS. Danh sác
 
 ## Chưa xác minh
 
-- V17 trên SQL Server thật, Flyway checksum/history và Hibernate schema validation.
+- V18 trên SQL Server thật, Flyway checksum/history và Hibernate schema validation.
 - Lock/CAS/trigger/rollback audit thật và concurrency giữa hai connection/writer.
 - DB role–permission/grant toàn cục, source học kỳ và Auth identity trên account DEV thật.
 - Luồng UI qua `.\dev.ps1 start` và DB DEV sau migration.
