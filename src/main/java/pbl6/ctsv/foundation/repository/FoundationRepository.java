@@ -4,13 +4,16 @@ import jakarta.persistence.EntityManager;
 import java.time.*;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import pbl6.ctsv.foundation.api.AcademicSemesterSource;
 import pbl6.ctsv.foundation.api.FoundationAccess.Failure;
+import pbl6.ctsv.foundation.dto.FoundationDtos;
 import pbl6.ctsv.foundation.dto.FoundationDtos.*;
 import pbl6.ctsv.foundation.entity.*;
 import pbl6.ctsv.foundation.mapper.FoundationMapper;
 
 /** JPA for ordinary persistence; SQL Server locking, rowversion fencing and audit stay explicit. Caller owns transaction. */
-public final class FoundationRepository {
+public final class FoundationRepository implements AcademicSemesterSource {
     private final EntityManager em;
     private final JdbcTemplate jdbc;
     private static final Set<String> ROOTS = Set.of("hoc_ky","qua_trinh_theo_hoc","nguoi_dung");
@@ -27,14 +30,14 @@ public final class FoundationRepository {
     }
     public void flush() { em.flush(); }
     public void refresh(Object entity) { em.flush(); em.refresh(entity); }
-    public Page<StudentSummary> students(String q,int page,int size,int offset) {
+    public FoundationDtos.Page<StudentSummary> students(String q,int page,int size,int offset) {
         String where=" where (:q is null or s.mssv like :pattern escape '~' or s.hoTen like :pattern escape '~')";
         var rows=em.createQuery("select s from SinhVien s"+where+" order by s.mssv,s.id",SinhVien.class)
             .setParameter("q",q).setParameter("pattern",like(q)).setFirstResult(offset).setMaxResults(size).getResultList();
         long count=em.createQuery("select count(s) from SinhVien s"+where,Long.class).setParameter("q",q).setParameter("pattern",like(q)).getSingleResult();
-        return new Page<>(rows.stream().map(FoundationMapper::studentSummary).toList(),page,size,count);
+        return new FoundationDtos.Page<>(rows.stream().map(FoundationMapper::studentSummary).toList(),page,size,count);
     }
-    public Page<LookupItem> lookup(String kind,String q,int page,int size,int offset) {
+    public FoundationDtos.Page<LookupItem> lookup(String kind,String q,int page,int size,int offset) {
         String entity=switch(kind) {
             case "ethnicities" -> "DanToc"; case "cohorts" -> "KhoaHoc"; case "classes" -> "LopSinhHoat";
             case "units" -> "DonVi"; case "semesters" -> "HocKy"; default -> throw new Failure(400,"VALIDATION_ERROR","kind");
@@ -44,8 +47,79 @@ public final class FoundationRepository {
         var rows=em.createQuery("select e.id,e.ma,"+name+" from "+entity+" e"+where+" order by case when e.ma is null then 1 else 0 end,e.ma,e.id",Object[].class)
             .setParameter("q",q).setParameter("pattern",like(q)).setFirstResult(offset).setMaxResults(size).getResultList();
         long total=em.createQuery("select count(e) from "+entity+" e"+where,Long.class).setParameter("q",q).setParameter("pattern",like(q)).getSingleResult();
-        return new Page<>(rows.stream().map(r -> new LookupItem(r[0].toString(),(String)r[1],(String)r[2])).toList(),page,size,total);
+        return new FoundationDtos.Page<>(rows.stream().map(r -> new LookupItem(r[0].toString(),(String)r[1],(String)r[2])).toList(),page,size,total);
     }
+
+    @Override
+    public Page findPage(String q, int page, int size) {
+        requireSemesterSourceTransaction();
+        String pattern = q == null || q.isBlank() ? null : like(q.strip());
+        String where = pattern == null ? "" : " where h.ma like :pattern escape '~' or h.ten like :pattern escape '~'";
+        var rows = em.createQuery("""
+            select h.id, h.ma, h.ten, h.namHocNguon, h.ngayBatDau, h.ngayKetThuc,
+                   h.trangThaiXacMinhMoc, h.dangHienDienNguon, h.phienBan
+            from HocKy h
+            """ + where + " order by h.ma,h.id", Object[].class);
+        var count = em.createQuery("select count(h) from HocKy h" + where, Long.class);
+        if (pattern != null) {
+            rows.setParameter("pattern", pattern);
+            count.setParameter("pattern", pattern);
+        }
+        var items = rows.setFirstResult(Math.toIntExact((long) page * size)).setMaxResults(size).getResultList()
+            .stream().map(row -> new Semester((Long) row[0], (String) row[1], (String) row[2], (String) row[3],
+                (LocalDate) row[4], (LocalDate) row[5], (String) row[6], Boolean.TRUE.equals(row[7]),
+                (byte[]) row[8])).toList();
+        return new Page(items, page, size, count.getSingleResult());
+    }
+
+    @Override
+    public Page findStartedPage(LocalDate cutoff, int page, int size) {
+        requireSemesterSourceTransaction();
+        Objects.requireNonNull(cutoff, "cutoff");
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Invalid semester candidate page");
+        }
+        int offset = Math.toIntExact((long) page * size);
+        var rows = em.createQuery("""
+            select h.id, h.ma, h.ten, h.namHocNguon, h.ngayBatDau, h.ngayKetThuc,
+                   h.trangThaiXacMinhMoc, h.dangHienDienNguon, h.phienBan
+            from HocKy h where h.ngayBatDau<=:cutoff
+            order by h.ngayBatDau desc,h.ma,h.id
+            """, Object[].class).setParameter("cutoff", cutoff);
+        var count = em.createQuery("select count(h) from HocKy h where h.ngayBatDau<=:cutoff", Long.class)
+            .setParameter("cutoff", cutoff);
+        var items = rows.setFirstResult(offset).setMaxResults(size).getResultList().stream()
+            .map(row -> new Semester((Long) row[0], (String) row[1], (String) row[2], (String) row[3],
+                (LocalDate) row[4], (LocalDate) row[5], (String) row[6], Boolean.TRUE.equals(row[7]),
+                (byte[]) row[8])).toList();
+        return new Page(items, page, size, count.getSingleResult());
+    }
+
+    @Override
+    public Optional<Semester> findById(long id) {
+        requireSemesterSourceTransaction();
+        em.flush();
+        // Read the projected values and rowversion under the same source lock.
+        return jdbc.query("""
+            SELECT id,ma,ten,nam_hoc_nguon,ngay_bat_dau,ngay_ket_thuc,
+                   trang_thai_xac_minh_moc,dang_hien_dien_nguon,phien_ban
+            FROM dbo.hoc_ky WITH(UPDLOCK,HOLDLOCK) WHERE id=?
+            """, (row, index) -> {
+                var start = row.getDate("ngay_bat_dau");
+                var end = row.getDate("ngay_ket_thuc");
+                return new Semester(row.getLong("id"), row.getString("ma"), row.getString("ten"),
+                    row.getString("nam_hoc_nguon"), start == null ? null : start.toLocalDate(),
+                    end == null ? null : end.toLocalDate(), row.getString("trang_thai_xac_minh_moc"),
+                    row.getBoolean("dang_hien_dien_nguon"), row.getBytes("phien_ban"));
+            }, id).stream().findFirst();
+    }
+
+    private static void requireSemesterSourceTransaction() {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Foundation semester source requires a local transaction");
+        }
+    }
+
     public List<QuaTrinhTheoHoc> processes(long student) { return em.createQuery("from QuaTrinhTheoHoc where sinhVienId=:id order by id",QuaTrinhTheoHoc.class).setParameter("id",student).getResultList(); }
     public List<LichSuTrangThaiSv> statuses(long process) { return em.createQuery("from LichSuTrangThaiSv where quaTrinhHocId=:id order by ngayBatDauHieuLuc,id",LichSuTrangThaiSv.class).setParameter("id",process).getResultList(); }
     public List<QuaTrinhThuocLop> classes(long process) { return em.createQuery("from QuaTrinhThuocLop where quaTrinhHocId=:id order by hieuLucTu,id",QuaTrinhThuocLop.class).setParameter("id",process).getResultList(); }
