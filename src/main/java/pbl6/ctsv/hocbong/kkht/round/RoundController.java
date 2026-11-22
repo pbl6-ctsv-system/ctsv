@@ -29,12 +29,14 @@ class RoundController {
     private final RoundAccess access;
     private final RoundService service;
     private final RoundHttp http;
+    private final ScopeService scopes;
 
-    RoundController(AuthAccess auth, RoundAccess access, RoundService service, ObjectMapper json) {
+    RoundController(AuthAccess auth, RoundAccess access, RoundService service, ObjectMapper json,ScopeService scopes) {
         this.auth = auth;
         this.access = access;
         this.service = service;
         this.http = new RoundHttp(json);
+        this.scopes=scopes;
     }
 
     @GetMapping("/toi/nhom-chuc-nang")
@@ -52,6 +54,25 @@ class RoundController {
             var query = RoundHttp.getQuery(request, "q", "page", "size");
             return service.sources(RoundRules.queryText(parameter(query, "q")),
                     RoundRules.page(parameter(query, "page"), parameter(query, "size")));
+        });
+        return response(HttpStatus.OK).body(body);
+    }
+
+    @GetMapping("/hoc-ky-nguon/mac-dinh")
+    ResponseEntity<RoundDtos.DefaultSemester> defaultSemester(HttpServletRequest request) {
+        var body = access.executeConsistentRead(RoundHttp.principal(request, auth), actor -> {
+            RoundHttp.getQuery(request);
+            return service.defaultSemester();
+        });
+        return response(HttpStatus.OK).body(body);
+    }
+
+    @GetMapping("/hoc-ky-nguon/{sourceSemesterId}")
+    ResponseEntity<RoundDtos.SourceSemesterDto> sourceById(
+            @PathVariable("sourceSemesterId") String sourceSemesterId, HttpServletRequest request) {
+        var body = access.execute(RoundHttp.principal(request, auth), true, actor -> {
+            RoundHttp.getQuery(request);
+            return service.sourceById(RoundRules.id("sourceSemesterId", sourceSemesterId));
         });
         return response(HttpStatus.OK).body(body);
     }
@@ -75,11 +96,14 @@ class RoundController {
 
     @PostMapping(ROUNDS)
     ResponseEntity<RoundDtos.RoundDetail> create(HttpServletRequest request) {
-        var view = access.execute(RoundHttp.principal(request, auth), true, actor -> {
+        var result = access.execute(RoundHttp.principal(request, auth), true, actor -> {
             RoundHttp.ifMatch(request);
-            return service.create(RoundRules.create(http.body(request)), actor);
+            var command=ScopeRules.create(http.body(request));
+            return scopes.create(command,RoundHttp.requestId(request),actor);
         });
-        return response(HttpStatus.CREATED)
+        var view=result.view();
+        return response(result.replayed()?HttpStatus.OK:HttpStatus.CREATED)
+                .header("Idempotency-Replayed",Boolean.toString(result.replayed()))
                 .location(URI.create(BASE + ROUNDS + "/" + view.body().id()))
                 .eTag(view.etag())
                 .body(view.body());
@@ -101,9 +125,37 @@ class RoundController {
         var view = access.execute(RoundHttp.principal(request, auth), true, actor -> {
             long id = RoundRules.id("idDotXet", idDotXet);
             String ifMatch = RoundHttp.ifMatch(request);
-            return service.update(id, RoundRules.update(http.body(request)), ifMatch, actor);
+            return scopes.update(id, ScopeRules.update(http.body(request)), ifMatch, actor);
         });
         return response(HttpStatus.OK).eTag(view.etag()).body(view.body());
+    }
+
+    @GetMapping("/kkht/pham-vi-nguon")
+    ResponseEntity<ScopeDtos.Catalog> scopeCatalog(HttpServletRequest request) {
+        var result=access.executeConsistentRead(RoundHttp.principal(request,auth),actor->{
+            var query=RoundHttp.getQuery(request,"sourceSemesterId","cohortId","majorId","q","page","size");
+            String cohort=parameter(query,"cohortId"),major=parameter(query,"majorId");
+            return scopes.catalog(RoundRules.id("sourceSemesterId",parameter(query,"sourceSemesterId")),
+                cohort==null?null:RoundRules.id("cohortId",cohort),major==null?null:RoundRules.id("majorId",major),
+                RoundRules.queryText(parameter(query,"q")),RoundRules.page(parameter(query,"page"),parameter(query,"size")));
+        });
+        return response(HttpStatus.OK).body(result);
+    }
+
+    @GetMapping(ROUNDS+"/{idDotXet}/pham-vi")
+    ResponseEntity<ScopeDtos.View> scope(@PathVariable("idDotXet") String id,HttpServletRequest request) {
+        var result=access.execute(RoundHttp.principal(request,auth),true,actor->{
+            RoundHttp.getQuery(request);return scopes.scope(RoundRules.id("idDotXet",id));
+        });
+        return response(HttpStatus.OK).body(result);
+    }
+
+    @GetMapping("/kkht/lenh-tao-dot/{requestId}")
+    ResponseEntity<ScopeDtos.CreationLookup> creationLookup(@PathVariable("requestId") String key,HttpServletRequest request) {
+        var result=access.execute(RoundHttp.principal(request,auth),true,actor->{
+            RoundHttp.getQuery(request);return scopes.lookup(ScopeRules.lookupId(key),actor);
+        });
+        return response(HttpStatus.OK).body(result);
     }
 
     private static Integer roundNumber(String value) {

@@ -69,6 +69,9 @@ final class RoundHttp {
     static String ifMatch(HttpServletRequest request) {
         return singleton(request, HttpHeaders.IF_MATCH);
     }
+    static java.util.UUID requestId(HttpServletRequest request) {
+        return ScopeRules.requestId(singleton(request,"Idempotency-Key"));
+    }
 
     JsonNode body(HttpServletRequest request) {
         if (request.getQueryString() != null) {

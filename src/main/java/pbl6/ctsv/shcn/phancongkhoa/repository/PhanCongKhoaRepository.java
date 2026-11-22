@@ -49,7 +49,7 @@ public class PhanCongKhoaRepository {
     public record TrangDanhSach(List<DanhSachPhanCongKhoa> items,long total){}
     public TrangDanhSach trangDanhSach(String khoa,String namHoc,Integer version,int offset,int size){
         transaction();
-        String where=" where maKhoa=:khoa and namHoc=:nam"+(version==null?"":" and phienBan=:version");
+        String where=" where maKhoa=:khoa and namHoc=:nam and trangThai<>'DA_HUY'"+(version==null?"":" and phienBan=:version");
         var query=em.createQuery("from DanhSachPhanCongKhoa"+where+" order by phienBan desc,id desc",DanhSachPhanCongKhoa.class)
             .setParameter("khoa",khoa).setParameter("nam",namHoc).setFirstResult(offset).setMaxResults(size);
         var count=em.createQuery("select count(id) from DanhSachPhanCongKhoa"+where,Long.class).setParameter("khoa",khoa).setParameter("nam",namHoc);
@@ -85,6 +85,18 @@ public class PhanCongKhoaRepository {
         return Math.toIntExact(last+1);
     }
 
+    public int phienBanLonNhat(String khoa,String namHoc){
+        transaction();return Objects.requireNonNull(jdbc.queryForObject("SELECT COALESCE(MAX(phien_ban),0) FROM shcn.shcn_danh_sach_phan_cong_khoa WHERE ma_khoa=? AND nam_hoc=?",Integer.class,khoa,namHoc));
+    }
+    /** Keep the aggregate as a tombstone: version allocation must never reuse deleted versions. */
+    public void xoaNhap(long id,byte[] expected){
+        transaction();var root=khoaDanhSach(id).orElseThrow(()->new XungDot("NOT_FOUND"));
+        if("DA_HUY".equals(root.getTrangThai()))throw new XungDot("NOT_FOUND");
+        if(!Arrays.equals(expected,root.getPhienBanGhi()))throw new XungDot("VERSION_CONFLICT");
+        if(!"NHAP".equals(root.getTrangThai()))throw new XungDot("SHCN_KHONG_CON_LA_NHAP");
+        int changed=jdbc.update("UPDATE shcn.shcn_danh_sach_phan_cong_khoa SET trang_thai='DA_HUY',ly_do_huy=N'Xóa bản nháp',ngay_cap_nhat=TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00') WHERE id=? AND phien_ban_ghi=? AND trang_thai='NHAP'",id,expected);
+        if(changed!=1)throw new XungDot("VERSION_CONFLICT");em.clear();
+    }
     /** Full draft replacement: keep retained line IDs. Does not perform Foundation writes or activate a version. */
     public DanhSachPhanCongKhoa luuNhap(long id,byte[] expected,OffsetDateTime tu,OffsetDateTime den,
             String lyDo,List<DongNhap> cacDong){

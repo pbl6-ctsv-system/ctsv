@@ -84,3 +84,19 @@ pwsh -File .\tools\dev\shcn\dev-shcn.ps1 status
 Không sửa nội dung phiên bản đã chia sẻ rồi giữ nguyên version. Tạo version mới, changelog, checksum và lệnh upgrade có guard/no-overwrite rõ ràng. Tool **dừng khi metadata DB khác version/hash**, ngoại trừ action upgrade tường minh cho parent đã liệt kê; không clean/reset. Không chạy DELETE/reset để né lỗi version.
 
 Đã có kiểm package và chạy lại trên DEV tác giả; việc setup trên máy thứ hai phải ghi kết quả riêng, không suy PASS từ máy tác giả.
+
+## Mẫu kế thừa phân công năm trước — 21/11/2026
+
+Chạy riêng sau khi catalog/tài khoản DEV đã có, không chạy lại setup hoặc migration:
+
+```powershell
+pwsh -File .\tools\dev\shcn\seed-inheritance.ps1 plan
+pwsh -File .\tools\dev\shcn\seed-inheritance.ps1 seed
+pwsh -File .\tools\dev\shcn\seed-inheritance.ps1 status
+```
+
+Gói fixture bổ sung `ctsv.shcn.dev.inheritance` v1.0.0 tạo nguồn năm **2025-2026**, khoa **DEV-SHCN-KHOA-A**, 2 lớp A1/A2 cùng GV mẫu đã có. Trạng thái **Đã gửi chuyên viên** là mô phỏng, không có ký số thật; lý do/ghi chú và audit chỉ rõ DEV seed. Không sửa nháp sẵn có, không sửa schema/Foundation/SIS/Auth, không seed khi start. Ledger `shcn_dev_inheritance_v1` lưu ID local; chạy lại không nhân đôi hoặc khôi phục dữ liệu người dùng đã đổi.
+
+Đăng nhập `dev.truongkhoa`, tạo phân công năm **2026-2027**, chọn **Kế thừa phân công năm trước**, tìm năm **2025-2026** rồi chọn bản nguồn có 2 lớp. Nhập bắt đầu hiệu lực; lý do là tùy chọn, có thể để trống rồi bấm tạo. Bản mới là NHAP và được sao chép hai dòng; bản nguồn giữ chỉ đọc. Số phiên bản của bản mới phụ thuộc các bản đã có trên máy, không cố định ID/phiên bản giữa các thành viên.
+
+Công cụ standalone kiểm checksum gói nền hiện có trước khi dùng và kiểm đúng database `ctsv_dev`, instance `DEV2022`, owner, compat/collation và V14/V15 đã áp dụng. Nó không thay manifest của gói nền v1.1.0. Chia sẻ file `seed-inheritance.ps1` cùng README qua Git theo quy trình nhóm; không chia sẻ dev-home/credentials. Chưa tự commit/push.

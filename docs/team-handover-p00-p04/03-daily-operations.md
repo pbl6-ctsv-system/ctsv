@@ -148,3 +148,6 @@ DEV đang READY tại https://127.0.0.1:5173 (BE https://127.0.0.1:8443). Chuyê
 Dữ liệu thực hành: **đợt20017 — Thực hành lịch trình MGHP · Học kỳ I 2026–2027** còn mở để thử; **đợt20018 — Minh họa Đóng xét · Không có hồ sơ** đã đóng xét. Đây là dữ liệu synthetic tạo qua UI, không phải policy pháp lý mới hoặc fixture sao chép từ DB test.
 
 [Plan/evidence/giới hạn hiện hành](../../../nghiepvu/09-trien-khai/pre-p10-timeline-implementation-plan.md#11-kết-quả-gate-b). Không dùng tài khoản/fixture test thay credentials DEV; không gọi test harness làm server hằng ngày.
+# Lưu ý đồng bộ main — 22/11/2026
+
+Working tree merge hiện dùng chuỗi chung V1–V21; `ctsv_dev` máy tác giả vẫn có V17/V18 riêng cũ. **Không chạy migrate/start với source merged vào DB này** trước khi xử lý tương thích history. Không repair/reset hoặc sửa checksum để bỏ lỗi. Xem [trạng thái merge, SQL test riêng và cách chuyển DEV an toàn](../git-main-sync-20261122.md). Các số version trong evidence lịch sử bên dưới giữ nguyên theo thời điểm đã chạy.

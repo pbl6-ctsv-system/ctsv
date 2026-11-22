@@ -1,0 +1,21 @@
+{
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/config/DotConfiguration.java": "5027e1b4a7cdff4b7122d534c1b887998f5223363bbf5c916bf0e041dc9c8aa2",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/controller/DotController.java": "848cac63d0fec2a795afecd424d223dce8b1f39eac03474484ed2c663f598e54",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/controller/DotErrors.java": "16846a263ecb996d65af2f70add619d8e80b8c802775dc8fca839a79b1311371",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/dto/DotDtos.java": "7ea1c5a6ccb8ee6d5137ce7769f923302a27c7c069527448685e78e8884a1071",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/entity/DotSinhHoat.java": "23a79c2bac472a621f06890bb4696555fcb11f720e6d61b7d2bf131de253a0ff",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/exception/DotFailure.java": "091955021441469ea9018d546244220c64b681c94ac632080018a8fe0f208c42",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/reference/DotReference.java": "6336c5e650804afe141ecbee386ce9744f1c4a548c016d46446fff5353c704f7",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/reference/JdbcDotReference.java": "c13fd83291a2c345688192eceb5ea505346a38f70b2630e01d453b2aab7332b1",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/repository/DotRepository.java": "aeaffb5418fd3d1b62a12a753701ef154f58d707fbbcf6985ef03caa001d8b34",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/service/DotService.java": "b84a762e95d3c0ac77b25a565010dddb4b929d9ef91d8963ed84a2d0c4d48eda",
+  "src/main/java/pbl6/ctsv/shcn/dotsinhhoat/validation/DotRequests.java": "8ea80027d86bdffbd18bbb9922b22b48755f9ee3895116c6fda624b6512e7574",
+  "src/test/java/pbl6/ctsv/shcn/dotsinhhoat/DotHttpTest.java": "98a63577955c199b132697b854a99fd54542ba786bdb212b64a42459221bbeab",
+  "src/test/java/pbl6/ctsv/shcn/dotsinhhoat/DotRequestsTest.java": "9ec3d9fff7d7603cd18fe57528b74c8bf4f70451bd0beea4357b81a2aa86c98e",
+  "src/test/java/pbl6/ctsv/shcn/dotsinhhoat/DotServiceTest.java": "ed9b35da1f8767c5673055e4cb1816323478a8ef9738645dcc768082013dc8c3",
+  "src/main/resources/db/migration/V17__shcn_draft_round.sql": "a7aa4122b907d9d83fd45909abddf6a3b4962c1be06cf7fa841f54c3e331cfdb",
+  "frontend/src/features/shcn/components/RoundEditor.tsx": "5dbcf6e49c6eedfeb23e2c1205e102d3121c0b08ce4ea5cd92124dd75723d7e2",
+  "frontend/src/features/shcn/pages/RoundsPage.tsx": "4b6899e029069f9bc8477fe0d188a78f2c78d433dbc1a5e4d4a4379c8c5db76a",
+  "frontend/src/features/shcn/api/rounds.ts": "9e4388886cc5ab9c522a4c3c55b87eb8a7685f227db505e8fa4682faf103a99e",
+  "frontend/src/features/shcn/model/round.mjs": "6c9800f9a8f9fcd98dcead57d8107b53ed5ecf9fee12b469384081fd8e748277"
+}

@@ -7,9 +7,11 @@ import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 
 /** Owner-approved test target only. Never creates, cleans, resets or falls back to another DB. */
 public final class TimelineDatabase {
-    public static final String NAME="ctsv_timeline_test_20261120";
+    public static final String NAME=System.getProperty("timeline.test.database","ctsv_timeline_test_20261120");
     public static DataSource source() throws Exception {
         if(!Boolean.getBoolean("timeline.test.enabled"))throw new IllegalStateException("Timeline opt-in required");
+        boolean merge=NAME.equals("ctsv_merge_test_20261122");
+        if(!merge&&!NAME.equals("ctsv_timeline_test_20261120"))throw new IllegalStateException("Unapproved timeline database");
         var port=System.getenv("P00_SQL_PORT");
         if(port==null||!port.matches("[1-9][0-9]{0,4}")||Integer.parseInt(port)>65535)throw new IllegalStateException("Verified SQL TCP port required");
         var props=new Properties();props.setProperty("integratedSecurity","true");
@@ -25,7 +27,17 @@ public final class TimelineDatabase {
             """)){
             if(!r.next()||!NAME.equals(r.getString(1))||!"DEV2022".equals(r.getString(2))||r.getInt(3)!=1
                ||r.getInt(4)!=160||!"Vietnamese_100_CI_AS_SC".equals(r.getString(5))
-               ||!"ctsv-mghp-timeline-20261120".equals(r.getString(6)))throw new IllegalStateException("Timeline target/instance/owner/marker guard failed");
+               ||!(merge?"ctsv-merge-test-20261122":"ctsv-mghp-timeline-20261120").equals(r.getString(6)))throw new IllegalStateException("Timeline target/instance/owner/marker guard failed");
+        }
+        // Reject the old private numbering before a test can insert fixtures.
+        // Never repair or reset that evidence database to fit the merged chain.
+        try(var c=ds.getConnection();var s=c.createStatement();var r=s.executeQuery("""
+            IF OBJECT_ID(N'dbo.flyway_schema_history',N'U') IS NOT NULL
+              SELECT COUNT(*) FROM dbo.flyway_schema_history
+              WHERE script IN (N'V17__mghp_round_timeline.sql',N'V18__mghp_retire_round_guidance.sql')
+            ELSE SELECT 0
+            """)){
+            if(r.next()&&r.getInt(1)>0)throw new IllegalStateException("Legacy private migration numbering: keep this DB intact and use the owner-approved merge test target");
         }
         return ds;
     }

@@ -13,6 +13,9 @@ import pbl6.ctsv.foundation.repository.FoundationRepository;
 class FoundationConfiguration {
  @Bean FoundationSecurity foundationSecurity(AuthAccess auth,JdbcTemplate jdbc){return new FoundationSecurity(auth,jdbc);}
  @Bean pbl6.ctsv.foundation.repository.FoundationRepository foundationRepository(jakarta.persistence.EntityManager em,JdbcTemplate jdbc){return new pbl6.ctsv.foundation.repository.FoundationRepository(em,jdbc);}
+ @Bean pbl6.ctsv.foundation.api.ScholarshipScopeSource scholarshipScopeSource(JdbcTemplate jdbc,FoundationRepository repository,ObjectMapper json) {
+  return new pbl6.ctsv.foundation.repository.ScholarshipScopeRepository(jdbc,repository,json);
+ }
  @Bean
  FoundationService foundationService(FoundationSecurity security, FoundationRepository repository,
          PlatformTransactionManager tx, ObjectMapper json, List<FoundationUsage> usages) {

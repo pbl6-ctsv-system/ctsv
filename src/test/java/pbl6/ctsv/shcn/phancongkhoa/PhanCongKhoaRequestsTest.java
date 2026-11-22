@@ -20,6 +20,16 @@ class PhanCongKhoaRequestsTest {
         .putNull("maDanhSachTruoc").put("hieuLucTu","2026-09-01T00:00:00Z").putNull("hieuLucDen").putNull("lyDoDieuChinh");}
     @ParameterizedTest @ValueSource(strings={"0","01","+1"," 1","1 ","1.0","-1","9223372036854775808","10000000000000000000"})
     void bigintIdMustBePositiveCanonicalAndInRange(String value){assertThatThrownBy(()->PhanCongKhoaRequests.id(value,"id")).isInstanceOf(PhanCongKhoaFailure.class);}
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @ValueSource(strings={"  ","Kế thừa năm trước"})
+    void inheritanceReasonIsOptionalButSourceIdIsPreserved(String reason){
+        var request=body().put("maDanhSachTruoc","1");
+        if(reason==null)request.putNull("lyDoDieuChinh");else request.put("lyDoDieuChinh",reason);
+        var parsed=parser.tao(request);
+        assertThat(parsed.maDanhSachTruoc()).isEqualTo(1L);
+        assertThat(parsed.lyDoDieuChinh()).isEqualTo(reason);
+    }
     @Test void maximumIdLeadingCodeZeroAndOffsetsAreLossless(){
         assertThat(PhanCongKhoaRequests.id("9223372036854775807","id")).isEqualTo(Long.MAX_VALUE);
         var parsed=parser.tao(body().put("hieuLucTu","2026-09-01T07:00:00.1234567+07:00"));

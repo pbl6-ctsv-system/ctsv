@@ -43,12 +43,14 @@ public final class PhanCongKhoaRequests {
             return json.readTree(StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString());
         }catch(java.io.IOException e){throw invalid("body");}
     }
+    public byte[] xoa(JsonNode n){
+        shape(n,"",Set.of("expectedVersion"));return version(n.get("expectedVersion"));
+    }
     public TaoNhap tao(JsonNode n){
         shape(n,"",Set.of("maKhoa","namHoc","phienBanDuKien","maDanhSachTruoc","hieuLucTu","hieuLucDen","lyDoDieuChinh"));
         var from=instant(n.get("hieuLucTu"),"hieuLucTu",false);var until=instant(n.get("hieuLucDen"),"hieuLucDen",true);interval(from,until);
         Long before=n.get("maDanhSachTruoc").isNull()?null:id(text(n.get("maDanhSachTruoc"),"maDanhSachTruoc",19,false,false),"maDanhSachTruoc");
         String reason=text(n.get("lyDoDieuChinh"),"lyDoDieuChinh",4000,true,false);
-        if(before!=null&&(reason==null||reason.isBlank()))throw invalid("lyDoDieuChinh");
         return new TaoNhap(code(n.get("maKhoa"),"maKhoa"),label(n.get("namHoc"),"namHoc",20),integer(n.get("phienBanDuKien"),"phienBanDuKien",1,Integer.MAX_VALUE),before,from,until,reason);
     }
     public LuuNhap luu(JsonNode n){

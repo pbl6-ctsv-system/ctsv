@@ -54,6 +54,10 @@ public class PhanCongKhoaController {
     @GetMapping("/phan-cong/{danhSachId}") public ResponseEntity<?> chiTiet(@PathVariable String danhSachId,HttpServletRequest r){
         var p=principal(r);return response(service.thucHien(p,false,a->{requests.query(r);return service.chiTiet(a,id(danhSachId,"danhSachId"));}),200,null);
     }
+    @DeleteMapping("/phan-cong/{danhSachId}") public ResponseEntity<Void> xoa(@PathVariable String danhSachId,HttpServletRequest r){
+        var p=principal(r);service.thucHien(p,true,a->{long key=id(danhSachId,"danhSachId");service.xoa(a,key,requests.xoa(requests.body(r)));return null;});
+        return ResponseEntity.noContent().header(HttpHeaders.CACHE_CONTROL,"private, no-store").build();
+    }
     @PutMapping("/phan-cong/{danhSachId}") public ResponseEntity<?> luu(@PathVariable String danhSachId,HttpServletRequest r){
         var p=principal(r);return response(service.thucHien(p,true,a->{long key=id(danhSachId,"danhSachId");return service.luu(a,key,requests.luu(requests.body(r)));}),200,null);
     }

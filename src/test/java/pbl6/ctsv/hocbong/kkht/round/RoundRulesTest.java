@@ -43,28 +43,6 @@ class RoundRulesTest {
         invalid(() -> RoundRules.page("0","101"),"size");
     }
 
-    @Test void createTrimsTheNameAndUsesOnlyThreeWhitelistedFields() throws Exception {
-        var command = RoundRules.create(json.readTree("{\"sourceSemesterId\":\"21\",\"number\":1,\"name\":\"  Đợt 1  \"}"));
-        assertThat(command).isEqualTo(new RoundDtos.CreateCommand(21,1,"Đợt 1"));
-        invalid(() -> RoundRules.create(json.readTree("{\"sourceSemesterId\":\"21\",\"number\":1,\"name\":\"Đợt\",\"status\":\"draft\"}")),"body");
-        invalid(() -> RoundRules.create(json.readTree("{\"sourceSemesterId\":21,\"number\":1,\"name\":\"Đợt\"}")),"sourceSemesterId");
-    }
-
-    @Test void updateRejectsChangingTheSemesterAndChecksIntegerTypes() throws Exception {
-        assertThat(RoundRules.update(json.readTree("{\"number\":2147483647,\"name\":\"Đợt\"}")))
-            .isEqualTo(new RoundDtos.UpdateCommand(Integer.MAX_VALUE,"Đợt"));
-        invalid(() -> RoundRules.update(json.readTree("{\"number\":1,\"name\":\"Đợt\",\"sourceSemesterId\":\"21\"}")),"body");
-        invalid(() -> RoundRules.update(json.readTree("{\"number\":1.5,\"name\":\"Đợt\"}")),"number");
-        invalid(() -> RoundRules.update(json.readTree("{\"number\":0,\"name\":\"Đợt\"}")),"number");
-    }
-
-    @Test void measuresTrimmedNameInUtf16CodeUnits() throws Exception {
-        String boundary="😀".repeat(256);
-        assertThat(RoundRules.update(json.createObjectNode().put("number",1).put("name"," "+boundary+" ")).name()).isEqualTo(boundary);
-        invalid(() -> RoundRules.update(json.createObjectNode().put("number",1).put("name",boundary+"x")),"name");
-        invalid(() -> RoundRules.update(json.createObjectNode().put("number",1).put("name"," \t\n")),"name");
-    }
-
     @Test void keepsPreconditionFailuresDistinctAndBindsTagToRootAndRepresentation() {
         String first=RoundRules.tag(1,new byte[]{1,2},"before",json);
         assertThat(first).matches("\"[A-Za-z0-9_-]+\"");

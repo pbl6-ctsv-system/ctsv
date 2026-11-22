@@ -41,32 +41,6 @@ final class RoundRules {
         if(q.codePointCount(0,q.length())>128) throw RoundFailure.invalid("q");
         return q.isEmpty()?null:q;
     }
-    static RoundDtos.CreateCommand create(JsonNode body) {
-        shape(body,Set.of("sourceSemesterId","number","name"));
-        var source=body.get("sourceSemesterId");
-        if(!source.isTextual()) throw RoundFailure.invalid("sourceSemesterId");
-        return new RoundDtos.CreateCommand(id("sourceSemesterId",source.textValue()),number(body),name(body));
-    }
-    static RoundDtos.UpdateCommand update(JsonNode body) {
-        shape(body,Set.of("number","name"));
-        return new RoundDtos.UpdateCommand(number(body),name(body));
-    }
-    private static void shape(JsonNode body,Set<String> keys) {
-        if(body==null || !body.isObject() || body.size()!=keys.size()) throw RoundFailure.invalid("body");
-        for(String key:keys) if(!body.has(key)) throw RoundFailure.invalid("body");
-    }
-    private static int number(JsonNode body) {
-        var n=body.get("number");
-        if(!n.isIntegralNumber() || !n.canConvertToInt() || n.intValue()<1) throw RoundFailure.invalid("number");
-        return n.intValue();
-    }
-    private static String name(JsonNode body) {
-        var n=body.get("name");
-        if(!n.isTextual()) throw RoundFailure.invalid("name");
-        String name=n.textValue().strip();
-        if(name.isBlank() || name.length()>512) throw RoundFailure.invalid("name");
-        return name;
-    }
     static String tag(long id,byte[] version,Object body,ObjectMapper json) {
         try {
             var digest=MessageDigest.getInstance("SHA-256");

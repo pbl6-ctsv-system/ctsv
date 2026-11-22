@@ -43,10 +43,10 @@ public final class PhanCongKhoaService {
     public Page<ChuongTrinhDTO> chuongTrinh(Actor actor,String code,PageQuery page){return reference.chuongTrinh(khoa(actor,code,false),page);}
     public Page<LopDTO> lop(Actor actor,String code,Long program,PageQuery page){return reference.lop(khoa(actor,code,false),program,page);}
     public Page<GiangVienDTO> giangVien(Actor actor,String code,PageQuery page){return reference.giangVien(khoa(actor,code,false),page);}
-    public Page<DanhSachTomTatDTO> danhSach(Actor actor,String code,String year,Integer version,PageQuery page){
+    public TrangDanhSachDTO danhSach(Actor actor,String code,String year,Integer version,PageQuery page){
         khoa(actor,code,false);var rows=repository.trangDanhSach(code,year,version,page.offset(),page.size());
         var counts=repository.demCacPhanCong(rows.items().stream().map(DanhSachPhanCongKhoa::getId).toList());
-        return new Page<>(rows.items().stream().map(r->tomTat(r,counts.getOrDefault(r.getId(),0))).toList(),page.page(),page.size(),rows.total());
+        return new TrangDanhSachDTO(rows.items().stream().map(r->tomTat(r,counts.getOrDefault(r.getId(),0))).toList(),page.page(),page.size(),rows.total(),repository.phienBanLonNhat(code,year));
     }
     public DanhSachDTO tao(Actor actor,TaoNhap input){
         var faculty=khoa(actor,input.maKhoa(),true);
@@ -90,8 +90,14 @@ public final class PhanCongKhoaService {
         repository.luuNhap(id,input.expectedVersion(),input.hieuLucTu(),input.hieuLucDen(),input.lyDoDieuChinh(),input.cacPhanCong());
         audit.ghi(actor.userId(),"SHCN_KHOA_SAVE_DRAFT",id,input.lyDoDieuChinh());return chiTiet(actor,id);
     }
+    public void xoa(Actor actor,long id,byte[] expected){
+        var root=locked(actor,id,true);
+        if(!Arrays.equals(expected,root.getPhienBanGhi()))throw conflict("VERSION_CONFLICT");
+        if(!"NHAP".equals(root.getTrangThai()))throw conflict("SHCN_KHONG_CON_LA_NHAP");
+        repository.xoaNhap(id,expected);audit.ghi(actor.userId(),"SHCN_KHOA_DELETE_DRAFT",id,"Xóa bản nháp");
+    }
     private DanhSachPhanCongKhoa locked(Actor actor,long id,boolean write){
-        var root=repository.khoaDanhSach(id).orElseThrow(PhanCongKhoaFailure::notFound);khoa(actor,root.getMaKhoa(),write);return root;
+        var root=repository.khoaDanhSach(id).orElseThrow(PhanCongKhoaFailure::notFound);khoa(actor,root.getMaKhoa(),write);if("DA_HUY".equals(root.getTrangThai()))throw notFound();return root;
     }
     private static DanhSachTomTatDTO tomTat(DanhSachPhanCongKhoa r,int count){return new DanhSachTomTatDTO(r.getId().toString(),r.getMaKhoa(),r.getNamHoc(),r.getPhienBan(),r.getTrangThai(),instant(r.getHieuLucTu()),instant(r.getHieuLucDen()),count,instant(r.getNgayTao()),instant(r.getNgayCapNhat()));}
     private static String instant(OffsetDateTime value){return value==null?null:value.toInstant().toString();}

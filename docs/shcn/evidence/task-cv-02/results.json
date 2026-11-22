@@ -1,0 +1,22 @@
+{
+  "browser": "Chrome REAL",
+  "api": "HTTP STUB",
+  "sql": "NONE",
+  "migration": "NOT RUN",
+  "checks": [
+    "Create six fields, preserve semester code and alternate periods, render detail and list",
+    "Edit consumes version, refresh route, desktop and 360px layout",
+    "Read-only grant exposes no write controls",
+    "Missing global grant denies direct URL despite Auth permission name",
+    "Scope dependency failure is not an empty list or permission grant",
+    "Conflict retains local input, reads remote and requires explicit adoption",
+    "Lost POST response never retries automatically and permits list reconciliation",
+    "State change while editing blocks writes after reload",
+    "Closed round remains readable and cannot be edited",
+    "Source has nullable academic year; frontend never derives it from code",
+    "Lookup failure remains an error without invented semester choices",
+    "Backend field error is visible after scrolling and retains entered data",
+    "Server filters display genuine empty results then restore full list"
+  ],
+  "passed": 13
+}

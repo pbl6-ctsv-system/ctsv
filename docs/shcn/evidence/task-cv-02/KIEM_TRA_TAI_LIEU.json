@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-21",
+  "task": "TASK-CV-02 + semester subset CV-001",
+  "sourceStatus": "IMPLEMENTED_PENDING_OWNER_MIGRATION_AND_DEV_GRANTS",
+  "staticCheck": "PASS",
+  "operations": [
+    "SHCN_CV_006",
+    "SHCN_CV_007",
+    "SHCN_CV_008",
+    "SHCN_CV_009",
+    "SHCN_CV_001"
+  ],
+  "catalogColumns": 11,
+  "schemaCount": 15,
+  "resolvedRefs": 70,
+  "validatedExamples": 40,
+  "exampleValidation": "Custom type/required/properties/enum/pattern/limits checks, not a full OpenAPI validator",
+  "erdEntityMigrationFields": 27,
+  "newBusinessTablesOutsideErd": 0,
+  "migrationExecuted": false,
+  "seedExecuted": false,
+  "sqlRuntime": "NOT VERIFIED",
+  "evidence": "07_KET_QUA_KIEM_THU.md",
+  "artifactSha256": {
+    "01_API_CATALOG.md": "7a66d0d8b3b1ee3edaed4b2e54b105b01db0aaae14c4af774d95d0d2a616f782",
+    "02_CONTRACT.md": "f4697de80ff9b57dd8360ff37cbd0c119f6f5ded208fb31f684172143a43986f",
+    "03_DB_VA_TAI_SU_DUNG.md": "d535644aa48ba17b0f83f48adff52682403a134df272b94b82b28a2f24bc5eb5",
+    "04_TEST_CASES.md": "6b2c9edb6d2f3dd798d04d87df571dfb86785e4019a515761f5ecc42602537b8",
+    "05_GIAO_DIEN.md": "49f7d54708006bbf851cf067a0372604359f65943ce09a277e51148dfbade1b2",
+    "06_BAN_GIAO_DEV.md": "3acbf7ee57fedc651c477b2e7097687dae2ca3f29e9c97e43b433c6c195f9661",
+    "07_KET_QUA_KIEM_THU.md": "2d21b37f171d0a0c0a7141f06fd739eb34011c1820eff7fa22a4704e5cf5bf66",
+    "README.md": "61524479dca7ce39d394a2d1ae5eda12a15fb2ca7ef5bae9b76b5a71bcc375ef"
+  }
+}
