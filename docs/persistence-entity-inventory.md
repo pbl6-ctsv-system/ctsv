@@ -1,5 +1,7 @@
 # Entity – bảng – FK – module
 
+> **Delta P10 22/11:** `DecisionEntities` map sáu bảng hiện hữu: Root→mghp_quyet_dinh, Version→mghp_phien_ban_qd, Minutes→mghp_bien_ban, Candidate→mghp_ung_vien_phien_ban_qd, Line→mghp_dong_qd, GrantedPeriod→mghp_khoang_huong. FK scalar, không cascade/xuyên module hoặc trả Entity ra API. V22 thêm fence/header/source snapshot/unique; V23 append-only children. Hibernate validate đã chạy trên SQL P10 và DEV V23. Không thay 24 resource/7 bảng P05 trong inventory lịch sử phía dưới.
+
 Nguồn: migrations CTSV V1–V8; không thay schema. 24 resource + 7 bảng hỗ trợ Foundation; 7 bảng P05. Auth 8 bảng và bảng kỹ thuật sync giữ JDBC.
 
 | Module | Entity | Bảng | FK thành quan hệ LAZY | FK giữ ID ngoài tập Entity |

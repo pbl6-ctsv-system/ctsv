@@ -78,8 +78,15 @@ final class RoundTimelineService {
             Instant from=code.equals("council")?null:code.equals("signing")?plan.signingPlannedStartAt():plan.publicationPlannedStartAt();
             Instant to=code.equals("council")?null:code.equals("signing")?plan.signingPlannedEndAt():plan.publicationPlannedEndAt();
             var v=new LinkedHashMap<String,Object>();v.put("code",code);v.put("plannedStart",TimelineModels.string(from));v.put("plannedEnd",TimelineModels.string(to));
-            if(code.equals("council"))v.put("plannedDate",TimelineModels.string(plan.councilPlannedDate()));
-            v.put("actualTime",null);v.put("status","not_implemented");stages.add(v);
+            if(code.equals("council")) {
+                v.put("plannedDate",TimelineModels.string(plan.councilPlannedDate()));
+                var actual=RoundTimelineRepository.instant(round.getThoiDiemHoiDongChot());
+                var date=plan.councilPlannedDate();var today=LocalDate.ofInstant(clock.instant(),ZoneId.of("Asia/Ho_Chi_Minh"));
+                String state=actual!=null?"completed":date==null?"unplanned":today.isBefore(date)?"upcoming":today.isAfter(date)?"overdue":"in_progress";
+                v.put("actualTime",TimelineModels.string(actual));v.put("status",state);
+                if(state.equals("overdue"))warnings.add("council:DEADLINE_PASSED");
+            } else {v.put("actualTime",null);v.put("status","not_implemented");}
+            stages.add(v);
             if(to!=null&&clock.instant().isAfter(to))warnings.add(code+":PLANNED_DEADLINE_PASSED");
         }
         if(plan.unplanned())warnings.add("UNPLANNED");

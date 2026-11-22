@@ -1,0 +1,60 @@
+{
+  "time": "2026-11-22T08:32:33.841Z",
+  "url": "http://127.0.0.1:5180/",
+  "mode": "STUB prototype, no backend/SQL",
+  "results": [
+    {
+      "name": "Đợt chưa Đóng xét không có nút tạo",
+      "status": "PASS"
+    },
+    {
+      "name": "Tạo → chi tiết đúng bộ, ba sinh viên",
+      "status": "PASS"
+    },
+    {
+      "name": "Căn cứ hiển thị M thắng và M không chọn",
+      "status": "PASS"
+    },
+    {
+      "name": "Escape đóng dialog",
+      "status": "PASS"
+    },
+    {
+      "name": "Tìm sinh viên đúng một kết quả",
+      "status": "PASS"
+    },
+    {
+      "name": "Ngày thực tế tương lai báo lỗi nhìn thấy và giữ form",
+      "status": "PASS"
+    },
+    {
+      "name": "Sửa ngày → lưu bản sau họp",
+      "status": "PASS"
+    },
+    {
+      "name": "Lịch sử giữ hai bản",
+      "status": "PASS"
+    },
+    {
+      "name": "Bản cũ chỉ đọc, không nút thay đổi",
+      "status": "PASS"
+    },
+    {
+      "name": "Hủy sửa không tăng phiên bản",
+      "status": "PASS"
+    },
+    {
+      "name": "Chốt → khóa đúng bản, không có nút sửa",
+      "status": "PASS"
+    },
+    {
+      "name": "Mobile 390px có nhãn thông tin và không tràn trang",
+      "status": "PASS"
+    },
+    {
+      "name": "Không lỗi JS, không gọi API nghiệp vụ",
+      "status": "PASS"
+    }
+  ],
+  "errors": []
+}

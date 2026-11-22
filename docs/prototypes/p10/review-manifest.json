@@ -1,0 +1,215 @@
+{
+  "capturedAt": "2026-11-22T08:49:18.702Z",
+  "url": "http://127.0.0.1:5180/",
+  "mode": "SYNTHETIC prototype STUB; no API/SQL",
+  "fixture": {
+    "students": 3,
+    "versions": 2,
+    "code": "MGHP-HKI-2026-DEMO",
+    "minutes": "BB-MGHP-HKI-2026-01",
+    "meetingAtLocal": "2026-11-22T09:00",
+    "decisionNumber": "123/QĐ-ĐHBK"
+  },
+  "captures": [
+    {
+      "file": "review-01-nguon-da-dong-xet.png",
+      "title": "Nguồn đã Đóng xét — trước khi tạo bộ",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 52195,
+      "sha256": "E8CFA91760846B2F232B5B5BE3DA1D8F80D219307444332095AED74A161C6753"
+    },
+    {
+      "file": "review-02-tao-bo-xet.png",
+      "title": "Form tạo bộ xét",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 76713,
+      "sha256": "F15A3764132B1A4801EFDB089B8172DF8B7487C50DDD69A763AB7F631E7D898F"
+    },
+    {
+      "file": "review-03-danh-sach-truoc-hop.png",
+      "title": "Bản 1 — danh sách trước cuộc họp",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 82276,
+      "sha256": "2CB1C1025934995516CF90A26E9EA7DF8AA93E7D5061AF86F8AD7271C20539C3"
+    },
+    {
+      "file": "review-04-can-cu-lua-chon.png",
+      "title": "Căn cứ nguồn — M8 được chọn, M9 không được chọn",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 113960,
+      "sha256": "F1A8E73D7BBF575D96C42B7BD050153410C42BD90815F6855BE2E3049763A35B"
+    },
+    {
+      "file": "review-05-cuoc-hop-chua-ghi.png",
+      "title": "Bản 1 — tab Cuộc họp & văn bản trước khi ghi",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 55961,
+      "sha256": "72E3F5E41CE99C241426EC5583605098FD0226A4374A88DAB4F4DBC850148A74"
+    },
+    {
+      "file": "review-06-form-ghi-cuoc-hop.png",
+      "title": "Form Ghi kết quả cuộc họp — đã nhập dữ liệu",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 93968,
+      "sha256": "27B491B7E31F32BB9F3E36E9AE0854741C3AA4A953425FA6FF6B8F6F558CA01D"
+    },
+    {
+      "file": "review-07-cuoc-hop-van-ban-sau-luu.png",
+      "title": "Bản 2 — Cuộc họp & văn bản sau khi lưu",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 78826,
+      "sha256": "E3949A49F0084409579C8244587807B9150151BC63A6C58758F16848420E45D5"
+    },
+    {
+      "file": "review-08-danh-sach-sau-hop.png",
+      "title": "Bản 2 — danh sách sau họp, trước chốt",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 83263,
+      "sha256": "3649BA0526D6AD68A716E88D99DD6C717014ADF3BB80C739782D8FD609114DD4"
+    },
+    {
+      "file": "review-09-lich-su-sau-hop.png",
+      "title": "Lịch sử sau họp — bản 1 và bản 2",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 73120,
+      "sha256": "66557185C7A3A3EC1BCDBE2A718AC309D3476BF18E91FC67F15C6E99D38B4C5B"
+    },
+    {
+      "file": "review-10-xac-nhan-chot.png",
+      "title": "Hộp xác nhận Chốt dữ liệu",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 100620,
+      "sha256": "0C25CC3799A1E232AE3D350C7BAEBDA31CAD0435BB64AE48F8042A9B11D602BD"
+    },
+    {
+      "file": "review-11-da-chot-danh-sach.png",
+      "title": "Đã chốt — tab Danh sách hưởng",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 85519,
+      "sha256": "BD33C5BBA8AD914EA96BB3E77EEBF78C8A1E27DB02C3BD1485A360C32517B457"
+    },
+    {
+      "file": "review-12-da-chot-cuoc-hop-van-ban.png",
+      "title": "Đã chốt — tab Cuộc họp & văn bản",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 82041,
+      "sha256": "B5A87CF3BDA29C8F515462C87A871699A3F987A81388967CCDA7DD367889AD8E"
+    },
+    {
+      "file": "review-13-da-chot-lich-su.png",
+      "title": "Đã chốt — tab Lịch sử phiên bản",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 75869,
+      "sha256": "785687B019AE70A80C07041AFFFAFCFDB970CB52FF7FD25BCA1363F7B9563EBD"
+    },
+    {
+      "file": "review-14-ban-cu-readonly.png",
+      "title": "Mở lại bản 1 lịch sử — chỉ đọc",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 80762,
+      "sha256": "508904E53875EB707C01385ED64BECAF7BA256DD5CA7F80FEE254919DDAB47FC"
+    },
+    {
+      "file": "review-15-danh-sach-bo-da-chot.png",
+      "title": "Danh sách bộ xét — bản hiện hành đã chốt",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 51342,
+      "sha256": "1E6CA8B868431EDE6C7C6D3AC0BD609EFCACC327AC108331C7250B53A0CD3B85"
+    },
+    {
+      "file": "review-16-mobile-cuoc-hop-van-ban.png",
+      "title": "Mobile — Cuộc họp & văn bản",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 75051,
+      "sha256": "76564464306F9FDE0FDE9A3A7DDF20B1A27373E528D3AADC7AAFB453FDF28B3E"
+    },
+    {
+      "file": "review-17-mobile-lich-su.png",
+      "title": "Mobile — Lịch sử phiên bản",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 66515,
+      "sha256": "C13B23BBE478E3E4D95F3927EB0F61DFAEE8E4149D98C93440A73BC42AF6AE18"
+    },
+    {
+      "file": "review-18-mobile-danh-sach.png",
+      "title": "Mobile — Danh sách hưởng",
+      "contentAsserted": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 83211,
+      "sha256": "CB631B12726123F0F9D941A17B67F11483C676BD37CDF3BD083452265DC06E95"
+    }
+  ],
+  "errors": [],
+  "businessApiCalls": 0
+}

@@ -22,6 +22,7 @@ test('navigation identifies implemented feature entries without publishing empty
   ['mghp-casework','mghp'],
   ['mghp-evaluations','mghp'],
   ['mghp-benefits','mghp'],
+  ['mghp-decisions','mghp'],
   ['mghp-inbox','mghp'],
   ['hocbong-rounds','hocbong']
  ]);
@@ -39,7 +40,7 @@ test('specialist gets verification and case review without student submission or
  const menu=visibleNavigation([],{student:false,mghpSpecialist:true,ctsvRoleAdmin:false});
  assert.deepEqual(menu.map(item=>item.id),[
   'lookup','students','manage','mghp-policies','mghp-rounds',
-  'mghp-casework','mghp-evaluations','mghp-benefits','mghp-inbox'
+  'mghp-casework','mghp-evaluations','mghp-benefits','mghp-decisions','mghp-inbox'
  ]);
  assert.equal(menu.find(item=>item.id==='mghp-casework').view,'staff-applications');
  assert.equal(menu.find(item=>item.id==='mghp-casework').label,'Tiếp nhận & bổ sung hồ sơ');
