@@ -46,7 +46,7 @@ try{
   assert.equal((await listed).status(),200);
   await page.getByRole('heading',{name:'Tiếp nhận & bổ sung hồ sơ MGHP',exact:true}).waitFor();
   assert.equal(new URL(page.url()).pathname,'/mghp/tiep-nhan-ho-so');
-  assert.equal(await page.getByRole('link',{name:'Hồ sơ MGHP',exact:true,includeHidden:true}).count(),0);
+  assert.equal(await page.getByRole('link',{name:'Hồ sơ của tôi',exact:true,includeHidden:true}).count(),0);
   assert.equal(await page.getByRole('button',{name:'Nộp hồ sơ mới',exact:true}).count(),0);
   await page.getByRole('button',{name:'Xem hồ sơ',exact:true}).first().click();
   await page.getByRole('button',{name:'Bổ sung & kiểm giấy',exact:true}).click();
@@ -59,8 +59,8 @@ try{
  });
  await check('NAV-CASE02_STUDENT_OWN_APPLICATIONS_ONLY',async()=>{
   const page=await login('student');
-  await openNav(page,'Hồ sơ MGHP');
-  await page.getByRole('heading',{name:'Hồ sơ miễn giảm học phí',exact:true}).waitFor();
+  await openNav(page,'Hồ sơ của tôi');
+  await page.getByRole('heading',{name:'Hồ sơ của tôi',exact:true}).waitFor();
   await page.getByRole('button',{name:'Nộp hồ sơ mới',exact:true}).waitFor();
   assert.equal(new URL(page.url()).pathname,'/mghp/ho-so');
   assert.equal(await page.getByRole('link',{name:'Tiếp nhận & bổ sung hồ sơ',exact:true,includeHidden:true}).count(),0);
@@ -68,7 +68,7 @@ try{
  });
  await check('NAV-CASE03_AUTH_ADMIN_HAS_NEITHER_CASEWORK_NOR_SUBMISSION',async()=>{
   const page=await login('admin');
-  for(const label of ['Hồ sơ MGHP','Tiếp nhận & bổ sung hồ sơ'])
+  for(const label of ['Hồ sơ của tôi','Tiếp nhận & bổ sung hồ sơ'])
    assert.equal(await page.getByRole('link',{name:label,exact:true,includeHidden:true}).count(),0);
   await denied(page,'/mghp/ho-so');
   await denied(page,'/mghp/tiep-nhan-ho-so');

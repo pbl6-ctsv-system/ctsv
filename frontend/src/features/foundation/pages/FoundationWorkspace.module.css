@@ -4,3 +4,5 @@
 .toolbar{padding:18px;border-radius:10px;background:var(--color-surface-muted)}
 .toolbar label{flex:1;min-width:min(100%,180px)}.toolbar input,.toolbar select{width:100%}
 @media(max-width:650px){.toolbar>*{width:100%}}
+
+.table{overflow:auto}.table table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid var(--color-border)}

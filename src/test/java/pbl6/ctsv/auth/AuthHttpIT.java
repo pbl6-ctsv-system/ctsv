@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
     classes={pbl6.ctsv.CtsvApplication.class,AuthHttpIT.TestDataSource.class},
-    properties={"ctsv.auth.enabled=true","server.address=127.0.0.1","server.forward-headers-strategy=none"})
+    properties={"ctsv.auth.enabled=true","ctsv.auth.login-rate-limit-enabled=true","server.address=127.0.0.1","server.forward-headers-strategy=none"})
 @ActiveProfiles({"local","test"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AuthHttpIT {

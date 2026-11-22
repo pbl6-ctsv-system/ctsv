@@ -107,7 +107,7 @@ try {
  });
  await check('P07-DEV02_UI_SUBMISSION_REAL_UPLOAD',async()=>{
   const page=student.page;
-  await openNav(page,'Hồ sơ MGHP');
+  await openNav(page,'Hồ sơ của tôi');
   await page.getByRole('button',{name:'Nộp hồ sơ mới',exact:true}).click();
   const select=page.getByLabel('Đợt kê khai',{exact:true});
   await select.locator('option[value="'+round.id+'"]').waitFor({state:'attached'});

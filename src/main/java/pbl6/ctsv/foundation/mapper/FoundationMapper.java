@@ -10,13 +10,13 @@ public final class FoundationMapper {
     private static String date(LocalDate value) { return value == null ? null : value.toString(); }
     private static String instant(OffsetDateTime value) { return value == null ? null : value.toInstant().toString(); }
     public static StudentSummary studentSummary(SinhVien s) {
-        return new StudentSummary(id(s.getId()),s.getMssv(),s.getHoTen(),id(s.getLopHienTaiId()),id(s.getKhoaQuanLyHienTaiId()));
+        return new StudentSummary(id(s.getId()),s.getMssv(),s.getHoTen(),id(s.getLopHienTaiId()),id(s.getKhoaQuanLyHienTaiId()),s.getLopHienTai()==null?null:s.getLopHienTai().getMa(),s.getKhoaQuanLyHienTai()==null?null:s.getKhoaQuanLyHienTai().getTen());
     }
     public static StudentDetail student(SinhVien s,List<QuaTrinhTheoHoc> processes) {
         return new StudentDetail(id(s.getId()),s.getMssv(),s.getHoTen(),id(s.getLopHienTaiId()),id(s.getKhoaQuanLyHienTaiId()),
             id(s.getHeThongNguonId()),s.getMaDinhDanhBenNgoai(),instant(s.getThoiDiemDongBo()),s.getTrangThaiChuanHoa(),
             processes.stream().map(p -> new StudyProcess(id(p.getId()),p.getMaQuaTrinhHoc(),id(p.getChuongTrinhDaoTaoId()),
-                id(p.getKhoaHocId()),id(p.getHocKyBatDauId()),p.getTrangThaiDoiChieu(),p.getCanCuXacMinh())).toList());
+                id(p.getKhoaHocId()),id(p.getHocKyBatDauId()),p.getTrangThaiDoiChieu(),p.getCanCuXacMinh(),p.getChuongTrinhDaoTao()==null?null:p.getChuongTrinhDaoTao().getTen(),p.getKhoaHoc()==null?null:p.getKhoaHoc().getMa())).toList());
     }
     public static SemesterDetail semester(HocKy h) {
         return new SemesterDetail(id(h.getId()),h.getMa(),h.getTen(),h.getSoThuTu(),date(h.getNgayBatDau()),date(h.getNgayKetThuc()),h.getTrangThaiXacMinhMoc(),h.getCanCuXacMinhMoc());

@@ -64,6 +64,8 @@ class P06FileHttpIT {
     @TestConfiguration(proxyBeanMethods=false)
     static class Config {
         @Bean DataSource p06Source() throws Exception {
+            if(Boolean.getBoolean("timeline.test.enabled"))
+                return pbl6.ctsv.mghp.configuration.TimelineDatabase.migrate();
             if(Boolean.getBoolean("p08.test.enabled"))
                 return P06Database.migrate("ctsv_p08_test_20261118","p08_test_owner","ctsv-mghp-p08-20261118","12");
             if(Boolean.getBoolean("p07.test.enabled"))

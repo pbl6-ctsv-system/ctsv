@@ -51,14 +51,16 @@ class ApplicationController {
     @GetMapping("/mghp/ho-so")
     ResponseEntity<?> list(HttpServletRequest request) {
         var principal=principal(request);
-        query(request,"roundId","status","page","size");
+        query(request,"roundId","semesterId","status","page","size");
         String raw=request.getParameter("roundId");
         Long round=raw==null?null:id(raw,"roundId");
+        String term=request.getParameter("semesterId");
+        Long semester=term==null?null:id(term,"semesterId");
         String state=status(request.getParameter("status"));
         int page=page(request.getParameter("page"),"page",0,0,Integer.MAX_VALUE);
         int size=page(request.getParameter("size"),"size",20,1,100);
         boolean staff=tx.execute(s -> access.authorize(principal,false,null).studentId()==null);
-        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,state,page,size)));
+        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,semester,state,page,size)));
     }
 
     @GetMapping("/mghp/ho-so/{idHoSo}")
@@ -222,6 +224,18 @@ class ApplicationController {
     @PostMapping("/mghp/ho-so/{idHoSo}/rut")
     ResponseEntity<?> withdraw(@PathVariable String idHoSo,HttpServletRequest request) throws IOException {
         return transition(request,idHoSo,false);
+    }
+
+    @PostMapping("/mghp/ho-so/{idHoSo}/ket-luan")
+    ResponseEntity<?> conclude(@PathVariable String idHoSo,HttpServletRequest request) throws IOException {
+        var received=writes.received();var principal=principal(request);
+        var raw=body(request);
+        var input=shape(raw,raw.has("reason")?List.of("result","reason"):List.of("result"));
+        String result=text(input.get("result"),"result",128,true);
+        if(!Set.of("approved","rejected").contains(result))throw invalid("result");
+        if("rejected".equals(result)&&!input.has("reason"))throw invalid("reason");
+        String reason=input.has("reason")?text(input.get("reason"),"reason",4000,"rejected".equals(result)):null;
+        return ok(tx.execute(s->writes.conclude(specialist(principal),id(idHoSo,"idHoSo"),request.getHeader("If-Match"),result,reason,received)));
     }
 
     @PostMapping("/mghp/ho-so/{idHoSo}/mo-lai")

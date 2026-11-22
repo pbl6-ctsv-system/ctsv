@@ -21,12 +21,20 @@ final class FoundationController {
  @GetMapping("/sinh-vien") Object students(HttpServletRequest r)throws IOException{
   var p=principal(r);query(r,"q","page","size");return service.execute(p,true,"mghp_chuyen_vien",u->service.students(q(r),paging(r,20)));
  }
+ @GetMapping("/nguoi-dung") Object users(HttpServletRequest r)throws IOException{
+  var p=principal(r);query(r,"q","page","size");return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.execute(p,true,"ctsv.roles.manage",u->service.users(q(r),paging(r,20))));
+ }
+ @GetMapping("/vai-tro-mghp") Object roleChoices(HttpServletRequest r)throws IOException{
+  var p=principal(r);query(r);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.execute(p,true,"ctsv.roles.manage",u->service.roleChoices()));
+ }
  @GetMapping("/sinh-vien/{idSinhVien}")Object student(@PathVariable String idSinhVien,HttpServletRequest r)throws IOException{
   var p=principal(r);query(r);long id=FoundationRules.id(idSinhVien);return service.execute(p,true,"mghp_chuyen_vien",u->service.student(id));
  }
  @GetMapping("/danh-muc")Object lookup(HttpServletRequest r)throws IOException{
-  var p=principal(r);query(r,"kind","q","page","size");String kind=r.getParameter("kind");
-  if(kind==null)throw FoundationFailure.invalid("kind");return service.execute(p,false,null,u->service.lookup(kind,q(r),paging(r,50)));
+  var p=principal(r);query(r,"kind","q","page","size","ids");String kind=r.getParameter("kind");
+  if(kind==null)throw FoundationFailure.invalid("kind");
+  if(r.getParameter("ids")!=null){if(r.getParameter("q")!=null||r.getParameter("page")!=null||r.getParameter("size")!=null)throw FoundationFailure.invalid("query");String[] parts=r.getParameter("ids").split(",",-1);if(parts.length<1||parts.length>100)throw FoundationFailure.invalid("ids");var ids=Arrays.stream(parts).map(FoundationRules::id).distinct().toList();return service.execute(p,false,null,u->service.lookupIds(kind,ids));}
+  return service.execute(p,false,null,u->service.lookup(kind,q(r),paging(r,50)));
  }
  @GetMapping("/hoc-ky/{idHocKy}")ResponseEntity<?> semester(@PathVariable String idHocKy,HttpServletRequest r)throws IOException{
   var p=principal(r);query(r);return response(service.execute(p,true,"mghp_chuyen_vien",u->service.semester(FoundationRules.id(idHocKy))),200,true);

@@ -14,27 +14,35 @@ import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 import static pbl6.ctsv.mghp.application.IntakeRules.*;
 
-@RestController @RequestMapping("/api/ctsv/mghp/quyen-huong")
+@RestController @RequestMapping("/api/ctsv/mghp")
 @ConditionalOnProperty(name="ctsv.mghp.applications.enabled",havingValue="true")
 class BenefitController {
  private final AuthAccess auth;private final FoundationAccess access;private final BenefitService service;
  private final TransactionTemplate tx;private final ObjectMapper json;
  BenefitController(AuthAccess auth,FoundationAccess access,BenefitService service,PlatformTransactionManager manager,ObjectMapper json){this.auth=auth;this.access=access;this.service=service;this.tx=new TransactionTemplate(manager);this.json=json.copy().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);}
  private AuthAccess.Principal principal(HttpServletRequest r){var headers=Collections.list(r.getHeaders("Authorization"));if(headers.size()!=1||!headers.getFirst().startsWith("Bearer "))throw new IntakeProblem(401,"UNAUTHENTICATED","request");return auth.verifyAccessToken(headers.getFirst().substring(7));}
- @GetMapping("/{id}") ResponseEntity<?> read(@PathVariable String id,HttpServletRequest r){
+ @GetMapping("/quyen-huong/{id}") ResponseEntity<?> read(@PathVariable String id,HttpServletRequest r){
   query(r);var p=principal(r);return reply(tx.execute(s->{var actor=access.authorize(p,false,null);boolean staff=false;
    try{access.authorize(p,false,"mghp_chuyen_vien");staff=true;}catch(FoundationAccess.Failure error){if(error.status()!=403)throw error;}
    if(staff)actor=access.authorize(p,true,"mghp_chuyen_vien");return service.read(actor,staff,id(id,"id"));}),200,true);
  }
- @GetMapping("/can-ra-soat") ResponseEntity<?> list(HttpServletRequest r){
+ @GetMapping("/quyen-huong/can-ra-soat") ResponseEntity<?> list(HttpServletRequest r){
   query(r,"semesterId","policyCode","page","size");var p=principal(r);
   var result=tx.execute(s->{access.authorize(p,true,"mghp_chuyen_vien");return service.review(id(r.getParameter("semesterId"),"semesterId"),r.getParameter("policyCode"),page(r.getParameter("page"),"page",0,0,Integer.MAX_VALUE),page(r.getParameter("size"),"size",20,1,100));});
   return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(result);
  }
- @PostMapping("/{id}/ghi-nhan-ra-soat") ResponseEntity<?> observe(@PathVariable String id,HttpServletRequest r)throws IOException {
+ @GetMapping("/toi/quyen-huong") ResponseEntity<?> mine(HttpServletRequest r){
+  query(r,"page","size");var principal=principal(r);int p=page(r.getParameter("page"),"page",0,0,Integer.MAX_VALUE),size=page(r.getParameter("size"),"size",20,1,100);
+  var result=tx.execute(s->{var actor=access.authorize(principal,false,null);if(actor.studentId()==null)throw new IntakeProblem(403,"FORBIDDEN","student");return service.mine(actor.studentId(),p,size);});
+  return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(result);
+ }
+ @GetMapping("/quyen-huong/{id}/ngu-canh-xet-duyet") ResponseEntity<?> reviewContext(@PathVariable String id,HttpServletRequest r){
+  query(r);var p=principal(r);return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(tx.execute(s->{access.authorize(p,true,"mghp_chuyen_vien");return service.reviewContext(id(id,"id"));}));
+ }
+ @PostMapping("/quyen-huong/{id}/ghi-nhan-ra-soat") ResponseEntity<?> observe(@PathVariable String id,HttpServletRequest r)throws IOException {
   var p=principal(r);var b=body(r);return reply(tx.execute(s->service.observe(access.authorize(p,true,"mghp_chuyen_vien"),id(id,"id"),b,r.getHeader("If-Match"))),201,true);
  }
- @PostMapping("/{id}/yeu-cau-cap-nhat") ResponseEntity<?> update(@PathVariable String id,HttpServletRequest r)throws IOException {
+ @PostMapping("/quyen-huong/{id}/yeu-cau-cap-nhat") ResponseEntity<?> update(@PathVariable String id,HttpServletRequest r)throws IOException {
   var p=principal(r);var b=body(r);return reply(tx.execute(s->service.requestUpdate(access.authorize(p,true,"mghp_chuyen_vien"),id(id,"id"),b,r.getHeader("If-Match"))),201,false);
  }
  private void query(HttpServletRequest r,String... allowed){for(var entry:r.getParameterMap().entrySet())if(!Set.of(allowed).contains(entry.getKey())||entry.getValue().length!=1)throw IntakeProblem.invalid("query");if(r.getContentLengthLong()>0||r.getHeader("Transfer-Encoding")!=null)throw IntakeProblem.invalid("body");}

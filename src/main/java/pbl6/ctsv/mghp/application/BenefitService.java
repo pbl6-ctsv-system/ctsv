@@ -20,6 +20,22 @@ class BenefitService {
  ApplicationReads.Detail read(Identity actor,boolean staff,long id){
   var b=store.benefit(id);if(!staff&&!Objects.equals(actor.studentId(),b.studentId))throw missing();return view(b,staff);
  }
+ Object mine(long student,int page,int size){
+  var items=store.ownedBenefits(student,page,size).stream().map(b->{
+   var policy=repo.row("SELECT ma code,ten name FROM dbo.mghp_chinh_sach WHERE id=?",b.policyId);
+   return map("id",b.id,"code",b.code,"policyCode",policy.get("code"),"policyName",policy.get("name"),"rate",b.rate==null?null:b.rate.toPlainString(),"recognizedFrom",b.from,"recognizedUntil",b.to,"revokedOn",b.revokedOn,"status",b.status);
+  }).toList();return map("items",items,"page",page,"size",size,"totalElements",store.ownedBenefitCount(student));
+ }
+ Object reviewContext(long id){
+  var benefit=store.benefit(id);if(benefit.submissionId==null)throw conflict("BENEFIT_UPDATE_CONFLICT");
+  var source=repo.find(ApplicationEntities.Submission.class,benefit.submissionId);if(source==null)throw conflict("BENEFIT_UPDATE_CONFLICT");
+  var root=repo.root(source.applicationId);var detail=reads.detail(root).body();
+  var versions=repo.versions(root.id);
+  var documents=versions.stream().flatMap(v->reads.documents(v.id).stream().map(d->{var row=new LinkedHashMap<String,Object>(d);row.put("submissionId",v.id);return row;})).toList();
+  var assessments=repo.rows("SELECT id,so_phien_ban_danh_gia revision,trang_thai_xu_ly status,ket_qua result,hoc_ky_ap_dung_id semesterId,phien_ban_chinh_sach_id policyVersionId FROM dbo.mghp_danh_gia_dieu_kien WHERE quyen_huong_nguon_id=? ORDER BY so_phien_ban_danh_gia DESC,id DESC",id).stream().map(IntakeMapping::wire).toList();
+  return map("application",detail,"documents",documents,"sourceVersionId",source.id,"evaluations",assessments,
+    "updateSubmissions",versions.stream().filter(v->Objects.equals(v.benefitId,id)).map(v->map("id",v.id,"revision",v.revision,"policyVersionId",v.policyVersionId,"submittedAt",v.submittedAt)).toList());
+ }
  private ApplicationReads.Detail view(Benefit b,boolean staff){
   store.flush();var events=store.events(b.id);
   var result=map("id",b.id,"code",b.code,"processId",b.processId,"policyId",b.policyId,"scopeCode",b.scopeCode,"status",b.status,"nextReviewOn",b.nextReviewOn,
@@ -65,7 +81,7 @@ class BenefitService {
   return map("items",result.stream().skip(skip).limit(size).toList(),"page",page,"size",size,"totalElements",result.size());
  }
  ApplicationReads.Detail observe(Identity actor,long id,JsonNode body,String tag){
-  shape(body,List.of("nextReviewOn","reviewReason","cycleVerificationStatus","updateMode","employmentUnitGroup"));
+  config.lockWrites();shape(body,List.of("nextReviewOn","reviewReason","cycleVerificationStatus","updateMode","employmentUnitGroup"));
   var b=store.benefit(id);ApplicationReads.matchTag(view(b,true).tag(),tag);
   String status=EvaluationService.choice(body,"cycleVerificationStatus",Set.of("unverified","verified"));
   String mode=text(body.get("updateMode"),"updateMode",128,false),group=text(body.get("employmentUnitGroup"),"employmentUnitGroup",128,false);
@@ -81,7 +97,7 @@ class BenefitService {
   store.save(event);store.audit(actor.userId(),"observe_benefit","benefit",id,reason);store.refresh(b);return view(b,true);
  }
  ApplicationReads.Detail requestUpdate(Identity actor,long id,JsonNode input,String tag){
-  shape(input,List.of("sourceVersionId","receivingRoundId","benefitId","updateType","reason","deadline","items"));
+  config.lockWrites();shape(input,List.of("sourceVersionId","receivingRoundId","benefitId","updateType","reason","deadline","items"));
   // Resolve identity without a lock, then keep P07 order: receiving round -> application -> benefit.
   Long sub=(Long)repo.row("SELECT phien_ban_ho_so_nguon_id id FROM dbo.mghp_quyen_huong WHERE id=?",id).get("id");
   if(sub==null)throw conflict("BENEFIT_UPDATE_CONFLICT");

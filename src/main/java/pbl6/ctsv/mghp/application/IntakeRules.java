@@ -10,7 +10,7 @@ final class IntakeRules {
     static final List<String> PEOPLE=List.of("relation","fullName","citizenId","ethnicityId","permanentAddress","localityCode","workplaceUnitId","workplaceName","workplaceGroup","employmentStatus","statusFrom","statusUntil","matchingStaffCode");
     static final List<String> STATEMENTS=List.of("firstDegree","alreadyBenefitedAtSameLevel","salariedWhileStudying","declarationConfirmed");
     static final List<String> DOCUMENT=List.of("requirementId","fileId","documentNumber","issuer","issuedOn","expiresOn","relatedPersonIndex");
-    static final Set<String> STATUSES=Set.of("submitted","processing","supplementing","completed","withdrawn","reopened","UNSPECIFIED");
+    static final Set<String> STATUSES=Set.of("submitted","processing","supplementing","supplement_responded","approved","rejected","completed","withdrawn","reopened","UNSPECIFIED");
 
     static JsonNode shape(JsonNode value,Collection<String> keys) {
         if(value==null || !value.isObject() || value.size()!=keys.size()) throw IntakeProblem.invalid("body");

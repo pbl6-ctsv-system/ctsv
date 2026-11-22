@@ -43,10 +43,19 @@ class ApplicationReads {
     }
 
     Object list(Identity actor,Long round,String status,int page,int size) {
+        return list(actor,round,null,status,page,size);
+    }
+
+    Object list(Identity actor,Long round,Long semester,String status,int page,int size) {
         String filter=" where 1=1";
         var params=new LinkedHashMap<String,Object>();
         if(actor.studentId()!=null){filter+=" and a.studentId=:student";params.put("student",actor.studentId());}
         if(round!=null){filter+=" and a.roundId=:round";params.put("round",round);}
+        if(semester!=null){
+            var ids=repo.rows("SELECT id FROM dbo.mghp_dot_xet WHERE hoc_ky_id=?",semester).stream().map(r->(Long)r.get("id")).toList();
+            if(ids.isEmpty())filter+=" and 1=0";
+            else{filter+=" and a.roundId in :semesterRounds";params.put("semesterRounds",ids);}
+        }
         if("UNSPECIFIED".equals(status))filter+=" and a.status is null";
         else if(status!=null){filter+=" and a.status=:status";params.put("status",status);}
         var query=repo.query("from P06Application a"+filter+" order by a.updatedAt desc,a.id desc",Application.class);
@@ -58,6 +67,9 @@ class ApplicationReads {
                 if(actor.studentId()==null) {
                     var student=repo.row("SELECT mssv studentCode,ho_ten fullName FROM dbo.sinh_vien WHERE id=?",a.studentId);
                     summary.putAll(map("studentId",a.studentId,"studentCode",student.get("studentCode"),"fullName",student.get("fullName")));
+                    var latest=repo.versions(a.id).stream().findFirst().orElse(null);
+                    summary.put("classCode",latest==null?null:latest.classCode);
+                    summary.put("policyCode",cfg.policyCode(a.policyVersionId));
                 }
                 return summary;
             }).toList();
@@ -80,6 +92,22 @@ class ApplicationReads {
             return dto;
         }).toList();
         response.put("submittedVersions",versions);
+        response.put("policyCode",cfg.policyCode(root.policyVersionId));
+        var policy=cfg.publicPolicy(root.policyVersionId);
+        response.put("policyName",policy.get("name"));
+        response.put("documentRequirements",IntakeConfiguration.list(policy,"documentGroups").stream()
+            .flatMap(g->IntakeConfiguration.list(g,"documents").stream()).map(d->map("id",d.get("id"),"name",d.get("name"))).toList());
+        var round=repo.row("SELECT r.ten roundName,h.id semesterId,h.ma semesterCode,h.ten semesterName FROM dbo.mghp_dot_xet r JOIN dbo.hoc_ky h ON h.id=r.hoc_ky_id WHERE r.id=?",root.roundId);
+        response.putAll(wire(round));
+        response.put("supplementRequests",repo.children(Supplement.class,"applicationId",root.id,"number desc,id desc").stream()
+            .map(s->{var answers=repo.children(Submission.class,"supplementId",s.id,"id");
+                return map("id",s.id,"roundNumber",s.number,"status",s.status,"reason",s.reason,"deadline",s.deadline,
+                    "requestedAt",s.requestedAt,"respondedAt",s.respondedAt,"closedAt",s.closedAt,
+                    "sourceVersionId",s.baseVersionId,"responseVersionId",answers.isEmpty()?null:answers.getFirst().id,
+                    "general",repo.children(SupplementItem.class,"supplementId",s.id,"id").stream().allMatch(i->"general".equals(i.type)));}).toList());
+        response.put("dispositionHistory",repo.children(ApplicationEvent.class,"applicationId",root.id,"id desc").stream()
+            .filter(e->Set.of("approve_application","reject_application").contains(e.action==null?"":e.action))
+            .map(e->map("id",e.id,"result",e.current,"reason",e.reason,"at",e.createdAt)).toList());
         return new Detail(response,tag(root,response));
     }
 
@@ -98,6 +126,8 @@ class ApplicationReads {
         if(version==null || !root.id.equals(version.applicationId)) throw IntakeProblem.missing();
         var result=version(version);
         result.put("claims",claims(version));
+        result.put("claimDisplayNames",map("ethnicityId",version.ethnicityName,"classId",version.classCode,
+            "cohortId",version.cohortCode,"managementUnitId",version.managementUnitName));
         result.put("statements",statements(version));
         result.put("relatedPeople",repo.children(RelatedPerson.class,"versionId",id,"id").stream().map(IntakeMapping::people).toList());
         result.put("requestedSemesters",repo.children(SemesterRequest.class,"versionId",id,"id").stream()

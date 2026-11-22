@@ -23,7 +23,7 @@ async function login(username) {
  await p.getByLabel('Mật khẩu',{exact:true}).fill(cfg.password);
  await p.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  await p.getByRole('button',{name:'Đăng xuất',exact:true}).waitFor();
- await openNav(p,'Hồ sơ MGHP');
+ await openNav(p,'Hồ sơ của tôi');
  return p;
 }
 
@@ -47,7 +47,7 @@ try {
   await publicDetail.getByText('SYNTHETIC P06 PDF',{exact:true}).waitFor();
   assert.equal(await owner.getByText('Nội dung cấu hình',{exact:true}).count(),0);
   assert.equal(await owner.getByRole('button',{name:'Thêm chính sách vào đợt',exact:true}).count(),0);
-  await openNav(owner,'Hồ sơ MGHP');
+  await openNav(owner,'Hồ sơ của tôi');
   const round=owner.getByLabel('Đợt kê khai');
   await round.locator('option[value="'+cfg.round+'"]').waitFor({state:'attached'});
   await round.selectOption(cfg.round);

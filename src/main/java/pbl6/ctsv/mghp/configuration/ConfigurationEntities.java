@@ -148,13 +148,11 @@ final class ConfigurationEntities {
                 case "nguoi_tao_id" -> entity.setNguoiTaoId((Long)v);
                 case "thoi_diem_tao" -> entity.setThoiDiemTao((OffsetDateTime)v);
                 case "thoi_diem_cap_nhat" -> entity.setThoiDiemCapNhat((OffsetDateTime)v);
-                case "huong_dan_ke_khai" -> entity.setHuongDanKeKhai((String)v);
                 case "cho_phep_truy_linh" -> entity.setChoPhepTruyLinh((Boolean)v);
                 case "nguoi_khoa_cau_hinh_id" -> entity.setNguoiKhoaCauHinhId((Long)v);
                 case "thoi_diem_khoa_cau_hinh" -> entity.setThoiDiemKhoaCauHinh((OffsetDateTime)v);
                 case "che_do_truy_linh" -> entity.setCheDoTruyLinh((String)v);
                 case "cach_xet_thay_doi_giua_ky" -> entity.setCachXetThayDoiGiuaKy((String)v);
-                case "huong_dan_can_cu_nop_muon" -> entity.setHuongDanCanCuNopMuon((String)v);
                 default -> throw new IllegalArgumentException("Unmapped configuration field: "+entry.getKey());
             }
         }

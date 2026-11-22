@@ -16,7 +16,11 @@ class FoundationMapperTest {
         assertThat(body.path("id").asText()).isEqualTo("9007199254740993");
         assertThat(body.path("currentClassId").isNull()).isTrue();
         assertThat(body.has("soCccd")).isFalse();
-        assertThat(body.size()).isEqualTo(5);
+        // Owner22/11 read delta adds only class/unit labels; keep an exact projection whitelist.
+        var fields=new java.util.HashSet<String>();body.fieldNames().forEachRemaining(fields::add);
+        assertThat(fields).containsExactlyInAnyOrder("id","studentCode","fullName","currentClassId","managementUnitId","classCode","managementUnitName");
+        assertThat(body.path("classCode").isNull()).isTrue();
+        assertThat(body.path("managementUnitName").isNull()).isTrue();
     }
     @Test void semesterProjectionKeepsVerifiedCalendarSeparateFromRawSource() {
         var h = new HocKy(); h.setNgayDayNguon("raw-source"); h.setNgayBatDau(java.time.LocalDate.of(2026,9,1));

@@ -68,3 +68,41 @@ Công nghệ hoặc mẫu thiết kế mà skill khuyến nghị không được
 - Playwright smoke cho luồng UI hằng ngày dùng ứng dụng chạy bằng `.\dev.ps1 start` trên `ctsv_dev`, với tài khoản và dữ liệu synthetic DEV. Ca Playwright tự động cần fixture cố định hoặc thao tác phá hủy dùng DB test riêng theo §4. Bằng chứng ghi URL, DB và dịch vụ REAL/STUB thực tế.
 - Giao diện chỉ hiển thị menu, màn hình và thao tác theo quyền hiện hành do backend cấp. Kiểm ít nhất một tài khoản có quyền và một tài khoản thiếu quyền khi thay đổi UI có phân quyền, gồm trường hợp truy cập trực tiếp. Backend tiếp tục kiểm capability và quyền trên từng đối tượng. Xem [quy chuẩn frontend](frontend/SKILL.md#7-state-api-và-bảo-mật).
 - Với luồng có dịch vụ ngoài như upload PDF, xác minh API và cấu hình dịch vụ qua launcher DEV hằng ngày trước khi bàn giao. Ghi riêng kết quả của harness và DEV, URL/DB/profile đã dùng và dịch vụ REAL hay STUB. Nếu chưa có cấu hình DEV, ghi rõ upload end-to-end chưa được xác minh trên DEV.
+
+<a id="ctsv-efficient-verification"></a>
+
+## 9. Triển khai và kiểm thử có trọng tâm — quyết định owner 21/11/2026
+
+Áp dụng cho các lượt triển khai/kiểm thử CTSV tiếp theo. Các quy tắc này điều chỉnh cách làm, không miễn kiểm thử kỹ thuật bắt buộc hoặc thay contract/expected result.
+
+1. Trước code, xác định ngắn gọn phạm vi thay đổi, nguyên nhân và các ca cần kiểm. Không mở rộng công việc hoặc đọc lại toàn bộ tài liệu không liên quan.
+2. Kiểm thử tăng dần: test tập trung → ca browser tái hiện lỗi → luồng thành công/lỗi/quyền liên quan → một lượt hồi quy cuối. Không chạy lại toàn bộ suite chỉ vì sửa vài dòng frontend, trừ khi dependency hoặc Quality Gates yêu cầu.
+3. Kiểm tra locator trên DOM thực trước khi chạy luồng dài. Ưu tiên role, accessible name và locator duy nhất. Không force-click hoặc thay expected để che lỗi.
+4. Khi một ca thất bại, giữ browser context và trạng thái để điều tra. Sửa rồi chạy lại đúng ca lỗi trước; không mặc định khởi động lại toàn bộ kịch bản. Chỉ đóng context sau khi đã thu thập bằng chứng và hoàn tất điều tra/lượt kiểm.
+5. Đăng nhập một lần cho mỗi tài khoản trong một lượt kiểm thử, tái sử dụng phiên trong bộ nhớ. Không lưu password/token hoặc browser storage state chứa credentials/token vào file để tái sử dụng phiên kiểm thử. Cấu hình DEV riêng ngoài Git theo cơ chế hiện hành được giữ nguyên.
+6. Quyết định hiện hành của owner: `ctsv.auth.login-rate-limit-enabled=false` mặc định trên tất cả môi trường. Không tự bật lại khi chưa được owner yêu cầu, kể cả tự chọn override/profile trong lượt kiểm. Giữ nguyên xác thực mật khẩu, JWT, CSRF, CORS và authorization. Không suy từ quyết định này rằng cấu hình đã được áp dụng vào JAR/process đang chạy nếu chưa xác minh.
+7. Tái sử dụng fixture synthetic đã xác minh đích và quyền sở hữu. Sau timeout hoặc lỗi công cụ, đọc lại trạng thái backend trước khi gửi lại lệnh ghi; tránh tạo trùng hồ sơ, đợt xét hoặc upload PDF. Không reset/clean/drop DB hoặc xóa dữ liệu ngoài phạm vi được phép.
+8. Chỉ đọc response body khi cần. Phân biệt lỗi script/công cụ với lỗi ứng dụng. Kiểm chứng thao tác bằng HTTP status, UI và dữ liệu đã lưu; không chỉ dựa vào screenshot.
+9. Kiểm frontend theo hành trình thật: tìm chức năng → mở đúng ngữ cảnh → nhập → gửi → thấy kết quả. Kiểm thêm lỗi sau khi cuộn, sửa lỗi rồi thao tác tiếp, quyền truy cập và mobile.
+10. Upload/download dịch vụ thật khi thay đổi có ảnh hưởng tới tích hợp đó; không lặp upload cho các ca chỉ kiểm điều hướng. Không dùng mock rồi báo integration REAL đã PASS.
+11. Báo PASS đúng phạm vi đã chạy. Ghi rõ FAIL/BLOCKED/NOT VERIFIED, số ca và bằng chứng. Dataset chỉ có một chủ sở hữu không chứng minh được kiểm soát truy cập chéo.
+
+<a id="ctsv-role-first-ux"></a>
+
+## 10. Thiết kế theo công việc của người dùng — quyết định owner 22/11/2026
+
+- Trước khi code UI, nêu ngắn gọn người dùng/capability, việc họ cần làm, dữ liệu cần xem/nhập, hành động chính và bước tiếp theo/kết thúc. Đối chiếu source/contract hiện hành; không biến mọi field database hoặc endpoint thành một ô nhập/nút. Với sửa nhỏ, ghi ngay trong cập nhật công việc, không tạo plan hay bộ tài liệu mới không cần thiết.
+- Rà soát sự cần thiết của từng field/nút và cả màn hình sau khi ghép: bỏ phần trùng, gom phần liên quan, tách rõ danh sách/tạo mới/chi tiết; tên nút phải đúng tác động. Dữ liệu kỹ thuật giữ trong hệ thống; dùng tên dễ hiểu và nguồn đã xác minh. Không tự chọn mặc định khi còn nhiều lựa chọn nghiệp vụ chưa xác định.
+- Thiết kế theo trách nhiệm và capability thật từ backend: sinh viên thao tác dữ liệu của mình; chuyên viên có thông tin đối chiếu và đường xử lý; Admin Auth không mặc nhiên có quyền MGHP. Kiểm ẩn/hiện menu cùng route và thao tác, backend tiếp tục kiểm quyền trên đối tượng. Không sao chép một màn hình tác vụ cho mọi vai trò.
+- Kiểm toàn bộ đường đi liên quan: tìm chức năng → xem đúng ngữ cảnh → thao tác → thấy kết quả → xử lý tiếp hoặc kết thúc. Với quy trình lặp, phải có đường cho lần tiếp theo; nếu trạng thái chặn thao tác, giải thích lý do và bước hợp lệ. Sau ghi/đọc lại phải đồng bộ cả chi tiết con, trạng thái, danh sách và ETag; không dùng reload trang để che dữ liệu cũ.
+- Đơn giản hóa giao diện phải đi kèm khảo sát phụ thuộc. Không tự bỏ validation, quyền, điều kiện P08 hoặc lịch sử để giảm nút; không tự pass hàng loạt kiểm tra. Nếu cần đổi contract/nghiệp vụ ngoài quyền đã giao, báo đúng điểm ảnh hưởng trước khi sửa. Giữ AppShell/navigation/design tokens và ranh giới module hiện hành.
+- Áp dụng checklist chi tiết tại [frontend/SKILL.md §12](frontend/SKILL.md#ctsv-ux-review). Kiểm theo tác động và §9: assertion phải chứng minh kết quả người dùng nhận được, dữ liệu đã lưu, quyền và cách tiếp tục khi lỗi; HTTP thành công, iframe tồn tại hay ảnh chụp riêng lẻ chưa đủ. Tách PASS kỹ thuật khỏi nhận xét UX/nghiệm thu owner, ghi rõ giới hạn. Không chạy toàn suite hoặc tạo thêm dữ liệu chỉ vì sửa nhãn.
+- Với màn hình mới hoặc thay đổi bố cục lớn, phác ngắn cách sắp xếp thông tin và tác vụ trước code, rồi đối chiếu brief/luồng đã chốt. Kế thừa font, palette, tokens và Navbar hiện hành; không tự đổi theme, thêm hero/animation hoặc tạo bộ thiết kế riêng để làm khác biệt. Sửa nhỏ không cần thêm wireframe hay vòng xin duyệt.
+- Áp dụng [frontend/SKILL.md §13](frontend/SKILL.md#ctsv-visual-design): thứ bậc thị giác rõ, khung/đường chia có ý nghĩa, từ ngữ nhất quán từ nút đến phản hồi, chuyển động phục vụ thay đổi trạng thái và có giảm chuyển động. Rà CSS trạng thái và xem ảnh thực tế trước bàn giao phần bố cục; tự loại chi tiết trang trí không giúp tác vụ, không bỏ điều kiện nghiệp vụ để làm gọn.
+
+## 11. Đồng bộ main và migration gọn — quyết định owner 22/11/2026
+
+- Quy trình ưu tiên: bảo toàn working tree → fetch/merge main → backup DB cần nâng → xử lý số migration → kiểm trên DB riêng đã được phép → áp DEV đã được giao → test/smoke liên quan → review secrets → commit/push nhánh riêng khi đã được yêu cầu. Tạo PR khi được giao; không force push/main/reset dữ liệu.
+- Migration riêng **chưa áp dụng**: đổi sang số tiếp theo còn trống, giữ SQL của main. Migration **đã áp dụng**: không chạy lại SQL vừa đổi tên; trước hết đối chiếu chính xác script/checksum/schema và backup, rồi chuyển định danh history có guard/audit theo phạm vi owner đã cho phép. Giữ checksum và dấu vết thực thi; không repair bừa hoặc xóa history để qua validation. Chỉ chạy các migration còn thiếu; nếu không khớp thì dừng phần ghi và báo nguyên nhân cụ thể.
+- Kiểm đủ và có trọng tâm: chuỗi version duy nhất, Flyway validate, schema/Entity, dữ liệu/tài khoản cũ, idempotency; sau nâng DEV kiểm launcher và smoke hành trình bị tác động. Tái sử dụng bằng chứng vừa đạt nếu source/đích/phạm vi không thay đổi; không chạy lại toàn bộ phase hoặc upload/seed thêm chỉ để tăng số PASS.
+- Thực hiện liên tục phần đã được giao, không hỏi lại các phê duyệt còn hiệu lực. Chỉ dừng khi thiếu quyền thực sự, conflict không rõ hoặc rủi ro dữ liệu chưa xử lý. Lỗi được owner cho bỏ qua phải ghi nguyên trạng FAIL/ERROR và phạm vi miễn, không đổi expected hoặc báo PASS. [Ví dụ chuyển DEV V21 có bảo toàn dữ liệu](docs/dev-v21-upgrade-20261122.md).

@@ -1,4 +1,4 @@
-import {navigationSections} from '../src/app/navigation/modules.mjs';
+import {navigationSections,navigationItems} from '../src/app/navigation/modules.mjs';
 
 const sections=navigationSections(
  [{code:'auth.accounts.manage',active:true},{code:'auth.rbac.read',active:true}],
@@ -7,7 +7,7 @@ const sections=navigationSections(
 const navbar=page=>page.getByRole('navigation',{name:'Chức năng CTSV'});
 
 export async function revealNav(page,label) {
- const section=sections.find(item=>item.kind==='dropdown'&&item.groups.some(group=>group.items.some(entry=>entry.label===label)));
+ const section=sections.find(item=>item.kind==='dropdown'&&item.groups.some(group=>group.items.some(entry=>entry.label===label||navigationItems.find(item=>item.id===entry.id)?.studentLabel===label)));
  if(section){
   const trigger=navbar(page).getByRole('button',{name:section.label,exact:true});
   await trigger.waitFor();

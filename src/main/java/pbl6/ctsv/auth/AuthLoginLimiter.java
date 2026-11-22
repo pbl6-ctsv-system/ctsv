@@ -6,12 +6,16 @@ import java.util.Map;
 
 /** A bounded process-local limiter for the single CTSV backend. Use socket peer address. */
 final class AuthLoginLimiter {
+    private final boolean enabled;
+    AuthLoginLimiter() { this(false); }
+    AuthLoginLimiter(boolean enabled) { this.enabled=enabled; }
     private record Pair(String username,String ip) {}
     private record Window(long until,int attempts) {}
     private final Map<String,Window> ips = new HashMap<>();
     private final Map<Pair,Window> pairs = new HashMap<>();
     private long nextCleanup;
     synchronized void check(String username, String ip, Instant now) {
+        if (!enabled) return;
         long seconds = now.getEpochSecond();
         if (seconds >= nextCleanup) {
             ips.values().removeIf(w -> w.until <= seconds);

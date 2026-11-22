@@ -1,0 +1,1 @@
+.picker{display:grid;gap:8px;min-width:0}.picker label{display:grid;gap:6px;min-width:0}.picker select,.picker input{width:100%;min-width:0}.search{display:flex;gap:8px;align-items:end}.search label{flex:1}.search button{flex:0 0 auto}.paging{display:flex;gap:12px;align-items:center;color:var(--color-text-muted)}.paging button{padding:4px 12px}.picker p{color:var(--color-danger)}

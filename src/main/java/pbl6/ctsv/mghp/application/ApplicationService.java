@@ -34,6 +34,7 @@ class ApplicationService {
     Instant received() { return clock.instant(); }
 
     Accepted submit(Identity actor,Long target,JsonNode body,String tag,Instant received) {
+        cfg.lockWrites();
         shape(body,FIELDS);
         long round=id(body.get("roundId"),"roundId");
         long process=id(body.get("studyProcessId"),"studyProcessId");
@@ -60,7 +61,7 @@ class ApplicationService {
                 ||!Objects.equals(scope.get("phien_ban_chinh_sach_id"),policyVersion))
                 throw IntakeProblem.conflict("APPLICATION_IDENTITY_CONFLICT");
         }
-        cfg.lock(round);
+        cfg.lock(round);cfg.requireReviewOpen(round);
         var currentRound=availableRound(round);
         if(!cfg.receives(currentRound,received)) throw IntakeProblem.conflict("SUBMISSION_NOT_ALLOWED");
         if(IntakeConfiguration.list(currentRound,"policyVersions").stream()
@@ -175,8 +176,10 @@ class ApplicationService {
     }
 
     Object transition(Identity actor,long id,String tag,String reason,boolean reopen,Instant received) {
+        cfg.lockWrites();
         if(reopen)cfg.lock((Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",id).get("dot_xet_id"));
         var root=reopen?repo.root(id):reads.scoped(actor,id);
+        cfg.requireReviewOpen(root.roundId);
         reads.match(root,tag);
         var now=received.atOffset(ZoneOffset.UTC);
         String prior=root.status;
@@ -188,7 +191,7 @@ class ApplicationService {
             if(!"withdrawn".equals(prior) || !cfg.receives(availableRound(root.roundId,rejection),received))
                 throw IntakeProblem.conflict(rejection);
         } else {
-            if(prior==null || !Set.of("submitted","processing","supplementing","reopened").contains(prior))
+            if(prior==null || !Set.of("submitted","processing","supplementing","supplement_responded","reopened").contains(prior))
                 throw IntakeProblem.conflict(rejection);
             for(var supplement:repo.children(Supplement.class,"applicationId",root.id,"id")) {
                 if(supplement.status!=null && Set.of("completed","cancelled").contains(supplement.status)) continue;
@@ -200,6 +203,50 @@ class ApplicationService {
         event(root,null,actor.userId(),reopen?"reopen":"withdraw",prior,next,reason,now,null);
         var recipient=(Long)repo.row("SELECT nguoi_dung_id FROM dbo.sinh_vien WHERE id=?",root.studentId).get("nguoi_dung_id");
         if(recipient!=null)inbox.publish(root,actor.userId(),recipient,reopen?"Hồ sơ đã được mở lại":"Hồ sơ đã được rút",now);
+        return summary(root);
+    }
+
+    Object conclude(Identity actor,long id,String tag,String result,String reason,Instant received) {
+        cfg.lockWrites();
+        long round=(Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",id).get("dot_xet_id");
+        cfg.lock(round);
+        var root=repo.root(id);
+        cfg.requireReviewOpen(round);
+        reads.match(root,tag);
+        if(result.equals(root.status))return summary(root);
+        if(!ApplicationDispositionRules.accepts(root.status)||repo.confirmed(root))
+            throw IntakeProblem.conflict("APPLICATION_NOT_REVIEWABLE");
+        var pending=repo.children(Supplement.class,"applicationId",id,"id").stream()
+            .filter(s->s.status==null||SupplementRules.ACTIVE.contains(s.status)).toList();
+        var now=received.atOffset(ZoneOffset.UTC);
+        if("approved".equals(result)) {
+            var versions=repo.versions(id);
+            if(versions.isEmpty())throw IntakeProblem.conflict("APPLICATION_NOT_REVIEWABLE");
+            var documents=repo.children(Document.class,"versionId",versions.getFirst().id,"id");
+            if(documents.isEmpty())throw IntakeProblem.conflict("APPLICATION_REVIEW_INCOMPLETE");
+            for(var document:documents) {
+                var checks=new LinkedHashMap<String,String>();
+                for(var check:repo.children(DocumentCheck.class,"documentId",document.id,"id desc"))
+                    if(check.kind!=null&&check.result!=null)checks.putIfAbsent(check.kind,check.result);
+                if(!ApplicationDispositionRules.pdfReady(checks))throw IntakeProblem.conflict("APPLICATION_REVIEW_INCOMPLETE");
+            }
+            for(var s:pending)if(!"responded".equals(s.status)
+                ||repo.children(SupplementItem.class,"supplementId",s.id,"id").stream().anyMatch(i->!"general".equals(i.type)))
+                throw IntakeProblem.conflict("APPLICATION_REVIEW_INCOMPLETE");
+        }
+        for(var supplement:pending) {
+            String prior=supplement.status;
+            if("approved".equals(result))for(var item:repo.children(SupplementItem.class,"supplementId",supplement.id,"id")) {
+                item.result="satisfied";item.reviewerId=actor.userId();item.reviewedAt=now;
+            }
+            repo.changeSupplement(supplement,"approved".equals(result)?"completed":"cancelled",supplement.deadline,supplement.respondedAt,now);
+            event(root,null,actor.userId(),"approved".equals(result)?"complete_supplement":"cancel_supplement",prior,supplement.status,reason,now,supplement.id);
+        }
+        String previous=root.status;
+        repo.change(root,result,now,null);
+        event(root,null,actor.userId(),"approved".equals(result)?"approve_application":"reject_application",previous,result,reason,now,null);
+        var recipient=(Long)repo.row("SELECT nguoi_dung_id FROM dbo.sinh_vien WHERE id=?",root.studentId).get("nguoi_dung_id");
+        if(recipient!=null)inbox.publish(root,actor.userId(),recipient,"approved".equals(result)?"Hồ sơ đã được đồng ý":"Hồ sơ bị từ chối",now);
         return summary(root);
     }
 

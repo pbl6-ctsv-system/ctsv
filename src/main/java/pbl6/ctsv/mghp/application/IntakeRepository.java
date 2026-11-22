@@ -134,9 +134,10 @@ class IntakeRepository {
 
     List<Map<String,Object>> processes(long student) {
         return rows("""
-            SELECT id,ma_qua_trinh_hoc code,chuong_trinh_dao_tao_id programId,khoa_hoc_id cohortId,hoc_ky_bat_dau_id startSemesterId,
-                trang_thai_doi_chieu verificationStatus
-            FROM dbo.qua_trinh_theo_hoc WHERE sinh_vien_id=? ORDER BY id
+            SELECT p.id,p.ma_qua_trinh_hoc code,p.chuong_trinh_dao_tao_id programId,p.khoa_hoc_id cohortId,p.hoc_ky_bat_dau_id startSemesterId,
+                p.trang_thai_doi_chieu verificationStatus,c.ten programName,k.ma cohortCode
+            FROM dbo.qua_trinh_theo_hoc p LEFT JOIN dbo.chuong_trinh_dao_tao c ON c.id=p.chuong_trinh_dao_tao_id
+                LEFT JOIN dbo.khoa_hoc k ON k.id=p.khoa_hoc_id WHERE p.sinh_vien_id=? ORDER BY p.id
             """,student);
     }
 
