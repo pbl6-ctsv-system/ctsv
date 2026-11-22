@@ -1,0 +1,117 @@
+{
+  "url": "http://127.0.0.1:5180/gallery.html",
+  "verifiedAt": "2026-11-22T08:51:38.179Z",
+  "navigation": "PASS",
+  "imagesDecoded": 18,
+  "images": [
+    {
+      "file": "review-01-nguon-da-dong-xet.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-02-tao-bo-xet.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-03-danh-sach-truoc-hop.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1042
+    },
+    {
+      "file": "review-04-can-cu-lua-chon.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1042
+    },
+    {
+      "file": "review-05-cuoc-hop-chua-ghi.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-06-form-ghi-cuoc-hop.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-07-cuoc-hop-van-ban-sau-luu.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1004
+    },
+    {
+      "file": "review-08-danh-sach-sau-hop.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1042
+    },
+    {
+      "file": "review-09-lich-su-sau-hop.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-10-xac-nhan-chot.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-11-da-chot-danh-sach.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1129
+    },
+    {
+      "file": "review-12-da-chot-cuoc-hop-van-ban.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1091
+    },
+    {
+      "file": "review-13-da-chot-lich-su.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1034
+    },
+    {
+      "file": "review-14-ban-cu-readonly.png",
+      "loaded": true,
+      "width": 1425,
+      "height": 1042
+    },
+    {
+      "file": "review-15-danh-sach-bo-da-chot.png",
+      "loaded": true,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "review-16-mobile-cuoc-hop-van-ban.png",
+      "loaded": true,
+      "width": 375,
+      "height": 1578
+    },
+    {
+      "file": "review-17-mobile-lich-su.png",
+      "loaded": true,
+      "width": 375,
+      "height": 1398
+    },
+    {
+      "file": "review-18-mobile-danh-sach.png",
+      "loaded": true,
+      "width": 375,
+      "height": 1939
+    }
+  ],
+  "mode": "Static gallery of actual prototype captures; no API/SQL"
+}

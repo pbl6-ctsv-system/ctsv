@@ -1,0 +1,47 @@
+async(page)=>{
+ page.setDefaultTimeout(6000);await page.setViewportSize({width:1440,height:1000});await page.goto('http://127.0.0.1:5180/');
+ const errors=[],api=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().includes('/api/'))api.push(r.url());});
+ const results=[];function check(name,ok){if(!ok)throw Error(name);results.push({name,status:'PASS'});}
+ await page.getByRole('combobox',{name:'Đợt xét',exact:true}).selectOption('open');
+ check('Đợt chưa Đóng xét không có nút tạo',await page.getByRole('button',{name:'Tạo bộ xét',exact:true}).count()===0);
+ await page.getByRole('combobox',{name:'Đợt xét',exact:true}).selectOption('ready');
+ await page.screenshot({path:'docs/prototypes/p10/01-list-desktop.png',fullPage:true});
+ await page.getByRole('button',{name:'Tạo bộ xét',exact:true}).click();
+ await page.getByRole('textbox',{name:'Mã bộ quyết định',exact:true}).fill('MGHP-HKI-2026-DEMO');
+ await page.getByRole('dialog').getByRole('button',{name:'Tạo bộ xét',exact:true}).click();
+ check('Tạo → chi tiết đúng bộ, ba sinh viên',await page.getByRole('heading',{name:'MGHP-HKI-2026-DEMO',exact:true}).isVisible()&&await page.locator('#students tr').count()===3);
+ await page.getByRole('row').filter({hasText:'Trần Hải Yến'}).getByRole('button',{name:'Xem căn cứ',exact:true}).click();
+ check('Căn cứ hiển thị M thắng và M không chọn',await page.getByRole('dialog').getByText('Được chọn',{exact:true}).isVisible()&&await page.getByRole('dialog').getByText('Không chọn',{exact:true}).isVisible());
+ await page.keyboard.press('Escape');check('Escape đóng dialog',!await page.getByRole('dialog').isVisible());
+ await page.getByRole('searchbox',{name:'Tìm sinh viên',exact:true}).fill('Quốc Bảo');check('Tìm sinh viên đúng một kết quả',await page.locator('#students tr').count()===1);
+ await page.getByRole('searchbox',{name:'Tìm sinh viên',exact:true}).fill('');
+ await page.getByRole('button',{name:'Ghi kết quả cuộc họp',exact:true}).click();
+ await page.getByRole('textbox',{name:'Thời gian họp thực tế',exact:true}).fill('2099-01-01T09:00');
+ await page.getByRole('textbox',{name:'Kết luận và căn cứ',exact:true}).fill('Hội đồng thống nhất danh sách và căn cứ.');
+ await page.getByRole('button',{name:'Lưu bản sau họp',exact:true}).click();
+ check('Ngày thực tế tương lai báo lỗi nhìn thấy và giữ form',await page.getByRole('alert').isVisible()&&await page.getByRole('dialog').isVisible());
+ await page.getByRole('textbox',{name:'Thời gian họp thực tế',exact:true}).fill('2026-11-22T09:00');
+ await page.getByRole('textbox',{name:'Số quyết định (nếu có)',exact:true}).fill('123/QĐ-ĐHBK');
+ await page.getByRole('textbox',{name:'Ngày quyết định (nếu có)',exact:true}).fill('2026-11-22');
+ await page.getByRole('button',{name:'Lưu bản sau họp',exact:true}).click();
+ check('Sửa ngày → lưu bản sau họp',await page.getByRole('heading',{name:'Sẵn sàng kiểm tra và chốt',exact:true}).isVisible());
+ await page.getByRole('tab',{name:'Lịch sử phiên bản',exact:true}).click();check('Lịch sử giữ hai bản',await page.locator('.version').count()===2);
+ await page.getByRole('button',{name:'Xem bản 1',exact:true}).click();
+ check('Bản cũ chỉ đọc, không nút thay đổi',await page.getByRole('button',{name:'Ghi kết quả cuộc họp',exact:true}).count()===0&&await page.getByRole('button',{name:'Chốt dữ liệu',exact:true}).count()===0);
+ await page.getByRole('tab',{name:'Lịch sử phiên bản',exact:true}).click();await page.getByRole('button',{name:'Xem bản 2',exact:true}).click();
+ await page.getByRole('button',{name:'Sửa kết quả cuộc họp',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Quay lại',exact:true}).click();
+ await page.getByRole('tab',{name:'Lịch sử phiên bản',exact:true}).click();check('Hủy sửa không tăng phiên bản',await page.locator('.version').count()===2);
+ await page.getByRole('tab',{name:/Danh sách hưởng/}).click();
+ if(await page.getByRole('button',{name:'Đóng thông báo',exact:true}).count())await page.getByRole('button',{name:'Đóng thông báo',exact:true}).click();
+ await page.screenshot({path:'docs/prototypes/p10/02-detail-desktop.png',fullPage:true});
+ await page.getByRole('button',{name:'Chốt dữ liệu',exact:true}).click();await page.getByRole('button',{name:'Xác nhận chốt dữ liệu',exact:true}).click();
+ check('Chốt → khóa đúng bản, không có nút sửa',await page.getByRole('heading',{name:'Dữ liệu đã chốt',exact:true}).isVisible()&&await page.getByRole('button',{name:'Sửa kết quả cuộc họp',exact:true}).count()===0);
+ if(await page.getByRole('button',{name:'Đóng thông báo',exact:true}).count())await page.getByRole('button',{name:'Đóng thông báo',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ check('Mobile 390px có nhãn thông tin và không tràn trang',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)&&await page.locator('#students td[data-label="Mức hưởng"]').count()===3);
+ await page.screenshot({path:'docs/prototypes/p10/03-locked-mobile.png',fullPage:true});
+ check('Không lỗi JS, không gọi API nghiệp vụ',errors.length===0&&api.length===0);
+ page.__p10PrototypeEvidence={time:new Date().toISOString(),url:page.url(),mode:'STUB prototype, no backend/SQL',results,errors};
+ await page.setViewportSize({width:1440,height:1000});await page.reload();
+ return page.__p10PrototypeEvidence;
+}

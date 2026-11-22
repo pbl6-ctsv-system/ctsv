@@ -15,6 +15,7 @@ export const navigationItems=Object.freeze([
  {id:'mghp-casework',label:'Tiếp nhận & bổ sung hồ sơ',feature:'mghp',view:'staff-applications',path:'/mghp/tiep-nhan-ho-so',group:'intake',allow:['mghpSpecialist']},
  {id:'mghp-evaluations',label:'Đánh giá hồ sơ',feature:'mghp',view:'evaluations',path:'/mghp/danh-gia',group:'review',allow:['mghpSpecialist']},
  {id:'mghp-benefits',label:'Rà soát quyền hưởng',studentLabel:'Quyền hưởng của tôi',feature:'mghp',view:'benefits',studentView:'own-benefits',preferSpecialist:true,path:'/mghp/quyen-huong',group:'review',allow:['student','mghpSpecialist']},
+ {id:'mghp-decisions',label:'Hội đồng & quyết định',feature:'mghp',view:'decisions',path:'/mghp/hoi-dong-quyet-dinh',group:'decisions',allow:['mghpSpecialist']},
  {id:'mghp-inbox',label:'Thông báo',feature:'mghp',view:'inbox',path:'/thong-bao',group:'notifications',allow:['ctsvIdentity']},
  {id:'hocbong-rounds',label:'Đợt xét KKHT',feature:'hocbong',view:'rounds',path:'/hoc-bong/kkht/dot-xet',group:'scholarship-kkht',allow:['hocBongSpecialist']},
 ].map(item=>Object.freeze(item)));
@@ -49,6 +50,7 @@ const sections=[
   {id:'policy',label:'Cấu hình xét'},
   {id:'intake',label:'Đợt xét và hồ sơ'},
   {id:'review',label:'Đánh giá và quyền hưởng'},
+  {id:'decisions',label:'Hội đồng và quyết định'},
  ]},
  {id:'shcn',label:'Sinh hoạt chủ nhiệm',kind:'dropdown',groups:[
   {id:'shcn-rounds',label:'Đợt sinh hoạt'},
