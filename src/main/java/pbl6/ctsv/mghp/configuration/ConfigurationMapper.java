@@ -83,13 +83,14 @@ final class ConfigurationMapper {
         m.put("opensAt",value(e.getThoiDiemMo()));
         m.put("submissionDeadline",value(e.getHanNop()));
         m.put("reviewDeadline",value(e.getHanRaSoat()));
-        m.put("declarationGuidance",value(e.getHuongDanKeKhai()));
-        m.put("lateSubmissionGuidance",value(e.getHuongDanCanCuNopMuon()));
         m.put("allowRetroactive",value(e.getChoPhepTruyLinh()));
         m.put("retroactiveMode",value(e.getCheDoTruyLinh()));
         m.put("midSemesterMode",value(e.getCachXetThayDoiGiuaKy()));
         m.put("status",value(e.getTrangThai()));
-        if(manager)m.put("configLockedAt",value(e.getThoiDiemKhoaCauHinh()));
+        if(manager){m.put("configLockedAt",value(e.getThoiDiemKhoaCauHinh()));
+            m.put("schedule",RoundTimelineRepository.plan(e.getLichTrinh()).view());
+            m.put("reviewClosedAt",value(e.getThoiDiemDongXet()));m.put("reviewClosedByUserId",value(e.getNguoiDongXetId()));
+            m.put("reviewSourceSha256",e.getSha256NguonDongXet());}
         return m;
     }
     static Object value(Object v) {

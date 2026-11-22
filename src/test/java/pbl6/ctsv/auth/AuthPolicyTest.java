@@ -31,7 +31,7 @@ class AuthPolicyTest {
     }
 
     @Test void rateLimitsPairAndIpAndResetsAtBoundary() {
-        var limiter = new AuthLoginLimiter();
+        var limiter = new AuthLoginLimiter(true);
         Instant t = Instant.parse("2026-11-12T00:00:00Z");
         for (int i=0;i<5;i++) limiter.check("user", "192.0.2.10", t);
         assertThatThrownBy(() -> limiter.check("user", "192.0.2.10", t.plusMillis(1)))

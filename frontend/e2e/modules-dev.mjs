@@ -87,8 +87,8 @@ try{
   await page.getByRole('heading',{name:'Đợt xét miễn giảm học phí'}).waitFor();
   await page.goForward();
   await page.getByRole('heading',{name:'Thông báo của tôi'}).waitFor();
-  await openNav(page,'Hồ sơ MGHP');
-  await page.getByRole('heading',{name:'Hồ sơ miễn giảm học phí'}).waitFor();
+  await openNav(page,'Hồ sơ của tôi');
+  await page.getByRole('heading',{name:'Hồ sơ của tôi'}).waitFor();
  });
  await check('MODULE02_FORBIDDEN_IS_NOT_EMPTY_SUCCESS',async()=>{
   const denied=await student.page.evaluate(async()=>{

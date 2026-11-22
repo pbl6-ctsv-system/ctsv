@@ -16,8 +16,20 @@ public final class IntakeConfiguration {
     IntakeConfiguration(ConfigurationRepository repository) { this.repository=repository; }
 
     public void lock(long roundId) {
-        repository.serializeWrites();
+        lockWrites();
         repository.fence("mghp_dot_xet",roundId);
+    }
+
+    /** First MGHP lock after authorization, before operation/root/chain locks in every affected writer. */
+    public void lockWrites() {
+        try { repository.serializeWrites(); }
+        catch(ConfigFailure failure) { throw new pbl6.ctsv.foundation.api.FoundationAccess.Failure(failure.status,failure.code,failure.field); }
+    }
+
+    public void requireReviewOpen(long receivingRoundId) {
+        var round=repository.find(pbl6.ctsv.mghp.configuration.entity.MghpDotXet.class,receivingRoundId);
+        if(round.getThoiDiemDongXet()!=null)
+            throw new pbl6.ctsv.foundation.api.FoundationAccess.Failure(409,"ROUND_STATE_CONFLICT","receivingRoundId");
     }
 
     public Map<String,Object> publicRound(long roundId) { return repository.roundView(roundId,false); }

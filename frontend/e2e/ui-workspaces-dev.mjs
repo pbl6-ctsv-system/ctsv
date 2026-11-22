@@ -116,7 +116,7 @@ try{
  });
  await check('UI03_ERROR_VISIBLE_AFTER_SCROLL_AND_MOBILE',async()=>{
   student=await login('student');
-  await openNav(student,'Hồ sơ MGHP');
+  await openNav(student,'Hồ sơ của tôi');
   await student.locator('[data-application-id]').first().click();
   await student.getByRole('button',{name:'Yêu cầu bổ sung',exact:true}).click();
   await student.getByLabel('Mã yêu cầu bổ sung',{exact:true}).fill('9223372036854775806');

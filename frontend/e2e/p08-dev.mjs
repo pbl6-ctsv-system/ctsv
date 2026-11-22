@@ -99,7 +99,7 @@ try {
   const created=await api(specialist,'POST','/api/ctsv/mghp/dot-xet',body,undefined,201);
   round=(await api(specialist,'POST','/api/ctsv/mghp/dot-xet/'+created.data.id+'/mo',undefined,created.tag)).data;
   report.fixture={roundId:round.id,roundCode:round.code};
-  const page=student.page;await openNav(page,'Hồ sơ MGHP');await page.getByRole('button',{name:'Nộp hồ sơ mới',exact:true}).click();
+  const page=student.page;await openNav(page,'Hồ sơ của tôi');await page.getByRole('button',{name:'Nộp hồ sơ mới',exact:true}).click();
   const select=page.getByLabel('Đợt kê khai',{exact:true});await select.locator('option[value="'+round.id+'"]').waitFor({state:'attached'});
   const pending=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/toi/ngu-canh-ke-khai'));await select.selectOption(round.id);const context=await (await pending).json();
   const policy=context.policyVersions[0];assert(policy.documentGroups.every(g=>g.documents.every(d=>d.evidenceSubject!=='cha_hoac_me')),'Synthetic template must match this student-only fixture.');
@@ -145,7 +145,7 @@ try {
   await openNav(specialist.page,'Rà soát quyền hưởng');await specialist.page.getByLabel('Học kỳ rà soát',{exact:true}).selectOption(round.semesterId);
   await capture(specialist.page,'GET','/can-ra-soat',200,()=>specialist.page.getByRole('button',{name:'Xem quyền cần rà soát',exact:true}).click());
   for(const actor of [student,admin]){await actor.page.goto(origin+'/mghp/danh-gia');await actor.page.getByRole('alert').getByText('Bạn không có quyền truy cập trang này.',{exact:true}).waitFor();}
-  await openNav(student.page,'Hồ sơ MGHP');await student.page.locator('[data-application-id="'+report.fixture.applicationId+'"]').click();
+  await openNav(student.page,'Hồ sơ của tôi');await student.page.locator('[data-application-id="'+report.fixture.applicationId+'"]').click();
   // ApplicationDetail has no withdrawability flag. Exercise the server fence through the existing UI.
   await student.page.locator('summary').filter({hasText:/^Rút hồ sơ$/}).click();
   await student.page.getByLabel('Lý do rút hồ sơ',{exact:true}).fill('Thực hành kiểm mốc chặn rút sau xác nhận đánh giá.');

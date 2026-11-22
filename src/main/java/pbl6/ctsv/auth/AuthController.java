@@ -93,6 +93,16 @@ final class AuthController {
         empty(request);
         return account(admin.read(principal,uuid(idTaiKhoan)));
     }
+    @GetMapping("/tai-khoan") ResponseEntity<AccountPage> accounts(HttpServletRequest request)throws IOException {
+        var p=principal(request);noBody(request);
+        for(var entry:request.getParameterMap().entrySet())if(!Set.of("q","page","size").contains(entry.getKey())||entry.getValue().length!=1)throw AuthFailure.invalid();
+        String q=request.getParameter("q");if(q!=null){q=q.strip();if(q.length()>128)throw AuthFailure.invalid();if(q.isEmpty())q=null;}
+        return response(200).body(admin.search(p,q,pageNumber(request,"page",0,Integer.MAX_VALUE),pageNumber(request,"size",20,100)));
+    }
+    private int pageNumber(HttpServletRequest r,String key,int fallback,int max){
+        String raw=r.getParameter(key);if(raw==null)return fallback;
+        try{if(!raw.matches("[0-9]{1,10}"))throw AuthFailure.invalid();int n=Integer.parseInt(raw);if(n>(long)max||n<(key.equals("size")?1:0))throw AuthFailure.invalid();return n;}catch(NumberFormatException e){throw AuthFailure.invalid();}
+    }
 
     @PatchMapping("/tai-khoan/{idTaiKhoan}")
     ResponseEntity<AccountAdmin> update(@PathVariable String idTaiKhoan,HttpServletRequest request) throws IOException {

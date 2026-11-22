@@ -43,8 +43,11 @@ final class FoundationService {
         if(!view.tag.equals(tag))throw new FoundationFailure(412,"VERSION_CONFLICT");
     }
     Object students(String q,FoundationRules.PageInput p) { return repository.students(q,p.page(),p.size(),Math.toIntExact(p.offset())); }
+    Object users(String q,FoundationRules.PageInput p) { return repository.users(q,p.page(),p.size(),Math.toIntExact(p.offset())); }
+    Object roleChoices() { return repository.roleChoices(); }
     Object student(long id) { return FoundationMapper.student(repository.find(SinhVien.class,id),repository.processes(id)); }
     Object lookup(String kind,String q,FoundationRules.PageInput p) { return repository.lookup(kind,q,p.page(),p.size(),Math.toIntExact(p.offset())); }
+    Object lookupIds(String kind,List<Long> ids) { return repository.lookupIds(kind,ids); }
     View semester(long id) {
         var version=repository.version("hoc_ky",id);
         return view(FoundationMapper.semester(repository.find(HocKy.class,id)),version);

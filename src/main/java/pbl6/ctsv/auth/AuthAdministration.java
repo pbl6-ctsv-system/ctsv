@@ -9,7 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import static pbl6.ctsv.auth.AuthViews.*;
 import static pbl6.ctsv.auth.AuthRepository.*;
 
-final class AuthAdministration {
+final class AuthAdministration implements AuthDirectoryAccess {
     private static final String MANAGE="auth.accounts.manage";
     private final AuthService auth;
     private final AuthRepository db;
@@ -67,6 +67,12 @@ final class AuthAdministration {
 
     AccountResult read(AuthAccess.Principal actor,UUID target){
         return auth.transaction(()->result(lockForAdmin(actor,target)));
+    }
+    AccountPage search(AuthAccess.Principal actor,String q,int page,int size){
+        return auth.transaction(()->{auth.actor(actor,MANAGE,true);return db.search(q,page,size);});
+    }
+    @Override public Set<String> profileSources(AuthAccess.Principal actor){
+        return auth.transaction(()->{auth.actor(actor,MANAGE,true);return trustedSources;});
     }
 
     AccountResult updateLinks(AuthAccess.Principal actor,UUID target,String etag,List<ProfileLink> links){

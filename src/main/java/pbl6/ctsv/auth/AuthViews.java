@@ -9,6 +9,8 @@ final class AuthViews {
     record Function(String id,String code,String name,boolean active){}
     record ProfileLink(String sourceSystem,String profileType,String sourceId){}
     record AccountSelf(UUID accountId,String username,boolean active,List<Role> roles,List<Function> functions){}
+    record AccountSummary(UUID accountId,String username,boolean active){}
+    record AccountPage(List<AccountSummary> items,int page,int size,long totalElements){}
     record AccountAdmin(UUID accountId,String username,boolean active,List<Role> roles,List<Function> functions,List<ProfileLink> profileLinks){}
     record AccountResult(AccountAdmin account,String etag){}
     record TokenResponse(String accessToken,String tokenType,int expiresIn,Instant refreshExpiresAt,UUID accountId){

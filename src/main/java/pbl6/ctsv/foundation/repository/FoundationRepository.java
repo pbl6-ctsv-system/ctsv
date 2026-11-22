@@ -28,6 +28,27 @@ public final class FoundationRepository implements AcademicSemesterSource {
         // FK IDs are writable; read-only LAZY associations must be reloaded after an insert.
         em.persist(entity); em.flush(); em.refresh(entity);
     }
+    public FoundationDtos.Page<LookupItem> users(String q,int page,int size,int offset) {
+        String where=" where u.dangHoatDong=true and u.thoiDiemXoa is null and (:q is null or u.hoTen like :pattern escape '~' or u.diaChiEmail like :pattern escape '~')";
+        var rows=em.createQuery("from NguoiDung u"+where+" order by u.hoTen,u.id",NguoiDung.class).setParameter("q",q).setParameter("pattern",like(q)).setFirstResult(offset).setMaxResults(size).getResultList();
+        long count=em.createQuery("select count(u) from NguoiDung u"+where,Long.class).setParameter("q",q).setParameter("pattern",like(q)).getSingleResult();
+        return new FoundationDtos.Page<>(rows.stream().map(u->new LookupItem(u.getId().toString(),u.getDiaChiEmail(),u.getHoTen())).toList(),page,size,count);
+    }
+    public List<Map<String,Object>> roleChoices() {
+        return em.createQuery("from VaiTro where dangHoatDong=true and ma in ('mghp_chuyen_vien','mghp_pho_phong') order by ma,id",VaiTro.class).getResultList().stream().map(r->Map.<String,Object>of("id",r.getId().toString(),"code",r.getMa(),"name",r.getTen()==null?r.getMa():r.getTen(),"active",true)).toList();
+    }
+    public FoundationDtos.Page<Map<String,Object>> profileChoices(String type,String q,Set<String> sources,int page,int size,int offset){
+        if(sources.isEmpty())return new FoundationDtos.Page<>(List.of(),page,size,0);
+        boolean student="student".equals(type);
+        String table=student?"sinh_vien":"can_bo",code=student?"mssv":"ma_cb",external=student?"ma_dinh_danh_ben_ngoai":"can_bo_ben_ngoai_id";
+        String placeholders=String.join(",",Collections.nCopies(sources.size(),"?"));
+        String where=" FROM dbo."+table+" s JOIN dbo.he_thong_ngoai h ON h.id=s.he_thong_nguon_id WHERE h.ma IN ("+placeholders+") AND s."+external+" IS NOT NULL AND s."+external+"<>N''"+(student?" AND s.thoi_diem_xoa IS NULL":"")+" AND (? IS NULL OR s."+code+" LIKE ? ESCAPE '~' OR s.ho_ten LIKE ? ESCAPE '~')";
+        var args=new ArrayList<Object>(sources);String pattern=like(q);args.add(q);args.add(pattern);args.add(pattern);
+        long total=jdbc.queryForObject("SELECT COUNT_BIG(*)"+where,Long.class,args.toArray());args.add(offset);args.add(size);
+        var items=jdbc.query("SELECT h.ma,s."+external+",s."+code+",s.ho_ten"+where+" ORDER BY s."+code+",s."+external+",h.ma OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",(r,n)->{
+            var row=new LinkedHashMap<String,Object>();row.put("sourceSystem",r.getString(1));row.put("profileType",type);row.put("sourceId",r.getString(2));row.put("code",r.getString(3));row.put("name",r.getString(4));return (Map<String,Object>)row;
+        },args.toArray());return new FoundationDtos.Page<>(items,page,size,total);
+    }
     public void flush() { em.flush(); }
     public void refresh(Object entity) { em.flush(); em.refresh(entity); }
     public FoundationDtos.Page<StudentSummary> students(String q,int page,int size,int offset) {
@@ -48,6 +69,12 @@ public final class FoundationRepository implements AcademicSemesterSource {
             .setParameter("q",q).setParameter("pattern",like(q)).setFirstResult(offset).setMaxResults(size).getResultList();
         long total=em.createQuery("select count(e) from "+entity+" e"+where,Long.class).setParameter("q",q).setParameter("pattern",like(q)).getSingleResult();
         return new FoundationDtos.Page<>(rows.stream().map(r -> new LookupItem(r[0].toString(),(String)r[1],(String)r[2])).toList(),page,size,total);
+    }
+    public FoundationDtos.Page<LookupItem> lookupIds(String kind,List<Long> ids){
+        String entity=switch(kind){case "ethnicities"->"DanToc";case "cohorts"->"KhoaHoc";case "classes"->"LopSinhHoat";case "units"->"DonVi";case "semesters"->"HocKy";default->throw new Failure(400,"VALIDATION_ERROR","kind");};
+        String name=kind.equals("cohorts")?"cast(null as string)":"e.ten";
+        var items=em.createQuery("select e.id,e.ma,"+name+" from "+entity+" e where e.id in :ids order by e.id",Object[].class).setParameter("ids",ids).getResultList().stream().map(r->new LookupItem(r[0].toString(),(String)r[1],(String)r[2])).toList();
+        return new FoundationDtos.Page<>(items,0,ids.size(),items.size());
     }
 
     @Override

@@ -83,3 +83,18 @@ Module Học bổng sở hữu bốn Entity trong `hocbong.kkht.round.entity` v�
 | `ScholarshipAudit` | `hb_nhat_ky` | `nguoi_dung_id` → `nguoi_dung`, `vai_tro_id` → `vai_tro`. `doi_tuong_id` là tham chiếu đa hình. Snapshot lưu JSON, thời điểm UTC và correlation UUID. Trigger từ chối sửa hoặc xóa bản ghi |
 
 Alias T01 dùng hệ thống `CTSV`, loại mã `ctsv_hoc_ky_id` và PK nguồn Foundation dưới dạng chuỗi. `ScholarshipRound.version` ánh xạ `phien_ban_ky_thuat` dưới dạng `byte[8]` chỉ đọc qua JDBC BINARY.
+
+## PRE-P10-01 — Entity/migration timeline, Gate B20/11
+
+Nguồn [DATA-TL01–05](../../nghiepvu/01-thiet-ke/api-data-readiness.md#timeline-schema-delta), [Detailed Plan §3/7](../../nghiepvu/09-trien-khai/pre-p10-timeline-implementation-plan.md). Mapping đã triển khai: bổ sung Embeddable RoundSchedule và Entity MghpLichSuLichTrinh. V17 đã chạy trên ctsv_timeline_test_20261120; Hibernate validate đạt. Các bảng module khác và lịch sử migration cũ giữ nguyên.
+
+| Owner | Entity dự kiến | Bảng / delta | Quy tắc |
+|---|---|---|---|
+| MGHP configuration | MghpDotXet hiện có | 8planned nullable scalar + actual close-review actor/time/source hash | Migration additive và Entity cùng thay khi Gate B; rowversion V8/CAS giữ, không planned vào cột actual/khóa cấu hình |
+| MGHP configuration | MghpLichSuLichTrinh mới | mghp_lich_su_lich_trinh append-only, UNIQUE(round,revision), typed snapshots/FK round/actor/audit | Không JSON/cascade delete/Entity trả API; scalar FK ghi/LAZY association read-only; JPA/JDBC cùng TX, flush/refresh quanh CAS |
+
+Giữ Auth/sync JDBC và mọi module khác; service dùng Entity/typed parameters/DTO whitelist. V17 additive/history append-only/closure marker, SQL/HTTP runtime và Entity validation có evidence trong Detailed Plan §11. Owner đã cho phép áp V14–V17; ctsv_dev hiện V17 và launcher/smoke4/4PASS, không reset dữ liệu hoặc account.
+
+## Đợt xét: delta owner21/11/2026
+
+V18 bỏ huong_dan_ke_khai/huong_dan_can_cu_nop_muon tại mghp_dot_xet; MghpDotXet, ConfigurationEntities/Mapper/Repository và wire hiện hành cùng bỏ hai field. Các entity/FK/rowversion/timeline/history khác giữ nguyên. Không sửa V1–V17.

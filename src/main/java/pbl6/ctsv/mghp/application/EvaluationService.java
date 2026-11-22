@@ -19,8 +19,8 @@ import static pbl6.ctsv.mghp.application.IntakeProblem.*;
 class EvaluationService {
  static final List<String> FIELDS=List.of("applicationId","submissionId","benefitId","updateSubmissionId","processId","semesterId","policyVersionId","scopeCode","result","reason","timeEvidence","ageReferenceDate","birthDateUsed","statusHistoryId","criteria","evidence","eligiblePeriods");
  private final EvaluationRepository store; private final IntakeRepository repo;
- private final IntakeConfiguration config; private final ObjectMapper json;
- EvaluationService(EvaluationRepository store,IntakeRepository repo,IntakeConfiguration config,ObjectMapper json){this.store=store;this.repo=repo;this.config=config;this.json=json;}
+ private final IntakeConfiguration config; private final ObjectMapper json;private final Clock clock;
+ EvaluationService(EvaluationRepository store,IntakeRepository repo,IntakeConfiguration config,ObjectMapper json,Clock clock){this.store=store;this.repo=repo;this.config=config;this.json=json;this.clock=clock;}
  ApplicationReads.Detail read(long id){return view(store.evaluation(id));}
  private Evaluation parse(JsonNode b){
   shape(b,FIELDS);var e=new Evaluation();
@@ -44,8 +44,8 @@ class EvaluationService {
     ||!Objects.equals(root.policyId.toString(),policy.get("policyId")))throw conflict("EVALUATION_SOURCE_CONFLICT");
    if(repo.rows("SELECT id FROM dbo.mghp_hoc_ky_de_nghi WHERE phien_ban_ho_so_id=? AND hoc_ky_id=? AND phien_ban_chinh_sach_id=?",sub.id,e.semesterId,e.policyVersionId).isEmpty())
     throw conflict("EVALUATION_SOURCE_CONFLICT");
-   if("withdrawn".equals(root.status))throw conflict("EVALUATION_SOURCE_CONFLICT");
-   e.studentId=root.studentId;e.roundId=root.roundId;sourceSubmission=sub.id;
+   if("withdrawn".equals(root.status)||"rejected".equals(root.status))throw conflict("EVALUATION_SOURCE_CONFLICT");
+   e.studentId=root.studentId;e.roundId=sub.roundId==null?root.roundId:sub.roundId;sourceSubmission=sub.id;
   }else{
    var benefit=store.benefit(e.benefitId);
    if(!benefit.processId.equals(e.processId)||!Objects.equals(benefit.policyId.toString(),policy.get("policyId"))||!benefit.scopeCode.equals(e.scopeCode))throw conflict("EVALUATION_SOURCE_CONFLICT");
@@ -58,6 +58,7 @@ class EvaluationService {
     sourceSubmission=update.id;e.roundId=update.roundId;
    }
   }
+  if(e.roundId!=null)config.requireReviewOpen(e.roundId);
   var process=repo.row("SELECT sinh_vien_id student FROM dbo.qua_trinh_theo_hoc WHERE id=?",e.processId);
   if(!Objects.equals(process.get("student"),e.studentId))throw conflict("EVALUATION_SOURCE_CONFLICT");
   repo.row("SELECT id FROM dbo.hoc_ky WHERE id=?",e.semesterId);
@@ -67,13 +68,13 @@ class EvaluationService {
  }
  private void lockChain(Evaluation e){repo.lockOperation(UUID.nameUUIDFromBytes(("evaluation:"+(e.applicationId!=null?"app:"+e.applicationId:"benefit:"+e.benefitId)+":"+e.semesterId+":"+e.policyVersionId+":"+e.scopeCode).getBytes(StandardCharsets.UTF_8)));}
  ApplicationReads.Detail create(Identity actor,JsonNode body){
-  var e=parse(body);source(e);lockChain(e);
+  config.lockWrites();var e=parse(body);source(e);lockChain(e);
   if(!store.chain(e).isEmpty())throw conflict("EVALUATION_SOURCE_CONFLICT");
   e.revision=1;e.status="draft";e.current=false;store.save(e);children(actor,e,body);
   store.audit(actor.userId(),"create_evaluation","evaluation",e.id,e.reason);store.touch(e);touchParent(e);return view(e);
  }
  ApplicationReads.Detail update(Identity actor,long id,JsonNode body,String tag){
-  var incoming=parse(body);var e=locked(id);ApplicationReads.matchTag(view(e).tag(),tag);
+  config.lockWrites();var incoming=parse(body);config.lockWrites();var e=locked(id);ApplicationReads.matchTag(view(e).tag(),tag);
   if(!"draft".equals(e.status))throw conflict("EVALUATION_IMMUTABLE");
   if(!sameSource(e,incoming))throw conflict("EVALUATION_SOURCE_CONFLICT");source(incoming);
   e.submissionId=incoming.submissionId;e.updateSubmissionId=incoming.updateSubmissionId;
@@ -84,15 +85,15 @@ class EvaluationService {
  private boolean sameSource(Evaluation a,Evaluation b){return Objects.equals(a.applicationId,b.applicationId)&&Objects.equals(a.benefitId,b.benefitId)&&a.processId.equals(b.processId)&&a.semesterId.equals(b.semesterId)&&a.policyVersionId.equals(b.policyVersionId)&&a.scopeCode.equals(b.scopeCode);}
  private Evaluation locked(long id){
   var fields=repo.row("SELECT ho_so_nguon_id app,quyen_huong_nguon_id benefit FROM dbo.mghp_danh_gia_dieu_kien WHERE id=?",id);
-  if(fields.get("app") instanceof Long root)repo.root(root);else store.benefit((Long)fields.get("benefit"));
-  var e=store.evaluation(id);lockChain(e);return e;
+  if(fields.get("app") instanceof Long root){if("rejected".equals(repo.root(root).status))throw conflict("EVALUATION_SOURCE_CONFLICT");}else store.benefit((Long)fields.get("benefit"));
+  var e=store.evaluation(id);if(e.roundId!=null)config.requireReviewOpen(e.roundId);lockChain(e);return e;
  }
  private void touchParent(Evaluation e){
-  if(e.applicationId!=null){var root=repo.root(e.applicationId);repo.change(root,root.status,OffsetDateTime.now(ZoneOffset.UTC),null);}
+  if(e.applicationId!=null){var root=repo.root(e.applicationId);repo.change(root,root.status,clock.instant().atOffset(ZoneOffset.UTC),null);}
   else store.update("UPDATE dbo.mghp_quyen_huong SET thoi_diem_cap_nhat=SYSDATETIMEOFFSET() WHERE id=?",e.benefitId);
  }
  private void children(Identity actor,Evaluation e,JsonNode b){
-  var now=OffsetDateTime.now(ZoneOffset.UTC);var ids=new HashMap<Long,Long>();
+  var now=clock.instant().atOffset(ZoneOffset.UTC);var ids=new HashMap<Long,Long>();
   for(var c:array(b.get("criteria"),"criteria",false)){
    shape(c,List.of("criterionId","result","reasonCode","note"));var r=new Criterion();r.evaluationId=e.id;r.criterionId=id(c.get("criterionId"),"criterionId");
    if(ids.containsKey(r.criterionId)||repo.rows("SELECT id FROM dbo.mghp_tieu_chi_chinh_sach WHERE id=? AND phien_ban_chinh_sach_id=?",r.criterionId,e.policyVersionId).isEmpty())throw invalid("criterionId");
@@ -126,18 +127,19 @@ class EvaluationService {
   for(var old:chain)if(Boolean.TRUE.equals(old.current)){
    store.update("UPDATE dbo.mghp_danh_gia_dieu_kien SET la_ban_hien_hanh=0 WHERE id=?",old.id);store.refresh(old);
   }
-  e.status="confirmed";e.current=true;e.assessedBy=actor.userId();e.assessedAt=OffsetDateTime.now(ZoneOffset.UTC);
+  e.status="confirmed";e.current=true;e.assessedBy=actor.userId();e.assessedAt=clock.instant().atOffset(ZoneOffset.UTC);
   store.audit(actor.userId(),"confirm_evaluation","evaluation",e.id,reason);store.touch(e);touchParent(e);return view(e);
  }
  ApplicationReads.Detail revision(Identity actor,long id,String reason,String tag){
-  var old=locked(id);ApplicationReads.matchTag(view(old).tag(),tag);var chain=store.chain(old);
+  config.lockWrites();var old=locked(id);ApplicationReads.matchTag(view(old).tag(),tag);var chain=store.chain(old);
   if(!chain.getLast().id.equals(id)||!"confirmed".equals(old.status)||!Boolean.TRUE.equals(old.current))throw conflict("EVALUATION_CHAIN_CONFLICT");
   var wire=json.valueToTree(view(old).body());var body=json.createObjectNode();FIELDS.forEach(key->body.set(key,wire.get(key)));
   var next=parse(body);source(next);next.previousId=old.id;next.revision=Math.addExact(old.revision,1);next.revisionReason=reason;
   next.status="draft";next.current=false;store.save(next);children(actor,next,body);
   store.audit(actor.userId(),"revise_evaluation","evaluation",next.id,reason);store.touch(next);touchParent(next);return view(next);
  }
- private void ready(Evaluation e){
+ // Same-module preflight reuses the confirmed assessment rules; it never changes the assessment.
+ void ready(Evaluation e){
   if(e.result==null||e.reason==null||e.reason.isBlank())throw conflict("EVALUATION_NOT_READY");
   var policy=config.policy(e.policyVersionId);var criteria=store.children(Criterion.class,e.id);
   boolean failed=false,unknown=false;

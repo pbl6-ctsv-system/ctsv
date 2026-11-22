@@ -86,9 +86,6 @@ public class MghpDotXet {
     @Column(name="thoi_diem_cap_nhat", nullable=true, columnDefinition="datetimeoffset(7)")
     private OffsetDateTime thoiDiemCapNhat;
 
-    @Nationalized
-    @Column(name="huong_dan_ke_khai", nullable=true, columnDefinition="nvarchar(max)")
-    private String huongDanKeKhai;
 
     @Column(name="cho_phep_truy_linh", nullable=true)
     private Boolean choPhepTruyLinh;
@@ -108,13 +105,24 @@ public class MghpDotXet {
     @Column(name="cach_xet_thay_doi_giua_ky", nullable=true, length=128)
     private String cachXetThayDoiGiuaKy;
 
-    @Nationalized
-    @Column(name="huong_dan_can_cu_nop_muon", nullable=true, columnDefinition="nvarchar(max)")
-    private String huongDanCanCuNopMuon;
 
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
     @Column(name="phien_ban", nullable=false, columnDefinition="rowversion", insertable=false, updatable=false, length=8)
     private byte[] phienBan;
+
+    @Embedded private RoundSchedule lichTrinh;
+    @Column(name="nguoi_dong_xet_id") private Long nguoiDongXetId;
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    @Column(name="thoi_diem_dong_xet",columnDefinition="datetimeoffset(7)") private OffsetDateTime thoiDiemDongXet;
+    @Column(name="sha256_nguon_dong_xet",length=64) private String sha256NguonDongXet;
+    public RoundSchedule getLichTrinh(){return lichTrinh==null?new RoundSchedule():lichTrinh;}
+    public void setLichTrinh(RoundSchedule value){lichTrinh=value;}
+    public Long getNguoiDongXetId(){return nguoiDongXetId;}
+    public void setNguoiDongXetId(Long value){nguoiDongXetId=value;}
+    public OffsetDateTime getThoiDiemDongXet(){return thoiDiemDongXet;}
+    public void setThoiDiemDongXet(OffsetDateTime value){thoiDiemDongXet=value;}
+    public String getSha256NguonDongXet(){return sha256NguonDongXet;}
+    public void setSha256NguonDongXet(String value){sha256NguonDongXet=value;}
 
     public MghpDotXet() {}
 
@@ -155,8 +163,6 @@ public class MghpDotXet {
     public void setThoiDiemTao(OffsetDateTime value) { this.thoiDiemTao = value; }
     public OffsetDateTime getThoiDiemCapNhat() { return thoiDiemCapNhat; }
     public void setThoiDiemCapNhat(OffsetDateTime value) { this.thoiDiemCapNhat = value; }
-    public String getHuongDanKeKhai() { return huongDanKeKhai; }
-    public void setHuongDanKeKhai(String value) { this.huongDanKeKhai = value; }
     public Boolean getChoPhepTruyLinh() { return choPhepTruyLinh; }
     public void setChoPhepTruyLinh(Boolean value) { this.choPhepTruyLinh = value; }
     public Long getNguoiKhoaCauHinhId() { return nguoiKhoaCauHinhId; }
@@ -167,7 +173,5 @@ public class MghpDotXet {
     public void setCheDoTruyLinh(String value) { this.cheDoTruyLinh = value; }
     public String getCachXetThayDoiGiuaKy() { return cachXetThayDoiGiuaKy; }
     public void setCachXetThayDoiGiuaKy(String value) { this.cachXetThayDoiGiuaKy = value; }
-    public String getHuongDanCanCuNopMuon() { return huongDanCanCuNopMuon; }
-    public void setHuongDanCanCuNopMuon(String value) { this.huongDanCanCuNopMuon = value; }
     public byte[] getPhienBan() { return phienBan == null ? null : phienBan.clone(); }
 }

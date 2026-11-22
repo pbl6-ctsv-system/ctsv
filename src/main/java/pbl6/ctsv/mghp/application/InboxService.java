@@ -25,7 +25,7 @@ class InboxService {
         var notice=new Notification();
         notice.module="MGHP"; notice.title=title; notice.content=title+" "+application.code+".";
         notice.category="mghp"; notice.objectType="mghp_ho_so"; notice.objectId=application.id.toString();
-        notice.actionUrl="/mghp"; notice.status="published"; notice.publishedAt=now; notice.createdAt=now; notice.createdBy=actor;
+        notice.actionUrl="/mghp/ho-so?ho-so="+application.id; notice.status="published"; notice.publishedAt=now; notice.createdAt=now; notice.createdBy=actor;
         if(supplement!=null) {
             notice.objectType="mghp_yeu_cau_bo_sung";
             notice.objectId=supplement.id.toString();
@@ -70,7 +70,8 @@ class InboxService {
     private Map<String,Object> item(Notification n,Recipient r) {
         String supplementAction="mghp_yeu_cau_bo_sung".equals(n.objectType) && n.objectId!=null
             && n.objectId.matches("[1-9][0-9]*")?"/mghp/ho-so?bo-sung="+n.objectId:null;
-        String action="/mghp".equals(n.actionUrl) || java.util.Objects.equals(supplementAction,n.actionUrl)?n.actionUrl:null;
+        String applicationAction="mghp_ho_so".equals(n.objectType)&&n.objectId!=null&&n.objectId.matches("[1-9][0-9]*")?"/mghp/ho-so?ho-so="+n.objectId:null;
+        String action=applicationAction!=null&&(applicationAction.equals(n.actionUrl)||"/mghp".equals(n.actionUrl))?applicationAction:supplementAction!=null&&supplementAction.equals(n.actionUrl)?supplementAction:null;
         return map("id",n.id,"title",n.title,"content",n.content,"category",n.category,
             "actionUrl",action,"deadline",n.deadline,"important",n.important,
             "publishedAt",n.publishedAt,"createdAt",n.createdAt,"readAt",r.readAt);

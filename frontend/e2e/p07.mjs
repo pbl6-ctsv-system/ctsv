@@ -12,7 +12,7 @@ const cfg=JSON.parse(await readFile(path.join(home,'credentials.json'),'utf8'));
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const report={browser:browser.version(),origin:cfg.origin,database:'ctsv_p07_test_20261117',storage:cfg.storage,cases:[]};
 
-async function login(username,menu='Hồ sơ MGHP') {
+async function login(username,menu='Hồ sơ của tôi') {
  const session=await browser.newContext({ignoreHTTPSErrors:false,acceptDownloads:true});
  const page=await session.newPage();
  page.setDefaultTimeout(15000);

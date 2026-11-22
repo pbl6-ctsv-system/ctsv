@@ -68,3 +68,13 @@ Lỗi FE đã chứng minh và sửa riêng: `RecordFields.tsx` có hai nút th�
 Hồ sơ mẫu cuối `10010` đã rút, vòng bổ sung `9` đã hoàn tất; có thể xem lịch sử/tài liệu bằng tài khoản DEV sinh viên hoặc chuyên viên. Chính sách M9 có phiên bản thực hành `10010` đã xác nhận; đợt thực hành `20015` đã hoàn tất. Đây là dữ liệu synthetic tạo mới qua API/UI hiện có, không sửa chính sách pháp lý hoặc xóa/reset dữ liệu cũ. Tên đợt/chính sách mới là tên nghiệp vụ dễ đọc, mã chạy chỉ để đối chiếu.
 
 Giới hạn: API Auth hiện có tra cứu tài khoản bằng UUID, chưa có API danh sách tài khoản; giữ cách tra cứu đó và không tạo endpoint mới. Danh mục kê khai gợi ý từ trang đầu tối đa 100 mục theo API hiện có, vẫn cho nhập mã chuẩn ngoài trang này. Chưa kiểm mọi tổ hợp chính sách/phân quyền, thao tác cấp/thu hồi từng vai trò hoặc đặt lại mật khẩu trong lượt smoke này, hay mọi trình duyệt; không thay kết quả nghiệm thu lịch sử P00–P07.
+
+## PRE-P10-01 — lịch đợt, Gate A owner approved / Gate B triển khai
+
+Nguồn [Owner timeline](../../nghiepvu/06-bao-cao/phan-loai-readiness-api-ctsv-2026-11-05.md#timeline-20261120), [Detailed Plan §4/7/8](../../nghiepvu/09-trien-khai/pre-p10-timeline-implementation-plan.md). Đã thêm RoundTimelinePanel và PlannedFields trong feature cấu hình hiện có; không đổi router/navbar/Auth. Browser4luồng PASS trên DB timeline riêng, Chrome HTTPS có kiểm TLS, gồm clock browser America/New_York nhưng nhập/hiển thị giờ Việt Nam. [Kết quả/giới hạn](../../nghiepvu/09-trien-khai/pre-p10-timeline-implementation-plan.md#11-kết-quả-gate-b).
+
+Dùng trang tạo/quản lý đợt hiện có trong MGHP/AppShell, không Navbar/router/calendar riêng. Nhóm rõ Lịch tiếp nhận; Bổ sung & rà soát; Hội đồng; Ký & công bố. Hiển thị planned khác actual, múi giờ Việt Nam Asia/Ho_Chi_Minh, legacy Chưa lập lịch; tiến độ lấy server asOf, không tự suy quyền bằng Date.now.
+
+CV có capability mới thấy Sửa lịch/Gia hạn/Đóng xét; admin Auth không tự có MGHP, SV chỉ projection/hạn vòng của mình; PHT/PP assignment UI ở P11. Gia hạn là dialog/form hẹp kèm old/new/reason, không unlock cấu hình; đóng xét có preflight counts/blockers/readback và xác nhận, không chọn winner ở FE.
+
+Error toast nhìn thấy khi cuộn + lỗi gần field/action, loading và ngăn gửi đôi, giữ input khi stale và yêu cầu GET mới. Sau mutation đọc lại detail/list/history liên quan; không nhãn cũ sau thành công. Review/sign/publication overdue là cảnh báo mềm, không tự tắt hành động hợp lệ. Browser test role/direct URL/stale/mobile/timezone dùng BE+DB thật sau Gate B, không nhận build là UI PASS.

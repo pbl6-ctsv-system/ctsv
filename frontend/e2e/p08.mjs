@@ -67,7 +67,7 @@ try{
   for(const role of ['student','admin']){
    const page=await login(role);
    if(role==='student'){
-    await openNav(page,'Rà soát quyền hưởng');await page.getByLabel('Mã quyền hưởng cần xem',{exact:true}).fill(cfg.benefitId);
+    await openNav(page,'Quyền hưởng của tôi');await page.getByLabel('Mã quyền hưởng cần xem',{exact:true}).fill(cfg.benefitId);
     await page.getByRole('button',{name:'Đọc quyền hưởng',exact:true}).click();await page.getByText('Lịch sử quyền hưởng',{exact:true}).click();
     assert.equal(await page.getByText('Thực hành: chờ xác minh chu kỳ giấy của quyền mẫu.',{exact:true}).count(),0);
     assert.equal(await page.getByRole('button',{name:'Lưu quan sát rà soát',exact:true}).count(),0);

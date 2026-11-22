@@ -25,7 +25,10 @@ import jakarta.servlet.http.*;
 @EnableConfigurationProperties(AuthSettings.class)
 class AuthConfiguration {
     @Bean AuthCredentials authCredentials(){return new AuthCredentials();}
-    @Bean AuthLoginLimiter authLoginLimiter(){return new AuthLoginLimiter();}
+    @Bean AuthLoginLimiter authLoginLimiter(Environment environment){
+        boolean enabled=environment.getProperty("ctsv.auth.login-rate-limit-enabled",Boolean.class,false);
+        return new AuthLoginLimiter(enabled);
+    }
     @Bean AuthRepository authRepository(JdbcTemplate jdbc){return new AuthRepository(jdbc);}
     @Bean Clock authClock(){return Clock.systemUTC();}
     @Bean AuthJwt authJwt(AuthSettings settings,Clock authClock) {

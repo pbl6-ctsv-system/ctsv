@@ -21,7 +21,7 @@ import static pbl6.ctsv.mghp.application.IntakeProblem.*;
 class SupplementService {
     private static final Set<String> UPDATES=Set.of("initial_supplement","periodic_update","information_change","legal_refresh");
     private static final Set<String> REVIEW_RESULTS=Set.of("satisfied","unsatisfied","needs_verification","not_applicable");
-    private static final Set<String> INITIAL_ROOTS=Set.of("submitted","processing","supplementing");
+    private static final Set<String> INITIAL_ROOTS=Set.of("submitted","processing","supplementing","supplement_responded");
     private final IntakeRepository repo;
     private final ApplicationReads reads;
     private final ApplicationService submissions;
@@ -43,6 +43,21 @@ class SupplementService {
     }
 
     ApplicationReads.Detail create(Identity actor,long rootId,JsonNode input,String tag,Instant received) {
+        configuration.lockWrites();
+        if(input!=null&&input.isObject()&&input.size()==2&&input.has("reason")&&input.has("deadline")) {
+            long receiving=(Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",rootId).get("dot_xet_id");
+            configuration.lock(receiving);
+            var root=repo.root(rootId);
+            reads.match(root,tag);
+            var versions=repo.versions(rootId);
+            if(versions.isEmpty())throw conflict("SUPPLEMENT_NOT_ALLOWED");
+            var simple=json.createObjectNode();simple.put("sourceVersionId",versions.getFirst().id.toString());
+            simple.put("receivingRoundId",Long.toString(receiving));simple.putNull("benefitId");
+            simple.put("updateType","initial_supplement");simple.set("reason",input.get("reason"));simple.set("deadline",input.get("deadline"));
+            var item=simple.putArray("items").addObject();item.put("type","general");item.set("reason",input.get("reason"));
+            for(var field:List.of("requirementId","documentId","semesterId","evaluationId","declarationField"))item.putNull(field);
+            input=simple;
+        }
         shape(input,List.of("sourceVersionId","receivingRoundId","benefitId","updateType","reason","deadline","items"));
         long versionId=id(input.get("sourceVersionId"),"sourceVersionId");
         long receiving=id(input.get("receivingRoundId"),"receivingRoundId");
@@ -58,7 +73,7 @@ class SupplementService {
         boolean initial="initial_supplement".equals(updateType);
         if(versions.isEmpty() || !Objects.equals(versions.getFirst().id,versionId)
             || former.stream().anyMatch(s -> s.status==null || SupplementRules.ACTIVE.contains(s.status))
-            || "withdrawn".equals(root.status) || instant(round.get("opensAt"))==null
+            || "withdrawn".equals(root.status) || "rejected".equals(root.status) || instant(round.get("opensAt"))==null
             || deadline.toInstant().isBefore(instant(round.get("opensAt"))))
             throw conflict("SUPPLEMENT_NOT_ALLOWED");
         if(initial) {
@@ -88,11 +103,13 @@ class SupplementService {
     }
 
     Object extend(Identity actor,long id,JsonNode input,String tag,Instant received) {
+        configuration.lockWrites();
         shape(input,List.of("deadline","reason"));
         var newDeadline=deadline(input,received);
         var reason=reason(input);
         var locked=lock(actor,true,id);
         var row=locked.round;
+        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         var old=row.deadline;
         var previous=row.status;
@@ -106,6 +123,7 @@ class SupplementService {
     }
 
     ApplicationService.Accepted respond(Identity actor,long id,JsonNode input,String tag,Instant received) {
+        configuration.lockWrites();
         shape(input,ApplicationService.FIELDS);
         long roundId=id(input.get("roundId"),"roundId");
         long process=id(input.get("studyProcessId"),"studyProcessId");
@@ -133,7 +151,7 @@ class SupplementService {
         matchTag(context(locked,false).tag(),tag);
         if(!SupplementRules.acceptsResponse(row.status,(String)currentRound.get("status"),
             instant(currentRound.get("opensAt")),row.deadline==null?null:row.deadline.toInstant(),received)
-            || "withdrawn".equals(root.status) || row.updateType==null) throw conflict("SUBMISSION_NOT_ALLOWED");
+            || "withdrawn".equals(root.status) || "rejected".equals(root.status) || row.updateType==null) throw conflict("SUBMISSION_NOT_ALLOWED");
         if(!root.processId.equals(process))throw conflict("APPLICATION_IDENTITY_CONFLICT");
         boolean initial="initial_supplement".equals(row.updateType);
         if(initial) {
@@ -147,13 +165,14 @@ class SupplementService {
         }
         var result=submissions.persistSubmission(actor,root,roundId,process,policyVersion,input,operation,hash,received,row);
         var now=received.atOffset(ZoneOffset.UTC);
-        repo.change(root,root.status,now,null);
+        repo.change(root,"initial_supplement".equals(row.updateType)?"supplement_responded":root.status,now,null);
         repo.changeSupplement(row,"responded",row.deadline,now,null);
         audit(root,row,result.version(),actor,"respond_supplement","open","responded",null,now,null,null);
         return result;
     }
 
     Object review(Identity actor,long itemId,JsonNode input,String tag,Instant received) {
+        configuration.lockWrites();
         shape(input,List.of("responseDocumentId","result","reason"));
         var reason=reason(input);
         var documentId=nullableId(input,"responseDocumentId");
@@ -162,6 +181,7 @@ class SupplementService {
             .get("yeu_cau_bo_sung_id");
         var locked=lock(actor,true,supplementId);
         var row=locked.round;
+        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         if(!"responded".equals(row.status))throw conflict("SUPPLEMENT_STATE_CONFLICT");
         var item=repo.find(SupplementItem.class,itemId);
@@ -180,8 +200,10 @@ class SupplementService {
     }
 
     ApplicationReads.Detail close(Identity actor,long id,String reason,String tag,boolean complete,Instant received) {
+        configuration.lockWrites();
         var locked=lock(actor,true,id);
         var row=locked.round;
+        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         String previous=row.status;
         if(!complete && "cancelled".equals(previous))return view(row,true);
@@ -193,7 +215,7 @@ class SupplementService {
         }
         String state=complete?"completed":"cancelled";
         var now=received.atOffset(ZoneOffset.UTC);
-        if("supplementing".equals(locked.root.status))repo.change(locked.root,"processing",now,null);
+        if(Set.of("supplementing","supplement_responded").contains(locked.root.status==null?"":locked.root.status))repo.change(locked.root,"processing",now,null);
         repo.changeSupplement(row,state,row.deadline,row.respondedAt,now);
         audit(locked.root,row,null,actor,complete?"complete_supplement":"cancel_supplement",previous,state,reason,now,null,null);
         return view(row,true);
@@ -207,7 +229,7 @@ class SupplementService {
 
     private Map<String,Object> receivingRound(long id,String code) {
         if(!exists("SELECT id FROM dbo.mghp_dot_xet WHERE id=?",id))throw conflict(code);
-        configuration.lock(id);
+        configuration.lock(id);configuration.requireReviewOpen(id);
         var round=configuration.publicRound(id);
         if(!"open".equals(round.get("status")) && !"closed".equals(round.get("status")))throw conflict(code);
         return round;
@@ -226,11 +248,12 @@ class SupplementService {
         item.requirementId=nullableId(input,"requirementId"); item.documentId=nullableId(input,"documentId");
         item.semesterId=nullableId(input,"semesterId"); item.evaluationId=nullableId(input,"evaluationId");
         item.declarationField=text(input.get("declarationField"),"declarationField",128,false);
-        item.type=choice(input,"type",Set.of("document","declaration","semester","evaluation")); item.reason=reason(input);
+        item.type=choice(input,"type",Set.of("document","declaration","semester","evaluation","general")); item.reason=reason(input);
         if(switch(item.type) {
             case "document" -> item.requirementId==null;
             case "declaration" -> item.declarationField==null;
             case "semester" -> item.semesterId==null;
+            case "general" -> !ApplicationDispositionRules.generalTarget(item.requirementId,item.documentId,item.semesterId,item.evaluationId,item.declarationField);
             default -> item.evaluationId==null;
         })throw invalid("items");
         if(item.declarationField!=null && !CLAIMS.contains(item.declarationField))throw invalid("declarationField");

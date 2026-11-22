@@ -1,5 +1,22 @@
 # 03 — Start, stop, status và log
 
+## Giới hạn đăng nhập — quyết định owner21/11/2026
+
+Mặc định hiện tại `ctsv.auth.login-rate-limit-enabled=false` trong application.properties, áp dụng mọi profile kể cả prod. Không cần sửa config local sau mỗi restart. Chỉ bật lại bằng `true` khi owner yêu cầu rõ ràng, không tự bật theo profile hoặc để chạy lại kiểm thử; khi bật áp ngưỡng5 lần/cặp username+IP và30 lần/IP trong15phút. JWT/hashing/refresh/CSRF/CORS và authorization không thay đổi. Không coi việc tắt limiter là bỏ xác thực hoặc chấp nhận sai mật khẩu. Unit test tập trung: `mvnw.cmd -Dtest=AuthLoginLimiterConfigurationTest,AuthPolicyTest test`. AuthHttpIT hiện có dùng opt-in true để giữ các assertion429 của limiter; chỉ chạy nhánh opt-in khi owner giao kiểm limiter, không đổi expected để test xanh. Quy trình kiểm có trọng tâm theo [AGENTS §9](../../AGENTS.md#ctsv-efficient-verification).
+
+Kiểm chứng21/11:7unit PASS/0FAIL/ERROR/SKIP; build và stop/start launcher PASS, không migration/seed/reset. HTTPS REAL trên DEV:7request cùng username giả liên tục đều401 AUTHENTICATION_FAILED, không429;1login DEV hợp lệ200. [Unit log](../../target/auth-limiter-all-green.log), [HTTP evidence](../../target/auth-limiter-runtime.json). Kiểm mặc định các profile bằng unit; không khởi động/deploy production hoặc chạy lại toàn AuthHttpIT. Lượt HTTP probe đầu dừng do PowerShell trả Content dạng byte[], đã dùng lại ConvertFrom-DevResponse của launcher và chạy lại đủ7request; không đổi expected để bỏ qua lỗi.
+
+## Đề xuất rút ngắn lượt kiểm UI sau sự cố30phút
+
+- Chọn ca theo phần thay đổi: unit/helper → ca browser tái hiện lỗi → kiểm luồng hợp lệ/lỗi/quyền/mobile liên quan. Chỉ chạy hồi quy tổng hợp một lượt sau khi các ca riêng đã đạt; có thay đổi mới mới chạy lại phần bị ảnh hưởng.
+- Mỗi tài khoản đăng nhập một lần trong một lượt, tái sử dụng browser context. Sau lỗi giữ trang/context để quan sát và chạy lại bước lỗi; không cần đăng nhập lại/tạo fixture mới từ đầu. Không lưu token/password vào file để tái sử dụng.
+- Kiểm locator bằng DOM thực và tên truy cập trước luồng dài. Select có option dễ làm nhãn khác exact string; locator phải duy nhất. Không force-click hoặc sửa expected để lách lỗi.
+- Checkpoint fixture theo ID và kiểm marker/ownership trước tái sử dụng, kiểm trạng thái đã commit sau timeout. Không gửi lại lệnh ghi mù hoặc tạo thêm hồ sơ/PDF chỉ vì script dừng.
+- Helper HTTP chỉ đọc response body khi cần; command kiểm status và UI/GET persisted state. Lỗi lấy body của công cụ phải tách khỏi lỗi nghiệp vụ.
+- Upload/download Cloudinary thật một lần cho phần tích hợp bị ảnh hưởng; dùng fixture đã xác minh cho ca điều hướng không cần upload. Build/typecheck khi source ổn định, không chạy lại backend suite cho thay đổi thuần FE. Ghi coverage và phần chưa kiểm thay vì kéo dài suite chỉ để thêm số PASS.
+
+Các điểm trên là đề xuất cho workflow kiểm thử, không tự thay Acceptance Criteria hoặc Quality Gates. Lượt trước bị kéo dài bởi selector sai, lỗi toast thật, lỗi đọc body Chrome, đăng nhập lặp dẫn tới Retry-After530giây và các thao tác demo lặp. Không có số liệu đủ để cam kết một thời gian cố định cho mọi task; mục tiêu là giảm phần chạy lặp, vẫn giữ bằng chứng cho luồng người dùng.
+
 [Mục lục](README.md) · [Setup một lần](02-installation-guide.md) · [Xử lý lỗi](07-troubleshooting.md)
 
 **Điều kiện:** nhận đủ source và hoàn tất [setup](02-installation-guide.md). Auth/Foundation đã có evidence local; máy mới tự kiểm. Sync DEV chạy riêng theo [06](06-sis-ctsv-sync-guide.md).
@@ -121,3 +138,13 @@ PowerShell5.1 không hỗ trợ `-SkipHttpErrorCheck`; dùng browser Network tab
 External Tool/Shell Script: program `pwsh.exe`, arguments `-NoProfile -File "$ProjectFileDir$\dev.ps1" start`, cwd `$ProjectFileDir$`. Tạo tool stop/status tương ứng nếu muốn. Không cần Compound Configuration; chưa kiểm GUI trong audit. Không Run thêm BE từ IDE khi launcher đang giữ8443.
 
 Nếu tự Run `pbl6.ctsv.CtsvApplication` ngoài launcher, developer phải tự cung cấp profile/config private/PATH DLL và tự kiểm datasource/Flyway-off/sync flags; các guard command-line của launcher không tự có. Ưu tiên launcher để tránh drift, không copy Run Configuration chứa password vào Git.
+
+## PRE-P10-01 timeline — trạng thái bàn giao20/11/2026
+
+Timeline đã ACCEPTED WITH OWNER WAIVER; G8 được owner miễn riêng mini, không G8 PASS. DB test riêng đã kiểm kỹ thuật; owner đã cho phép nâng ctsv_dev từ V13 qua V14/V15 SHCN, V16 Học bổng, V17 timeline MGHP. Đã migrate/start/smoke4/4PASS, source/JAR/DB khớp. Không bỏ qua migration/reset/seed lại tài khoản; start vẫn không tự migrate/seed.
+
+DEV đang READY tại https://127.0.0.1:5173 (BE https://127.0.0.1:8443). Chuyên viên vào **Miễn giảm học phí → Đợt xét MGHP → Xem đợt → Lịch trình & tiến độ**. Có thể thiết lập lịch khi tạo đợt, sửa kế hoạch, gia hạn nhận khi còn open, đọc lịch sử và kiểm tra trước Đóng xét. Lý do bắt buộc; stale phải đọc lại/đối chiếu, không tự retry. Đóng xét không là Hoàn tất đợt; Hoàn tất còn nguồn ký/công bố/Portal/handoff của P12/P13, hiện fail closed.
+
+Dữ liệu thực hành: **đợt20017 — Thực hành lịch trình MGHP · Học kỳ I 2026–2027** còn mở để thử; **đợt20018 — Minh họa Đóng xét · Không có hồ sơ** đã đóng xét. Đây là dữ liệu synthetic tạo qua UI, không phải policy pháp lý mới hoặc fixture sao chép từ DB test.
+
+[Plan/evidence/giới hạn hiện hành](../../../nghiepvu/09-trien-khai/pre-p10-timeline-implementation-plan.md#11-kết-quả-gate-b). Không dùng tài khoản/fixture test thay credentials DEV; không gọi test harness làm server hằng ngày.

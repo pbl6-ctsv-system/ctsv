@@ -8,10 +8,10 @@ export const navigationItems=Object.freeze([
  {id:'auth-rbac',label:'Danh mục quyền Auth',feature:'auth',view:'rbac',path:'/quan-tri/danh-muc-quyen',group:'auth',allow:['auth.rbac.read']},
  {id:'mghp-policies',label:'Chính sách MGHP',feature:'mghp',view:'policies',path:'/mghp/chinh-sach',group:'policy',allow:['mghpSpecialist']},
  {id:'mghp-rounds',label:'Đợt xét MGHP',feature:'mghp',view:'rounds',studentView:'public-rounds',path:'/mghp/dot-xet',group:'intake',allow:['student','mghpSpecialist']},
- {id:'mghp-applications',label:'Hồ sơ MGHP',feature:'mghp',view:'applications',path:'/mghp/ho-so',group:'intake',allow:['student']},
+ {id:'mghp-applications',label:'Hồ sơ của tôi',feature:'mghp',view:'applications',path:'/mghp/ho-so',group:'intake',allow:['student']},
  {id:'mghp-casework',label:'Tiếp nhận & bổ sung hồ sơ',feature:'mghp',view:'staff-applications',path:'/mghp/tiep-nhan-ho-so',group:'intake',allow:['mghpSpecialist']},
  {id:'mghp-evaluations',label:'Đánh giá hồ sơ',feature:'mghp',view:'evaluations',path:'/mghp/danh-gia',group:'review',allow:['mghpSpecialist']},
- {id:'mghp-benefits',label:'Rà soát quyền hưởng',feature:'mghp',view:'benefits',studentView:'own-benefits',preferSpecialist:true,path:'/mghp/quyen-huong',group:'review',allow:['student','mghpSpecialist']},
+ {id:'mghp-benefits',label:'Rà soát quyền hưởng',studentLabel:'Quyền hưởng của tôi',feature:'mghp',view:'benefits',studentView:'own-benefits',preferSpecialist:true,path:'/mghp/quyen-huong',group:'review',allow:['student','mghpSpecialist']},
  {id:'mghp-inbox',label:'Thông báo',feature:'mghp',view:'inbox',path:'/thong-bao',group:'notifications',allow:['ctsvIdentity']},
 ].map(item=>Object.freeze(item)));
 
@@ -26,7 +26,7 @@ export function visibleNavigation(functions,access) {
  if(access?.ctsvRoleAdmin===true)capabilities.add('ctsvRoleAdmin');
  if(access)capabilities.add('ctsvIdentity');
  return navigationItems.filter(item=>item.allow.some(permission=>capabilities.has(permission)))
-  .map(item=>access?.student===true&&item.studentView&&!(item.preferSpecialist&&access?.mghpSpecialist)?{...item,view:item.studentView}:item);
+  .map(item=>access?.student===true&&item.studentView&&!(item.preferSpecialist&&access?.mghpSpecialist)?{...item,view:item.studentView,label:item.studentLabel??item.label}:item);
 }
 
 const sections=[
@@ -65,7 +65,7 @@ export function navigationSections(...permissions) {
   if(section.kind==='disabled'){
    if(permissions[1]?.student)result.push({id,label,kind:'disabled'});
   }else if(section.kind==='dropdown'){
-   const groups=(section.groups??[]).map(group=>({...group,items:entries.filter(item=>item.group===group.id)}))
+   const groups=(section.groups??[]).map(group=>({...group,label:group.id==='review'&&permissions[1]?.student&&!permissions[1]?.mghpSpecialist?'Quyền lợi của tôi':group.label,items:entries.filter(item=>item.group===group.id)}))
     .filter(group=>group.items.length>0);
    if(groups.length)result.push({id,label,kind:'dropdown',groups});
   }else{

@@ -23,6 +23,14 @@ final class AuthRepository {
     Account byUsername(String canonical) {
         return one(jdbc.query("SELECT "+ACCOUNT_COLUMNS+" FROM dbo.TaiKhoan WHERE TenDangNhapChuanHoa=?",ACCOUNT,canonical));
     }
+    AuthViews.AccountPage search(String q,int page,int size){
+        String pattern=q==null?null:"%"+q.replace("~","~~").replace("%","~%").replace("_","~_").replace("[","~[")+"%";
+        String where=" WHERE (? IS NULL OR TenDangNhap LIKE ? ESCAPE '~')";
+        long count=jdbc.queryForObject("SELECT COUNT_BIG(*) FROM dbo.TaiKhoan"+where,Long.class,pattern,pattern);
+        var rows=jdbc.query("SELECT ID,TenDangNhap,TrangThai FROM dbo.TaiKhoan"+where+" ORDER BY TenDangNhapChuanHoa,ID OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
+            (r,n)->new AuthViews.AccountSummary(uuid(r,"ID"),r.getString("TenDangNhap"),r.getBoolean("TrangThai")),pattern,pattern,(long)page*size,size);
+        return new AuthViews.AccountPage(rows,page,size,count);
+    }
 
     Account account(UUID id,boolean lock) {
         return one(jdbc.query("SELECT "+ACCOUNT_COLUMNS+" FROM dbo.TaiKhoan"+(lock?" WITH(UPDLOCK,HOLDLOCK)":"")+" WHERE ID=?",ACCOUNT,id.toString()));

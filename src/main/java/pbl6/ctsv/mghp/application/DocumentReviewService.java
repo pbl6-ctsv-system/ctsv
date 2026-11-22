@@ -21,9 +21,10 @@ class DocumentReviewService {
     private static final Set<String> RESULTS=Set.of("pass","fail","needs_verification","not_applicable");
     private final IntakeRepository repo;
     private final ApplicationReads reads;
+    private final pbl6.ctsv.mghp.configuration.IntakeConfiguration configuration;
 
-    DocumentReviewService(IntakeRepository repo,ApplicationReads reads) {
-        this.repo=repo; this.reads=reads;
+    DocumentReviewService(IntakeRepository repo,ApplicationReads reads,pbl6.ctsv.mghp.configuration.IntakeConfiguration configuration) {
+        this.repo=repo; this.reads=reads;this.configuration=configuration;
     }
 
     Object context(long id) {
@@ -52,6 +53,7 @@ class DocumentReviewService {
     }
 
     Object check(Identity actor,long id,JsonNode input,String tag,boolean hardCopy,Instant received) {
+        configuration.lockWrites();
         var row=new DocumentCheck();
         if(hardCopy) {
             shape(input,List.of("received","note"));
@@ -73,7 +75,8 @@ class DocumentReviewService {
         reads.match(root,tag);
         var document=repo.find(Document.class,id);
         var current=repo.versions(rootId).stream().findFirst().orElseThrow(IntakeProblem::missing);
-        if(!document.versionId.equals(current.id) || "withdrawn".equals(root.status))
+        configuration.requireReviewOpen(current.roundId==null?root.roundId:current.roundId);
+        if(!document.versionId.equals(current.id) || Set.of("withdrawn","rejected").contains(root.status==null?"":root.status))
             throw conflict("DOCUMENT_VERSION_CONFLICT");
         if("not_applicable".equals(row.result) && !notApplicable(row.kind,document))
             throw invalid("result");

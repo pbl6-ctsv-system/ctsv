@@ -5,11 +5,13 @@ description: Thiết kế, triển khai và review React frontend CTSV dùng chu
 
 # Quy chuẩn frontend CTSV
 
-**Phiên bản 0.1 — được chủ dự án chấp nhận ngày 13/11/2026.** Cấu trúc app/shared/features, tokens và các trang Auth/Foundation đã được tách trong task refactor FE. MGHP/DRL/Học bổng/SHCN chỉ có thư mục giữ chỗ theo yêu cầu, chưa có nghiệp vụ hoặc route chạy thật. Giữ nguyên các quyết định kiến trúc, API và Auth đã APPROVED. Một yêu cầu áp dụng skill không tự cấp quyền sửa module ngoài task.
+**Baseline kiến trúc 0.1 được chủ dự án chấp nhận ngày 13/11/2026; bổ sung quy tắc UX theo owner22/11/2026 tại §12.** Cấu trúc app/shared/features, tokens và các trang Auth/Foundation được tách trong task refactor FE. Các mô tả thư mục dự kiến là baseline kiến trúc; đối chiếu source/route hiện hành để biết module nào đã triển khai, không suy MGHP hoặc module khác vẫn chỉ là thư mục giữ chỗ từ snapshot cũ. Giữ nguyên các quyết định kiến trúc, API và Auth đã APPROVED. Một yêu cầu áp dụng skill không tự cấp quyền sửa module ngoài task.
 
 ## 1. Cách sử dụng và phạm vi
 
 - Member và AI đọc file này trước khi thiết kế/code/review FE CTSV. Trong prompt có thể ghi: “Đọc frontend/SKILL.md và áp dụng cho task này”. frontend/AGENTS.md nhắc Codex đọc file này khi làm việc tại frontend; đây không phải thao tác cài skill toàn cục cho mọi công cụ AI.
+- Khi làm UI, đọc thêm [§12 — checklist UX theo vai trò](#ctsv-ux-review); áp dụng cùng [AGENTS.md §10](../AGENTS.md#ctsv-role-first-ux). Không dùng checklist để mở rộng scope hoặc bắt chạy mọi loại test cho một thay đổi nhỏ.
+- Khi làm bố cục/câu chữ/trạng thái hiển thị, đọc [§13 — thiết kế thị giác có mục đích](#ctsv-visual-design). Đây là bổ sung cách thiết kế trong theme hiện hành, không là quyền đổi font/palette/Navbar hoặc xây nhận diện riêng cho module.
 - Đọc AGENTS.md của repository và API Contract của chức năng được giao. Nếu nguồn đó chưa được chia sẻ, báo thiếu nguồn; không tự dựng API từ UI.
 - Một React frontend chung, mỗi member phát triển module được giao. Auth/Foundation/shared/app là phần chung, không thuộc riêng MGHP.
 - Không tự thiết kế nghiệp vụ, tạo trang, route chạy thật hoặc skeleton của DRL/Học bổng/SHCN khi chưa được giao. Tên trong sơ đồ dưới chỉ xác định ranh giới tương lai.
@@ -182,4 +184,70 @@ File này không thay thế nghiệp vụ/API Contract của từng module hoặ
 - Tên và nhãn hướng đến người dùng. Hiển thị ngày theo vi-VN, trạng thái có chữ, UUID/mã kỹ thuật ở thông tin tham khảo. Với danh mục đã có API, cung cấp tên gợi ý/chọn và giữ ID trong request. Không ép người dùng đoán mã hoặc tạo API giả khi thiếu nguồn.
 - Dữ liệu mẫu đặt tên có ý nghĩa, ví dụ “Đợt thực hành bổ sung hồ sơ”, mô tả rõ đây là thực hành. Mã chạy test/epoch nằm ở phần tham khảo. Chỉ đổi cách trình bày cho mẫu nhận diện chắc chắn; tên thật và mã đối chiếu phải giữ nguyên. Không suy học kỳ, người, quyền hoặc căn cứ pháp lý từ một mã test.
 - API/quyền/ETag và Auth client giữ nguyên trong thay đổi UI. Trạng thái pending chặn gửi lặp; sau success đọc lại các vùng liên quan. Không dùng tải lại toàn trang, bỏ validation hoặc đổi expected để che lỗi nút/request.
-- Kiểm bằng browser thật trước bàn giao. Tối thiểu một luồng ghi hợp lệ, một lỗi từ backend sau khi cuộn, một tài khoản thiếu quyền, giữ dữ liệu qua chuyển bước, refresh route và viewport 360px. Xác nhận nút tạo request đúng method/path, response/status và UI sau commit. Chụp và xem ảnh desktop/mobile; ghi rõ SQL/HTTP/storage REAL hay STUB.
+- Kiểm bằng browser thật theo tác động trước bàn giao. Khi sửa hành vi/tác vụ/quyền, chọn luồng ghi hợp lệ, lỗi backend sau khi cuộn, tài khoản thiếu quyền, giữ dữ liệu qua chuyển bước, refresh route và mobile liên quan; kiểm request/status và kết quả đã lưu. Chỉ sửa nhãn thì kiểm đúng ngữ cảnh/đường điều hướng bị tác động, không tạo hồ sơ hoặc upload lại vô cớ. Với thay đổi bố cục, xem ảnh desktop/mobile. Giữ các gate bắt buộc theo phạm vi, ghi rõ SQL/HTTP/storage REAL hay STUB; không đồng nhất build xanh với UX đạt.
+
+<a id="ctsv-ux-review"></a>
+
+## 12. Checklist UX theo vai trò — bài học owner chốt22/11/2026
+
+### Trước khi dựng hoặc sửa màn hình
+
+- Ghi ngắn: **ai dùng/capability → mục đích vào trang → thông tin cần để quyết định → hành động chính → bước tiếp theo/kết thúc → cách phục hồi khi lỗi**. Dùng tình huống của người dùng thật, không chỉ danh sách endpoint. Không cần thêm tài liệu hay vòng xin duyệt cho lựa chọn nhỏ đã được giao.
+- Với từng field, xác định người dùng có cần nhập và có hiểu được không. Dữ liệu đã có/đã ràng buộc ngữ cảnh thì hiển thị tên hoặc tự lấy khi xác định duy nhất; nhiều lựa chọn thì cho chọn có ý nghĩa hoặc báo thiếu nguồn, không đoán. Không yêu cầu gõ ID học kỳ phân cách dấu phẩy, ID tệp, mã vòng hoặc object cấu hình trong form nghiệp vụ thông thường.
+- Với từng nút, trả lời được tác động, điều kiện xuất hiện, kết quả nhìn thấy và đường đi khi thất bại. Không thêm nút chỉ vì API có sẵn, không đổi nhãn nhưng giữ hành động cũ khác nghĩa. Không tự tạo tính năng/route hoặc bỏ yêu cầu Backend chỉ để giao diện gọn.
+- Tự rà lại màn hình hoàn chỉnh sau khi ghép component: bỏ thông tin lặp, gom các mốc liên quan, đặt đối chiếu/PDF gần thao tác xử lý, đưa chi tiết kỹ thuật/lịch sử phụ ra khỏi luồng chính. Giữ dữ liệu lịch sử ở backend; ẩn một khối UI không có nghĩa xóa dữ liệu.
+
+### Trong hành trình sử dụng
+
+| Điểm phải kiểm | Quy tắc |
+|---|---|
+| Vai trò và ngữ cảnh | Cùng dữ liệu có thể phục vụ tác vụ khác nhau. SV nộp/theo dõi own; CV đọc căn cứ, xử lý, kết luận. Dùng capability backend đã xác minh, kể cả nhiều quyền/direct URL; không cấp quyền nghiệp vụ bằng tên role. |
+| Danh sách/tạo/xem | Tiêu đề và action đúng ngữ cảnh; lọc danh sách không chen vào form tạo. Trang xem đợt có đường bắt đầu nộp khi đủ điều kiện. Trạng thái kết thúc hiển thị dữ liệu/hành động theo contract, không để người dùng đoán bước tiếp theo. |
+| Hành động và trạng thái | Phân biệt đồng ý một PDF, duyệt hồ sơ, đánh giá quyền hưởng và công bố. Sau ghi/đọc lại, cập nhật mọi vùng liên quan từ server, kể cả detail con có ID giữ nguyên nhưng ETag thay đổi. Lỗi không được đổi nhãn hoặc chuyển bước như đã thành công. |
+| Quy trình nhiều lần | Đi thử cả tạo yêu cầu, phản hồi, chưa đáp ứng, yêu cầu tiếp và kết thúc. Một vòng đang hoạt động không có nghĩa chỉ được một lần trong suốt hồ sơ. Nút bị chặn cần lý do và đường xử lý hợp lệ; không tạo vòng song song hoặc giả hoàn tất. |
+| Thông báo và sửa lỗi | Feedback xuất hiện trong viewport sau khi cuộn, có nguyên nhân/cách tiếp tục; giữ input và mở đúng nhóm lỗi. Không chỉ hiện mã lỗi thô hoặc thông báo thành công sau request bị lỗi. Không ép lý do cho mọi hành động nếu contract chỉ cần ở trường hợp từ chối/hủy. |
+| PDF và danh sách lựa chọn | Bấm mục nào xem đúng bytes của file gắn mục đó; hỗ trợ n mục, kể cả nhiều giấy dùng chung file. Chọn rõ mục hiện tại và nhãn đã/chưa xử lý bằng chữ, không chỉ màu. Nếu có tự chuyển, chỉ chuyển sau lưu thành công; bỏ qua mục đã xử lý, không vòng lặp vô hạn. Đổi nhanh không được để response cũ ghi đè lựa chọn mới. |
+
+### Bằng chứng đủ để bàn giao phần đã sửa
+
+- Chọn ca theo tác động: tái hiện lỗi → kiểm đúng ca sau sửa → luồng thành công/lỗi/quyền liên quan → hồi quy cuối có mục tiêu, theo AGENTS.md §9. Kiểm locator trên DOM trước luồng dài; đọc lại trạng thái sau timeout/HMR trước khi gửi thêm lệnh ghi. Không đổi expected HTTP trái contract hoặc force-click để che lỗi.
+- Assertion phải kiểm nội dung/kết quả: đúng hồ sơ của tài khoản, đúng file của lựa chọn, nhãn/count/chi tiết khớp sau thao tác, lưu và đọc lại được. `200/201`, nút có request, iframe tồn tại hoặc một screenshot không tự chứng minh UX đúng. Ảnh bố cục phải được xem, không chỉ tạo file.
+- Dataset synthetic phải dễ đọc và đủ phân biệt tình huống đang kiểm: ví dụ kiểm đổi PDF cần nội dung khác nhau; kiểm nhiều chủ sở hữu phải có dữ liệu của nhiều chủ. Không suy privacy từ dataset một người hoặc tính năng n mục từ việc chỉ chạy một mục. Mã test/UUID để ở tham khảo, không thành tiêu đề người dùng phải hiểu. Không sửa dữ liệu mẫu/DB ngoài phạm vi được phép.
+- Áp dụng DEV/test DB và REAL/STUB theo runbook; harness PASS chưa chứng minh JAR/profile/DB DEV hằng ngày. Chỉ kiểm dịch vụ ngoài thật khi luồng bị ảnh hưởng; không upload lại cho ca điều hướng. Báo số ca, phạm vi và FAIL/BLOCKED/NOT VERIFIED rõ ràng; không tự tuyên bố owner hài lòng/ACCEPTED từ kết quả kỹ thuật.
+
+### Quyết định MGHP đã chốt cần giữ đúng phạm vi
+
+- Nội dung PDF: không có nút Từ chối PDF/ô nhận xét PDF trong luồng đơn giản; PDF chưa phù hợp đi Yêu cầu bổ sung. Đồng ý thành công có nhãn và tự chuyển giấy chưa đồng ý tiếp theo. Lịch sử kiểm vẫn lưu; không tự xác nhận hình thức/thời hạn/chủ thể/bản cứng thay chuyên viên.
+- HS08: đồng ý hồ sơ không bắt lý do; từ chối bắt lý do. Phản hồi bổ sung general có đường xử lý xong hoặc yêu cầu tiếp, giữ bản nộp cũ và một vòng active. Đối chiếu contract/source hiện hành trước sửa, không phục hồi UI cũ chỉ vì thấy field/API lịch sử còn tồn tại.
+- Những quyết định này không tự áp cho DRL/SHCN/Học bổng hoặc mở phần P17 còn hoãn. Mọi thay đổi contract/nghiệp vụ vẫn theo quyền owner đã giao.
+
+Trước khi báo hoàn thành, tự đi theo vai trò: **người dùng có tự tìm được chức năng, biết cần nhập gì, hiểu nút sẽ làm gì, thấy đúng kết quả và biết làm tiếp khi lỗi không?** Nếu còn điểm chưa kiểm hoặc chưa rõ, báo đúng phần đó; không để owner phải khám phá toàn bộ đường sử dụng sau lời báo PASS.
+
+<a id="ctsv-visual-design"></a>
+
+## 13. Thiết kế thị giác có mục đích — owner22/11/2026
+
+Tiếp thu có chọn lọc từ tài liệu tham khảo `frontend-design` do owner cung cấp. Phục vụ ứng dụng nghiệp vụ CTSV và các lựa chọn đã duyệt tại §4–6; không sao chép yêu cầu làm website quảng bá, đổi nhận diện hoặc gây ấn tượng bằng trang trí.
+
+### Phác bố cục rồi đối chiếu yêu cầu
+
+- Với màn hình mới hoặc bố cục thay đổi lớn, phác bằng vài dòng hoặc wireframe ASCII: vùng nhận diện/ngữ cảnh, thông tin cần quyết định, vùng xử lý chính, chi tiết phụ và vị trí feedback. Nêu phần nào được ưu tiên và cách đọc trên mobile. Dùng dữ liệu/độ dài tên sát nghiệp vụ, không chỉ placeholder ngắn đẹp giả tạo.
+- Đối chiếu phác thảo với tác vụ/role và giao diện hiện hành trước khi code: đã đủ thông tin cần thiết, thao tác tiếp có dễ tìm, có phần lặp hoặc cấu trúc mẫu áp vào không phù hợp không? Chỉnh phác thảo nếu cần. Kế thừa tokens/font/component hiện có; không tạo palette/type system mới. Sửa nhãn hoặc vùng nhỏ không cần quy trình phác thảo riêng; không thêm gate phê duyệt ngoài yêu cầu owner.
+
+### Phân cấp và tiết chế
+
+- Chọn trọng tâm thị giác theo tác vụ: trong trang xử lý hồ sơ, ưu tiên trạng thái, nội dung cần kiểm và hành động tiếp theo. Dùng vị trí, cỡ/độ đậm chữ, khoảng cách và mức nhấn của nút để phân cấp; không cho mọi thông tin cùng trọng lượng hoặc biến mọi số lượng thành KPI nổi bật.
+- Mỗi khung, đường chia, nhãn và số thứ tự phải giúp hiểu nội dung. Ưu tiên khoảng cách cho nhóm đơn giản; dùng card cho vùng độc lập, số thứ tự cho danh sách/thứ tự/tiến trình cần phân biệt. Không bọc mọi đoạn trong card giống nhau hoặc thêm nhãn trên tiêu đề chỉ để trang trông đầy. Không tự xóa kiểu Navbar chữ hoa hay bố cục owner đã chấp nhận vì mẫu tham khảo khuyên khác.
+- Typography theo thang chữ và font §5, căn hàng nhất quán. Đoạn hướng dẫn dài nên có chiều rộng dễ đọc (tham khảo dưới khoảng80ký tự mỗi dòng), không áp giới hạn đó máy móc cho bảng/PDF hoặc ép ngắt chuỗi dữ liệu. Giữ tiếng Việt có dấu rõ, tên dài/nhãn lỗi không phá bố cục. Không đổi typeface để tạo cá tính khi chưa được giao.
+
+### Câu chữ và chuyển động giúp hiểu thao tác
+
+- Dùng một thuật ngữ cho cùng hành động xuyên suốt nút, dialog, thông báo và lịch sử; phân biệt các khái niệm khác nhau như công khai đợt/công bố kết quả. Ví dụ: “Gửi yêu cầu bổ sung” → “Đã gửi yêu cầu bổ sung”. CTA nói rõ kết quả phù hợp ngữ cảnh, tránh “Submit”, “OK”, “Xử lý” khi người dùng không biết tác động. Nội dung ngắn, động từ rõ, không thêm khẩu hiệu/nhãn trang trí vào màn hình nghiệp vụ.
+- Empty/error state có hướng đi đúng quyền: giải thích chưa có dữ liệu hay lỗi tải, cung cấp thao tác có thật nếu hợp lệ; không mời tạo mới khi thiếu quyền, không biến lỗi thành danh sách rỗng. Kế thừa feedback/giữ input tại §7/§12, không chỉ viết câu nghe thân thiện nhưng không giúp xử lý.
+- Chuyển động chỉ dùng khi làm rõ tương tác: mở/thu nhóm, đổi lựa chọn, phản hồi sau khi lưu. Nếu tự chuyển sang giấy tiếp theo, trạng thái mục cũ và lựa chọn mới phải rõ; chuyển động không thay bằng chứng lưu thành công. Hạn chế chuyển động tự chạy và hiệu ứng lặp trên từng card; tôn trọng `prefers-reduced-motion`, không để animation chặn thao tác hoặc là cách duy nhất truyền thông tin. Không thêm thư viện animation cho nhu cầu nhỏ.
+
+### Review trên giao diện thực
+
+- Rà độ ưu tiên CSS trong cùng component, nhất là tổ hợp selected/hover/focus/disabled/pending: selector không được vô tình triệt tiêu padding, màu hoặc dấu trạng thái. Dùng CSS Modules, tokens và state/variant rõ theo §6; không tăng specificity hoặc thêm override toàn cục để che xung đột.
+- Với phần hình thức đã đổi, xem ảnh desktop/mobile thực và trả lời: mắt nhìn vào đâu trước; tác vụ chính có nổi rõ; chữ/nhóm có dễ đọc; căn hàng/khoảng cách có đều; có thể bỏ trang trí nào mà vẫn giữ đủ thông tin và nghiệp vụ? Sửa đúng điểm chưa đạt. Không lấy sở thích thẩm mỹ để bỏ warning, dữ liệu hoặc điều kiện bắt buộc.
+- Kiểm thị giác bổ sung cho assertion hành vi tại §12. Không dùng ảnh đẹp để kết luận request/quyền/dữ liệu đúng; không dùng build xanh để kết luận bố cục dễ dùng. Báo riêng phần đã kiểm, vấn đề còn lại và phạm vi chưa xác minh.

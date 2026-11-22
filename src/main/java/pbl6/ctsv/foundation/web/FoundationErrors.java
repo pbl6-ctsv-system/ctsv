@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;import org.springframework.http.*;
 import org.springframework.dao.DataAccessException;import org.springframework.transaction.TransactionException;
 import pbl6.ctsv.auth.AuthFailure;
-@RestControllerAdvice(assignableTypes=FoundationController.class)
+@RestControllerAdvice(assignableTypes={FoundationController.class,SourceProfileController.class})
 class FoundationErrors {
  @ExceptionHandler(pbl6.ctsv.foundation.api.FoundationAccess.Failure.class) ResponseEntity<?> known(pbl6.ctsv.foundation.api.FoundationAccess.Failure e,HttpServletRequest r){return error(e.status(),e.code(),e.field(),r);}
  @ExceptionHandler(AuthFailure.class) ResponseEntity<?> auth(AuthFailure e,HttpServletRequest r){return error(e.status(),e.code(),"request",r);}

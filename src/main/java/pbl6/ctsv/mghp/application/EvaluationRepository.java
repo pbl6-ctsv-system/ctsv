@@ -18,6 +18,11 @@ class EvaluationRepository {
  int update(String sql,Object... args){em.flush();return jdbc.update(sql,args);}
  void refresh(Object row){em.refresh(row);}
  List<BenefitEvent> events(long id){return em.createQuery("from P08BenefitEvent where benefitId=:id order by revision desc,id desc",BenefitEvent.class).setParameter("id",id).getResultList();}
+ List<Benefit> ownedBenefits(long student,int page,int size){
+  long offset=(long)page*size;if(offset>Integer.MAX_VALUE)return List.of();
+  return em.createQuery("from P08Benefit where studentId=:student order by id desc",Benefit.class).setParameter("student",student).setFirstResult((int)offset).setMaxResults(size).getResultList();
+ }
+ long ownedBenefitCount(long student){return em.createQuery("select count(b) from P08Benefit b where b.studentId=:student",Long.class).setParameter("student",student).getSingleResult();}
  <T> List<T> children(Class<T> type,long id){return em.createQuery("from P08"+type.getSimpleName()+" where evaluationId=:id order by id",type).setParameter("id",id).getResultList();}
  Evaluation evaluation(long id){
   if(jdbc.queryForList("SELECT id FROM dbo.mghp_danh_gia_dieu_kien WITH(UPDLOCK,HOLDLOCK) WHERE id=?",Long.class,id).isEmpty())throw IntakeProblem.missing();
@@ -32,6 +37,11 @@ class EvaluationRepository {
    " and semesterId=:semester and policyVersionId=:policy and scopeCode=:scope order by revision",Evaluation.class)
    .setParameter("source",e.applicationId!=null?e.applicationId:e.benefitId).setParameter("semester",e.semesterId)
    .setParameter("policy",e.policyVersionId).setParameter("scope",e.scopeCode).getResultList();
+ }
+ List<Evaluation> sourceChain(Long application,Long benefit,long semester,long policy){
+  return em.createQuery("from P08Evaluation where "+(benefit==null?"applicationId=:source":"benefitId=:source")+
+   " and semesterId=:semester and policyVersionId=:policy order by revision desc,id desc",Evaluation.class)
+   .setParameter("source",benefit==null?application:benefit).setParameter("semester",semester).setParameter("policy",policy).getResultList();
  }
  void touch(Evaluation e){
   em.flush();em.refresh(e);if(jdbc.update("UPDATE dbo.mghp_danh_gia_dieu_kien SET la_ban_hien_hanh=la_ban_hien_hanh WHERE id=? AND phien_ban_ky_thuat=?",e.id,e.fence)!=1)
