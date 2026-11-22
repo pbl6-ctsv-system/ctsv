@@ -1,5 +1,7 @@
 # Đồng bộ origin/main — 22/11/2026
 
+> Cập nhật sau lượt push: owner đã yêu cầu chuyển `ctsv_dev`; bảo trì và smoke V21 đã hoàn tất. Xem [kết quả DEV hiện hành](dev-v21-upgrade-20261122.md). Các phần DEV chưa chuyển bên dưới là trạng thái tại thời điểm merge, không còn là tình trạng runtime mới nhất.
+
 **Trạng thái review: OWNER AUTHORIZED COMMIT/PUSH.** Sau khi xem nguyên nhân và bằng chứng, owner ra lệnh “bỏ qua lỗi này và push code lên”: cho giữ nguyên4 test navigation đang FAIL và lỗi `CtsvApplicationTests.contextLoads` đã được miễn riêng trước đó. Không sửa code/expected, không đánh các lỗi này PASS. Lượt dừng trước đã được owner cho tiếp tục; commit/push thường lên nhánh riêng, không tạo PR hoặc push main.
 
 ## Git và bảo toàn source
