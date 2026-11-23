@@ -100,3 +100,18 @@ Gói fixture bổ sung `ctsv.shcn.dev.inheritance` v1.0.0 tạo nguồn năm **2
 Đăng nhập `dev.truongkhoa`, tạo phân công năm **2026-2027**, chọn **Kế thừa phân công năm trước**, tìm năm **2025-2026** rồi chọn bản nguồn có 2 lớp. Nhập bắt đầu hiệu lực; lý do là tùy chọn, có thể để trống rồi bấm tạo. Bản mới là NHAP và được sao chép hai dòng; bản nguồn giữ chỉ đọc. Số phiên bản của bản mới phụ thuộc các bản đã có trên máy, không cố định ID/phiên bản giữa các thành viên.
 
 Công cụ standalone kiểm checksum gói nền hiện có trước khi dùng và kiểm đúng database `ctsv_dev`, instance `DEV2022`, owner, compat/collation và V14/V15 đã áp dụng. Nó không thay manifest của gói nền v1.1.0. Chia sẻ file `seed-inheritance.ps1` cùng README qua Git theo quy trình nhóm; không chia sẻ dev-home/credentials. Chưa tự commit/push.
+
+
+## Chuyên viên quản lý đợt — DEV package v1
+
+Owner đã giao cấp quyền cho account `dev.chuyenvien`. Công cụ riêng `seed-specialist-access.ps1` sử dụng role và permission chính thức từ V18; không sửa gói seed khoa hoặc chạy migration.
+
+```powershell
+pwsh -File .\tools\dev\shcn\seed-specialist-access.ps1 status
+pwsh -File .\tools\dev\shcn\seed-specialist-access.ps1 grant
+pwsh -File .\tools\dev\shcn\seed-specialist-access.ps1 smoke
+```
+
+Chạy `grant` khi owner giao provisioning; chạy lại không nhân đôi quyền. Không tự khôi phục scope/role đã bị admin thu hồi sau provisioning. Role Auth được gán qua API có If-Match/audit/token revocation, scope SHCN toàn cục được ghi có audit và guard đúng DEV. Không gán quyền MGHP thay SHCN, không tạo account/password hoặc nới quyền backend. Credential giữ DPAPI cục bộ, không nằm trong source/evidence.
+
+Sau cấp quyền, đăng xuất/đăng nhập lại; vào **Sinh hoạt chủ nhiệm → Quản lý đợt SHCN**. `smoke` đăng nhập một lần để kiểm API thật, không tạo đợt. Không lặp nhiều lần login: backend giới hạn5lần/15phút theo account/IP. Chi tiết dữ liệu/hạn chế và bằng chứng ở `docs/shcn/dev-readiness.md`; học kỳ rỗng phải được báo là thiếu reference, không coi tạo đợt đã nghiệm thu đầy đủ.

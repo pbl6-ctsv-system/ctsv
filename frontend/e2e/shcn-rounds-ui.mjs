@@ -17,6 +17,7 @@ async function run(name,fn,options={}){
   if(path.endsWith('/xac-thuc/toi'))return reply({accountId:'fixture',username:'SYNTHETIC specialist',functions:[{code:options.readOnly?'shcn.dot.read':'shcn.dot.prepare',active:true},{code:'shcn.reference.read',active:true}]});
   if(path.endsWith('/quyen-giao-dien'))return reply({student:false,mghpSpecialist:false,ctsvRoleAdmin:false});
   if(path.endsWith('/pham-vi'))return reply({code:'FORBIDDEN'},403);
+  if(path.endsWith('/tra-cuu/nhom-lop'))return reply({khoaHoc:[],lopTreTienDo:[],soLopChuaCoKhoa:0,trangThaiLopTreTienDo:'CHUA_CO_DU_LIEU'});
   if(path.endsWith('/tra-cuu/hoc-ky'))return options.semesterFailure?reply({code:'DEPENDENCY_UNAVAILABLE'},503):reply({items:[options.nullYear?{...semester,namHoc:null}:semester],page:0,size:25,totalElements:1});
   if(path==='/api/shcn/dot-sinh-hoat'&&r.method()==='GET'){
    if(options.denied)return reply({code:'FORBIDDEN'},403);

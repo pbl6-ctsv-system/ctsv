@@ -42,5 +42,8 @@ public class DotController {
     @GetMapping("/api/shcn/tra-cuu/hoc-ky") public ResponseEntity<?> semesters(HttpServletRequest r){
         return response(service.execute(principal(r),Action.REFERENCE,a->{parser.get(r,"q","page","size","sort");return service.semesters(query(r));}),200,null);
     }
+    @GetMapping("/api/shcn/tra-cuu/nhom-lop") public ResponseEntity<?> groups(HttpServletRequest r){
+        return response(service.execute(principal(r),Action.REFERENCE,a->{parser.get(r,"maHocKy");String code=r.getParameter("maHocKy");if(code==null)throw DotFailure.invalid("maHocKy");return service.groups(DotRequests.code(code,"maHocKy"));}),200,null);
+    }
     private Query query(HttpServletRequest r){return DotRequests.query(r.getParameter("page"),r.getParameter("size"),r.getParameter("sort"),r.getParameter("q"),r.getParameter("maHocKy"),r.getParameter("maKhoa"),r.getParameter("trangThai"));}
 }

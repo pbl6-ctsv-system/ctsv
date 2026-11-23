@@ -36,6 +36,7 @@ public final class JdbcDotReference implements DotReference {
         if(sources.size()!=1)throw DotFailure.unavailable();return sources.getFirst();
     }
     private void validCode(String code){
+        if(code==null)throw DotFailure.unavailable();
         try{DotRequests.code(code,"maHocKy");}catch(DotFailure e){throw DotFailure.unavailable();}
         boolean roundTrip=Boolean.TRUE.equals(jdbc.queryForObject("SELECT CASE WHEN CONVERT(nvarchar(128),CONVERT(varchar(32),?)) COLLATE Latin1_General_100_BIN2=CONVERT(nvarchar(128),?) COLLATE Latin1_General_100_BIN2 THEN 1 ELSE 0 END",Boolean.class,code,code));
         if(!roundTrip)throw DotFailure.unavailable();
@@ -46,6 +47,17 @@ public final class JdbcDotReference implements DotReference {
         var semester=semesters.findById(ids.getFirst()).orElseThrow(DotFailure::unavailable);
         if(!semester.present()||!Objects.equals(code,semester.code()))throw DotFailure.invalid("maHocKy");
         // SHCN drafts need no verified start/end milestones from MGHP.
+    }
+    @Override public NhomLopDTO groups(String code){
+        requireSemester(code);long src=source();
+        long semester=Objects.requireNonNull(jdbc.queryForObject("SELECT id FROM dbo.hoc_ky WITH(HOLDLOCK) WHERE he_thong_nguon_id=? AND ma=? AND dang_hien_dien_nguon=1",Long.class,src,code));
+        var result=new JdbcDotAudienceReference(jdbc).groups(src,semester);
+        result.khoaHoc().forEach(v->validCode(v.ma()));result.lopTreTienDo().forEach(v->validCode(v.ma()));return result;
+    }
+    @Override public void requireAudiences(String code,List<DoiTuong> values){
+        if(values.isEmpty())return;var catalog=groups(code);var allowed=new HashSet<String>();
+        catalog.khoaHoc().forEach(v->allowed.add("KHOA_HOC:"+v.ma()));catalog.lopTreTienDo().forEach(v->allowed.add("LOP:"+v.ma()));
+        for(int i=0;i<values.size();i++){var v=values.get(i);if(!allowed.contains(v.loaiDoiTuong()+":"+v.maDoiTuong()))throw DotFailure.invalid("doiTuongApDung["+i+"].maDoiTuong");}
     }
     @Override public Page<HocKyDTO> semesters(Query q){
         long src=source();

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {roundInput,validateRound,sameRound} from '../src/features/shcn/model/round.mjs';
+const group=()=>({loaiDoiTuong:'KHOA_HOC',maDoiTuong:'2023',hinhThucChoPhep:'OFFLINE',khungNgayBatDau:'2026-12-01',khungNgayKetThuc:'2026-12-07',khungTietChoPhep:null});
+const input=()=>({maHocKy:'0010',tenDot:'Đợt thực hành',khungNgayBatDau:'2026-12-01',khungNgayKetThuc:'2026-12-07',khungTietChoPhep:[{tietDau:11,tietCuoi:12}],hanChotDangKyLich:'2026-11-29T10:00:00Z',doiTuongApDung:[group()]});
+test('round payload keeps selected groups and owns nested copies',()=>{const d=input(),out=roundInput(d);assert.deepEqual(out.doiTuongApDung,[group()]);out.doiTuongApDung[0].hinhThucChoPhep='ONLINE';assert.equal(d.doiTuongApDung[0].hinhThucChoPhep,'OFFLINE');});
+test('group changes make draft dirty',()=>{const a=input(),b=input();b.doiTuongApDung[0].hinhThucChoPhep='ONLINE';assert.equal(sameRound(a,b),false);});
+test('group dates and mode are validated before saving',()=>{for(const change of [{hinhThucChoPhep:'X'},{khungNgayKetThuc:'2026-11-01'},{khungNgayKetThuc:null}]){const d=input();Object.assign(d.doiTuongApDung[0],change);assert.throws(()=>validateRound(d));}});
+test('duplicate audience is rejected rather than duplicated on save',()=>{const d=input();d.doiTuongApDung.push(group());assert.throws(()=>validateRound(d));});
+test('clearing groups preserves explicit empty list',()=>{const d=input();d.doiTuongApDung=[];assert.deepEqual(validateRound(d).doiTuongApDung,[]);});

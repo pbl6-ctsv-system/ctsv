@@ -1,5 +1,8 @@
 # Bàn giao TASK-CV-02 — backend và frontend
 
+> **Cập nhật22/11/2026:** owner đã áp dụng V18. Đã cấp role Auth và global grant SHCN cho `dev.chuyenvien`, kiểm API200/prepare=true và menu Chrome qua HTTPS DEV. Công cụ cấp quyền có version/guard/audit được lưu trong repo; xem [bàn giao quyền DEV](dev-readiness.md). Danh mục học kỳ của nguồn hiện còn0dòng, nên chưa nghiệm thu toàn luồng tạo đợt với dữ liệu thật. Các bằng chứng unit/fixture bên dưới là snapshot của lượt triển khai21/11, không thay cho kết quả DEV mới.
+
+
 Ngày 21/11/2026. Repo code: `G:\26-27\PBL6-CTSV\ctsv`. D01: chuyên viên có quyền SHCN toàn trường quản lý cả đợt do chuyên viên khác tạo. Đã bổ sung phần lookup học kỳ SHCN-CV-001 phục vụ màn hình này.
 
 **Source đã triển khai; DB chưa migrate, chưa seed/cấp thêm quyền tài khoản.** Không gọi SQL Server hoặc chạy thử launcher backend mới trong lượt này. Chưa nghiệm thu SQL/luồng DEV thật.
@@ -68,3 +71,48 @@ Không thêm API lấy quyền. Bốn API đợt trả header **`X-SHCN-Can-Prep
 CV-001 là GET `/api/shcn/tra-cuu/hoc-ky`: response phân trang `items[{ma,ten,namHoc}]`; `ma` là code nguồn nguyên vẹn, `ten`/`namHoc` nullable. Cần `shcn.reference.read` cùng grant toàn cục. Không yêu cầu các mốc học kỳ đã được MGHP xác minh.
 
 Frontend chỉ sửa feature SHCN và các điểm nối App/menu cần thiết; không thêm dependency, không đổi Auth client hoặc giao diện Foundation. Đã mở và kiểm ảnh desktop/mobile360; ô nhập ngày native theo locale trình duyệt, ngày hiển thị đọc dùng vi-VN.
+
+## Bổ sung 22/11/2026 — cấu hình nhóm trong CV-02
+
+Đã bổ sung backend và giao diện cấu hình ngày/hình thức theo khóa và nhóm lớp trễ tiến độ. Đây là phần cấu hình nhóm của CV-03 được owner yêu cầu làm ngay trong CV-02; không đồng nghĩa toàn bộ CV-03 đã có bước phân giải/chốt snapshot lớp. Không triển khai mẫu biên bản, phân công đợt, duyệt/phát hành, phòng hoặc ký/PDF.
+
+- Root và các bộ chọn lưu trong cùng transaction, cùng khóa root/rowversion; khi thay nhóm áp dụng reset con trỏ phân công NHAP. Giữ nguyên mọi guard trạng thái và RBAC hiện có.
+- Endpoint bổ sung: `GET /api/shcn/tra-cuu/nhom-lop?maHocKy=...`, permission `shcn.reference.read` + grant SHCN toàn trường. Giữ nguyên các permission/role có sẵn, không gán thêm quyền DEV trong lượt này.
+- POST/PATCH thêm `doiTuongApDung` tùy chọn. POST bỏ field tạo nháp chưa có nhóm; PATCH bỏ field giữ nguyên nhóm; gửi `[]` mới xóa nhóm. Đổi kỳ phải kiểm lại nhóm đang giữ. Chi tiết trả array nhóm đã lưu và đọc được lịch sử khi nguồn đổi.
+- Khóa lấy từ quan hệ `lop_sinh_hoat.khoa_hoc_id`, không suy từ tên/mã lớp. Loại lớp RenLuyen khỏi nhóm khóa thường. Nhóm trễ tiến độ chỉ lấy lớp có tên chứa renluyen và có phân lớp nguồn hiện diện đúng học kỳ, đúng hệ thống nguồn.
+- Hàng “Lớp trễ tiến độ” trên UI mở rộng thành các bộ chọn LOP; không thêm enum/bảng DRL, không tự tính vượt kỳ, không tự chuyển toàn bộ sinh viên lớp gốc hoặc lấy phân lớp kỳ trước.
+- Khi đổi học kỳ, xác nhận trước khi bỏ nhóm đang soạn; abort kết quả tra cứu cũ. Lỗi giữ dữ liệu, không tự gửi lại lệnh ghi. Có kiểm 360px/desktop, đọc lại chi tiết/danh sách sau lưu, lỗi sau khi cuộn và account thiếu quyền.
+
+### Migration pending và giới hạn DEV
+
+Chỉ viết **`V19__shcn_round_audiences.sql`**, tạo bảng `shcn.shcn_doi_tuong_ap_dung` đã có trong ERD, FK tới đợt, unique/check và trigger bảo vệ trạng thái. Không sửa V18 hoặc schema/Entity Foundation/Đào tạo. **Chưa chạy migration, kể cả trên DB test.**
+
+Owner tự thực hiện từ root CTSV khi muốn cập nhật DB:
+
+```powershell
+.\dev.ps1 build
+.\dev.ps1 migrate
+.\dev.ps1 start
+```
+
+Frontend chạy `npm.cmd run dev` trong `frontend`. Nếu ứng dụng đang chạy cần dừng bằng launcher trước khi cập nhật theo runbook hiện có. Không bỏ kiểm Flyway/Hibernate để chạy khi V19 còn pending.
+
+Nguồn DEV ở lần kiểm quyền trước có 0 học kỳ. Lượt bổ sung này không seed giả danh mục hay ghi dữ liệu Foundation; cần dữ liệu học kỳ, khóa gắn lớp và phân lớp RenLuyen đúng kỳ qua quy trình nhập/đồng bộ của nhóm trước khi thao tác đầy đủ bằng API thật. Không có phân lớp kỳ đang chọn được hiển thị là thiếu dữ liệu, không xác nhận 0 sinh viên trễ tiến độ.
+
+### Kiểm chứng lượt bổ sung
+
+- Backend: `./mvnw.cmd -o -Dtest=Dot*Test test` với JDK21: **74 tests, 0 failures/errors/skips**; parser/service unit và MockMvc, dependency repository/Foundation giả lập. Không chứng minh JPA/trigger/SQL thật.
+- Frontend: `node --test frontend/tests/shcn-rounds.test.mjs frontend/tests/shcn-round-audiences.test.mjs`: **18/18**.
+- Frontend `npm.cmd run build`: TypeScript và Vite PASS.
+- Chrome: **7/7** ca mới `e2e/shcn-round-audiences-ui.mjs` và **13/13** hồi quy `e2e/shcn-rounds-ui.mjs`; Vite thực ở `http://127.0.0.1:5174`, API HTTP STUB, không có SQL/CA/storage thật. Ảnh desktop/mobile đã được mở kiểm tra.
+- SQL Server/JPA validation/trigger/CAS/rollback thật sau V19: **NOT VERIFIED**, migration chưa được owner cho chạy. DEV ghi đợt bằng nguồn thật: **NOT VERIFIED**. Không báo toàn luồng production/DEV đã nghiệm thu.
+
+Contract và OpenAPI gốc đã bổ sung tại `G:/26-27/PBL6/DaTa_ThamKhao_BanChinh/API/TASK_CV_02_DOT_NHAP`: `10_BO_SUNG_NHOM_AP_DUNG.md`, `openapi.json`. Công cụ sinh/staging tại thư mục tài liệu là trung gian của lần triển khai, không dùng làm runtime/seed và không chạy lại trên source đã chỉnh tiếp. Source chính thức nằm trong repo CTSV.
+
+### Kết quả đóng gói cuối lượt
+
+Đóng gói executable Spring Boot JAR **PASS trong thư mục kiểm chứng riêng** `BUILD_VERIFY/target` của bộ tài liệu CV-02. Dùng bản sao POM giữ dependency/plugin hiện tại, trỏ nguồn Java/resources thật và chỉ đổi thư mục output. Không sửa POM của repo hoặc chạy ứng dụng/JAR này. Đã kiểm JAR chứa Entity và migration V19 mới.
+
+Lệnh package mặc định trong repo đã gặp lỗi đổi tên JAR vì có hai tiến trình Java đang giữ `target/ctsv-0.0.1-SNAPSHOT.jar`. Chưa dừng các tiến trình đó; không báo package mặc định PASS. Trước khi build/migrate DEV, owner cần dừng đúng ứng dụng/công cụ Java đang dùng JAR bằng launcher tương ứng. Bản package mặc định bị dở không được dùng làm JAR DEV mới. Sau khi giải phóng file, chạy lại build theo runbook, rồi owner tự migrate/start khi sẵn sàng.
+
+Kiểm cuối: OpenAPI có 6 operations trên 4 paths, array đối tượng tùy chọn ở request/bắt buộc ở response; `git diff --check` PASS. Không có thay đổi schema/Entity Foundation hoặc Đào tạo; không có migration/seed/ghi DB trong lượt bổ sung này. Vite phục vụ kiểm thử ở cổng 5174 chỉ dùng API STUB và được dừng sau kiểm thử.

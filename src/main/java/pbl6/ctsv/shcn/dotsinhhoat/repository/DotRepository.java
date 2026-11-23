@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pbl6.ctsv.shcn.dotsinhhoat.dto.DotDtos.*;
 import pbl6.ctsv.shcn.dotsinhhoat.entity.DotSinhHoat;
+import pbl6.ctsv.shcn.dotsinhhoat.entity.DoiTuongApDung;
 import pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure;
 
 public class DotRepository {
@@ -45,6 +46,14 @@ public class DotRepository {
               AND ngay_phat_hanh IS NULL AND ngay_huy IS NULL AND ngay_cong_bo_lich IS NULL
             """,input.maHocKy(),input.tenDot(),input.khungNgayBatDau(),input.khungNgayKetThuc(),ranges(input.khungTietChoPhep()),input.hanChotDangKyLich(),now,resetDraft?1:0,resetDraft?1:0,id,token);
         if(changed!=1)throw new DotFailure(409,"VERSION_CONFLICT");em.clear();return find(id,false);
+    }
+    public List<DoiTuong> audiences(long id){
+        tx();return em.createQuery("select a from DoiTuongApDung a where a.maDot=:id order by a.id",DoiTuongApDung.class).setParameter("id",id).getResultList().stream()
+            .map(a->a.dto(a.periods()==null?null:ranges(a.periods()))).toList();
+    }
+    public void replaceAudiences(long id,List<DoiTuong> values,OffsetDateTime now){
+        tx();em.flush();em.createQuery("delete from DoiTuongApDung a where a.maDot=:id").setParameter("id",id).executeUpdate();em.clear();
+        for(var v:values)em.persist(DoiTuongApDung.create(id,v,v.khungTietChoPhep()==null?null:ranges(v.khungTietChoPhep()),now));em.flush();
     }
     public void audit(long actor,String action,long id){
         tx();jdbc.update("INSERT dbo.nhat_ky_thao_tac(su_kien_id,loai_chu_the_thao_tac,nguoi_dung_id,hanh_dong,loai_doi_tuong,doi_tuong_id,thoi_diem_tao) VALUES(?,N'user',?,?,N'shcn_dot_sinh_hoat',?,TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))",UUID.randomUUID().toString(),actor,action,Long.toString(id));

@@ -1,6 +1,6 @@
 import type {AuthClient} from '../../../shared/types/api';
 import type {Page} from '../types/assignments';
-import type {Round,RoundInput,RoundFilters,RoundPage,RoundResult,Semester} from '../types/rounds';
+import type {Round,RoundInput,RoundFilters,RoundPage,RoundResult,Semester,RoundGroups} from '../types/rounds';
 const base='/api/shcn/dot-sinh-hoat';
 export function roundsApi(client:AuthClient){
  async function get<T>(path:string,params:Record<string,string|number|undefined>={},signal?:AbortSignal):Promise<RoundResult<T>>{
@@ -14,6 +14,7 @@ export function roundsApi(client:AuthClient){
  return {list:(filters:RoundFilters={},page=0,signal?:AbortSignal)=>get<RoundPage>(base,{...filters,page,size:25,sort:'id:desc'},signal),
   detail:(id:string,signal?:AbortSignal)=>get<Round>(base+'/'+encodeURIComponent(id),{},signal),
   semesters:async(q:string,page:number,signal?:AbortSignal)=>(await get<Page<Semester>>('/api/shcn/tra-cuu/hoc-ky',{q,page,size:25,sort:'id:desc'},signal)).value,
+  groups:async(maHocKy:string,signal?:AbortSignal)=>(await get<RoundGroups>('/api/shcn/tra-cuu/nhom-lop',{maHocKy},signal)).value,
   create:(body:RoundInput)=>write('POST',base,body),
   update:(id:string,body:RoundInput&{expectedVersion:string})=>write('PATCH',base+'/'+encodeURIComponent(id),body)};
 }

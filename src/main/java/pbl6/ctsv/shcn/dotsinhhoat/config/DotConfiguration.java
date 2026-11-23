@@ -30,7 +30,7 @@ public class DotConfiguration {
     @Bean FilterRegistrationBean<CorsFilter> shcnDotCors(Environment env){
         var origins=Binder.get(env).bind("ctsv.auth.origins",Bindable.listOf(String.class)).orElse(List.of());var policy=new CorsConfiguration();policy.setAllowedOrigins(origins);policy.setAllowedMethods(List.of("GET","POST","PATCH","OPTIONS"));
         policy.setAllowedHeaders(List.of("Authorization","Content-Type","Accept","If-Match","X-CSRF-Protection"));policy.setExposedHeaders(List.of("Location","X-SHCN-Can-Prepare"));policy.setAllowCredentials(true);policy.setMaxAge(600L);
-        var paths=new UrlBasedCorsConfigurationSource();paths.registerCorsConfiguration("/api/shcn/dot-sinh-hoat",policy);paths.registerCorsConfiguration("/api/shcn/dot-sinh-hoat/**",policy);paths.registerCorsConfiguration("/api/shcn/tra-cuu/hoc-ky",policy);
-        var filter=new FilterRegistrationBean<>(new CorsFilter(paths));filter.addUrlPatterns("/api/shcn/dot-sinh-hoat","/api/shcn/dot-sinh-hoat/*","/api/shcn/tra-cuu/hoc-ky");return filter;
+        var paths=new UrlBasedCorsConfigurationSource();paths.registerCorsConfiguration("/api/shcn/dot-sinh-hoat",policy);paths.registerCorsConfiguration("/api/shcn/dot-sinh-hoat/**",policy);paths.registerCorsConfiguration("/api/shcn/tra-cuu/hoc-ky",policy);paths.registerCorsConfiguration("/api/shcn/tra-cuu/nhom-lop",policy);
+        var filter=new FilterRegistrationBean<>(new CorsFilter(paths));filter.addUrlPatterns("/api/shcn/dot-sinh-hoat","/api/shcn/dot-sinh-hoat/*","/api/shcn/tra-cuu/hoc-ky","/api/shcn/tra-cuu/nhom-lop");return filter;
     }
 }
