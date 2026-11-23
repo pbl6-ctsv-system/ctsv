@@ -28,7 +28,7 @@ async (page) => {
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Staff mobile page overflow');
  await page.setViewportSize({width:1280,height:900});
  await page.locator('[aria-label="Nội dung hồ sơ"]').getByRole('button',{name:'Tổng quan',exact:true}).click();
- await page.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();
+ await page.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();
  if(x.evidenceDir)await page.screenshot({path:x.evidenceDir+'/staff-overview.png',fullPage:true});
  x.cases.push({id:'UX11_FINAL_STAFF_REFRESH_FILTER_HISTORY_MOBILE',status:'PASS',database:'ctsv_dev'});
 
@@ -36,7 +36,7 @@ async (page) => {
  await s.getByRole('heading',{name:'Thông tin đã kê khai',exact:true}).waitFor();await s.getByText('Đã duyệt',{exact:true}).first().waitFor();
  for(const label of ['Tra cứu yêu cầu bằng mã','Thông tin đối chiếu hồ sơ'])assert(await s.getByText(label,{exact:true}).count()===0,'Removed student control '+label);
  assert(await s.getByRole('heading',{name:'Đối chiếu thông tin',exact:true}).count()===0,'Internal review must not appear for student');
- await s.getByRole('button',{name:'Xem PDF 1',exact:true}).click();await s.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();
+ await s.getByRole('button',{name:'Xem PDF 1',exact:true}).click();await s.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();
  if(x.evidenceDir){const pending=s.waitForEvent('download');await s.getByRole('button',{name:'Tải PDF 1',exact:true}).click();await (await pending).saveAs(x.evidenceDir+'/download.pdf');}
  await s.setViewportSize({width:360,height:800});assert(await s.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Student mobile page overflow');
  if(x.evidenceDir)await s.screenshot({path:x.evidenceDir+'/student-overview-mobile.png',fullPage:true});

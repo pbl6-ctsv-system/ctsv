@@ -4,7 +4,7 @@ import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {errorMessage} from '../../../shared/api/error-message';
 import {Alert} from '../../../shared/ui/Alert';
 import {claimLabels,dateTime} from '../presentation.mjs';
-import {PdfPreview} from './PdfPreview';
+import {PdfViewer} from '../../../shared/ui/pdf';
 import {currentCheck,pdfAccepted,nextPendingPaper,approvalBlockers} from './review-model.mjs';
 import type {Dossier} from './dossier-types';
 import styles from './IntakeWorkspace.module.css';
@@ -22,8 +22,8 @@ function failure(error:unknown){
  return errorMessage(error);
 }
 
-export function StaffDossierReview({client,application,rootTag,refresh,download,onSupplement,declaredNames}:{client:AuthClient;application:Dossier;rootTag:string|null;declaredNames?:Record<string,string|null>;
- refresh:()=>Promise<void>;download:(id:string)=>Promise<void>;onSupplement:()=>void}) {
+export function StaffDossierReview({client,application,rootTag,refresh,onSupplement,declaredNames}:{client:AuthClient;application:Dossier;rootTag:string|null;declaredNames?:Record<string,string|null>;
+ refresh:()=>Promise<void>;onSupplement:()=>void}) {
  const [review,setReview]=useState<Review|null>(null),[selected,setSelected]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[reason,setReason]=useState('');
  const [decision,setDecision]=useState<'approved'|'rejected'|null>(null);
@@ -91,7 +91,7 @@ export function StaffDossierReview({client,application,rootTag,refresh,download,
    <p role="status" className={styles.reviewProgress}>{papers.filter(pdfAccepted).length} / {papers.length} giấy tờ đã đồng ý nội dung</p>
    <div className={styles.paperChoices}>{papers.map((p,index)=><button type="button" disabled={busy} aria-pressed={paper?.id===p.id} data-review-state={pdfAccepted(p)?'accepted':'pending'} key={p.id} onClick={()=>{setSelected(p.id);setError('');}}>
     <span>{index+1}. {title(p)}</span><small>{pdfAccepted(p)?'✓ Đã đồng ý PDF':lastCheck(p)?'! Cần kiểm tra lại':'○ Chưa đồng ý PDF'}</small></button>)}</div>
-   {paper&&<><PdfPreview client={client} fileId={paper.fileId} title={title(paper)} onDownload={()=>void run(()=>download(paper.fileId))}/>
+   {paper&&<><PdfViewer client={client} fileId={paper.fileId} title={title(paper)}/>
     {editable&&<div className={styles.reviewActions}><div className={styles.actions}>
      <button type="button" className="primary" disabled={busy||pdfAccepted(paper)} onClick={()=>void check()}>{pdfAccepted(paper)?'Đã đồng ý PDF':'Đồng ý PDF'}</button>
      <button type="button" disabled={busy} onClick={onSupplement}>Yêu cầu bổ sung</button></div></div>}

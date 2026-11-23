@@ -25,7 +25,7 @@ async(page)=>{
   await p.getByRole('heading',{name:'Đối chiếu thông tin sinh viên và Đào tạo',exact:true}).waitFor();
   assert((await p.getByRole('row').filter({hasText:'Số CCCD'}).innerText()).includes('DEV-SYNTHETIC-ID'),'Citizen ID must remain visible text');
   await p.getByRole('button',{name:'Giấy xác nhận synthetic · Bản nộp 1',exact:true}).click();
-  await p.locator('iframe[title="Nội dung PDF đang xem"]').waitFor({timeout:20000});
+  await p.locator('canvas[data-rendered-file][data-rendered-page]').waitFor({timeout:20000});
   pass('RL-UI-PDF-'+kind);
   for(const name of ['Đã nhận bản cứng','Hình thức và thẩm quyền phù hợp','Hiệu lực giấy phù hợp','Đúng người được chứng minh']){
    const b=p.getByRole('button',{name,exact:true});

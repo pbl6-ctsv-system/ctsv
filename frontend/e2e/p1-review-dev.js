@@ -16,7 +16,7 @@ async(page)=>{
  if(x.reviewPhase==='evaluation'){
   const link=c.getByRole('link',{name:'Tiếp tục đánh giá căn cứ và thời gian hưởng',exact:true});await link.click();await c.getByRole('button',{name:'Chuẩn bị đánh giá',exact:true}).waitFor();assert(c.url().includes('ho-so='+id),'Wrong application context');
   await c.getByRole('button',{name:'Chuẩn bị đánh giá',exact:true}).click();await c.getByRole('region',{name:'PDF và nguồn căn cứ',exact:true}).waitFor();
-  const choices=c.getByRole('region',{name:'PDF và nguồn căn cứ',exact:true}).getByRole('button');assert(await choices.count()===3,'Missing named documents');await choices.first().click();await c.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();
+  const choices=c.getByRole('region',{name:'PDF và nguồn căn cứ',exact:true}).locator('button[aria-pressed]');assert(await choices.count()===3,'Missing named documents');await choices.first().click();await c.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();
   await c.getByRole('button',{name:'Thêm giấy làm căn cứ',exact:true}).click();const papers=c.getByRole('combobox',{name:'Giấy đã nộp',exact:true});const names=await papers.locator('option').allTextContents();assert(names.some(n=>n.includes('Bản nộp 1'))&&!names.some(n=>/^Giấy #/.test(n)),'Raw document IDs remain');
   await c.getByRole('textbox',{name:'Lý do dùng giấy',exact:true}).fill('Căn cứ synthetic P1 đang chờ xác minh; chỉ lưu bản nháp, chưa xác nhận kết quả.');
   await c.getByRole('button',{name:'Lưu bản nháp đánh giá',exact:true}).click();await c.getByRole('status').filter({hasText:'Đã lưu đánh giá và đọc lại dữ liệu mới'}).waitFor();
