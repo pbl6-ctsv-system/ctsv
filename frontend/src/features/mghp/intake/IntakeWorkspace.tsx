@@ -8,7 +8,7 @@ import {StaffSupplement,StudentSupplement} from './SupplementWorkspace';
 import {applicationTitle,displayName,dateTime,claimLabels,submissionWindow,applicationStates,applicationStatusLabel} from '../presentation.mjs';
 import {applicationListUrl,noticeAction} from './dossier-model.mjs';
 import {DeclarationSummary} from './DeclarationSummary';
-import {PdfPreview} from './PdfPreview';
+import {PdfViewer} from '../../../shared/ui/pdf';
 import {StaffDossierReview} from './StaffDossierReview';
 import {SupplementHistory} from './SupplementHistory';
 import type {Dossier,Declaration} from './dossier-types';
@@ -198,7 +198,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
      <DeclarationSummary value={declaration} application={detail} showClaims={student}/>
      {student&&<section className={styles.contentBlock}><h3>Giấy tờ đính kèm</h3><p className={styles.muted}>Minh chứng của bản nộp mới nhất. Các bản trước nằm trong Lịch sử & minh chứng.</p><ul className={styles.list}>
       {detail.submittedVersions[0]?.documents.map((document,index)=><li className={styles.listItem} key={document.id}><div><strong>{detail.documentRequirements?.find(r=>r.id===document.requirementId)?.name||document.documentNumber||'Minh chứng '+(index+1)}</strong>{document.issuer&&<p>Nơi cấp: {document.issuer}</p>}</div><div className={styles.actions}><button type="button" onClick={()=>setPreview(document)}>Xem PDF {index+1}</button><button type="button" disabled={busy} onClick={()=>void run(()=>download(document.fileId))}>Tải PDF {index+1}</button></div></li>)}
-     </ul>{preview&&<PdfPreview client={client} fileId={preview.fileId} title={detail.documentRequirements?.find(r=>r.id===preview.requirementId)?.name||'Minh chứng PDF'} onDownload={()=>void run(()=>download(preview.fileId))}/>}</section>}
+     </ul>{preview&&<PdfViewer client={client} fileId={preview.fileId} title={detail.documentRequirements?.find(r=>r.id===preview.requirementId)?.name||'Minh chứng PDF'}/>}</section>}
      <section className={styles.contentBlock}><h3>Trạng thái và thao tác</h3><p><span className={styles.badge}>{applicationStatusLabel(detail)}</span> · {detail.submittedVersions.length} bản nộp</p>
       {detail.dispositionHistory?.[0]?.reason&&<p>Lý do: {detail.dispositionHistory[0].reason}</p>}
       {detail.status==='supplementing'&&<button type="button" onClick={()=>setTab('supplement')}>{student?'Xem yêu cầu và trả lời bổ sung':'Xem yêu cầu đã gửi'}</button>}
@@ -211,7 +211,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
       </details>}
      </section>
      {!student&&detail.status==='approved'&&<p><a href={'/mghp/danh-gia?ho-so='+detail.id}>Đến bước đối chiếu bản cứng</a></p>}
-     {!student&&<StaffDossierReview declaredNames={declaration?.claimDisplayNames} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} download={download} onSupplement={()=>setTab('supplement')}/>}
+     {!student&&<StaffDossierReview declaredNames={declaration?.claimDisplayNames} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} onSupplement={()=>setTab('supplement')}/>}
     </div>}
     {tab==='supplement'&&!student&&<StaffSupplement key={detail.id} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} download={download} onOverview={()=>setTab('overview')}/>}
     {tab==='history'&&<div className={styles.taskGroup}><h3>Lịch sử bản nộp</h3>

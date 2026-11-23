@@ -15,8 +15,8 @@ async(page)=>{
  await c.goto(origin+'/mghp/danh-gia?ho-so='+x.createdApplication);
  const history=c.getByRole('button',{name:/^Đánh giá \d+ · Bản /});await history.first().waitFor();assert(await history.count()===1,'Saved draft is missing or duplicated');await history.first().click();
  await c.getByRole('textbox',{name:'Căn cứ mốc nộp và khoảng xét',exact:true}).waitFor();assert((await c.getByRole('textbox',{name:'Căn cứ mốc nộp và khoảng xét',exact:true}).inputValue()).includes('P1 UX: cập nhật'),'Draft read-back does not match saved data');
- const panel=c.getByRole('region',{name:'PDF và nguồn căn cứ',exact:true});assert(await panel.getByRole('button').count()===3,'Missing named papers');await panel.getByRole('button').first().click();await c.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();
- assert(!(await panel.getByRole('button').allTextContents()).some(n=>/^Giấy #/.test(n)),'Raw document ID in choices');pass('P1-05-FINAL_REFRESH_HISTORY_NAMED_PDF');
+ const panel=c.getByRole('region',{name:'PDF và nguồn căn cứ',exact:true});assert(await panel.locator('button[aria-pressed]').count()===3,'Missing named papers');await panel.locator('button[aria-pressed]').first().click();await c.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();
+ assert(!(await panel.locator('button[aria-pressed]').allTextContents()).some(n=>/^Giấy #/.test(n)),'Raw document ID in choices');pass('P1-05-FINAL_REFRESH_HISTORY_NAMED_PDF');
  await s.goto(origin+'/mghp/quyen-huong');await s.getByText('Chưa có quyền hưởng được ghi nhận.',{exact:false}).waitFor();assert(await s.getByRole('textbox',{name:'Mã quyền hưởng cần xem',exact:true}).count()===0,'Own list still requires ID');
  await s.goto(origin+'/thong-bao');const notice=s.getByRole('link',{name:'Xem hồ sơ liên quan',exact:true}).first();await notice.waitFor();assert(/^\/mghp\/ho-so\?ho-so=[1-9]\d*$/.test(await notice.getAttribute('href')),'Notice lost its application context');await notice.click();await s.getByRole('heading',{name:'Thông tin đã kê khai',exact:true}).waitFor();pass('P1-06-FINAL_NOTICE_CONTEXT_EMPTY_BENEFITS');
  // A controlled transient storage fault tests the retry UI. Successful recovery is REAL.
@@ -26,7 +26,7 @@ async(page)=>{
   const fileButton=s.getByRole('button',{name:/^Xem PDF/}).first();await fileButton.click();
   await s.getByRole('button',{name:'Thử mở lại PDF',exact:true}).waitFor();fault=false;
   const pending=s.waitForResponse(r=>r.url().includes('/api/ctsv/tep/')&&r.url().endsWith('/noi-dung')&&r.status()===200);
-  await s.getByRole('button',{name:'Thử mở lại PDF',exact:true}).click();await pending;await s.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();pass('P1-PDF-FINAL_RETRY',{stubReads,recovery:'Backend SQL Cloudinary REAL200'});
+  await s.getByRole('button',{name:'Thử mở lại PDF',exact:true}).click();await pending;await s.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();pass('P1-PDF-FINAL_RETRY',{stubReads,recovery:'Backend SQL Cloudinary REAL200'});
  }finally{await s.unroute(pattern);}
  for(const [role,p] of Object.entries(x.accounts)){
   await p.setViewportSize({width:360,height:800});await p.getByRole('heading').first().waitFor();

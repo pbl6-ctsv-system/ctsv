@@ -259,10 +259,19 @@ Tiếp thu có chọn lọc từ tài liệu tham khảo `frontend-design` do ow
 
 - Một mục Tài liệu ký số MGHP trong navigation/AppShell hiện có. CV điều phối/BB bước1, PP QĐ bước1, PHT bước2; đúng actor tự bấm, hiển thị chờ ai và tiến độ sau ký. Giữ kho đã xử lý/lịch sử, không làm file biến mất sau thao tác.
 - CV không có Từ chối ký. P11 không có Từ chối ký ở mọi role theo quyết định cuối23/11. PP xác nhận xem đúng PDF trong dialog Ký số, không nút Đã xem riêng. PP được xem/tải BB đã ký xong của đúng bộ QĐ được giao; quyền do backend cấp, không mọi BB.
-- Màn hình ký dùng PDF.js/canvas + overlay chọn trang/kéo/di chuyển/resize; không nhập point/ID/hash/cert/token. Đúng page/zoom/rotation/crop và đúng input PDF; thay file bỏ vùng cũ. Sau thành công mở đúng trang của file CTSV mới lưu. Iframe chỉ đọc ở màn hình khác giữ nguyên, chưa thêm PDF.js package/version ở task tài liệu.
+- Màn hình ký dùng PDF.js/canvas + overlay chọn trang/kéo/di chuyển/resize; không nhập point/ID/hash/cert/token. Đúng page/zoom/rotation/crop và đúng input PDF; thay file bỏ vùng cũ. Sau thành công mở đúng trang của file CTSV mới lưu. **Cập nhật owner23/11:** cả màn hình xem và ký dùng viewer chung tại `shared/ui/pdf`, thay iframe ở các màn hình trước; giữ PDF.js 6.5.438 hiện có. Quy tắc triển khai tại §15.
 - Sau mỗi bước phải lưu PDF riêng authenticated ở Cloudinary CTSV và liên kết SQL commit mới báo hoàn tất/chuyển bước. Viewer/download lấy qua backend file CTSV, không CA URL. UI có trạng thái Đang nhận PDF/Đang lưu kết quả/lỗi/unknown; lỗi nhìn thấy sau cuộn và có đường phục hồi đúng bước.
 - Không thêm user_signature_id/chọn mẫu, không tái đưa external pin/trust vào gate. CV thu hồi tài liệu đang chờ ký là DEFERRED, không dựng chức năng hoặc test nhánh đó trước khi owner giao; vẫn giữ bất biến signed/unknown/history.
 
 ### Quyết định P11 cuối23/11 — không Từ chối ký
 
 Owner đã bỏ **toàn bộ Từ chối ký của PP/PHT trong P11**, CV cũng không có. Không tái dựng nút/API/reason từ chối hoặc case sửa dữ liệu đã chốt. Phần memory cũ về PP/PHT refusal đã superseded. Giữ ký chủ động đúng bước, PP ACK, PDF.js, output từng bước CTSV, lịch sử và phục hồi lỗi; không auto retry unknown. Thu hồi tài liệu chờ ký vẫn DEFERRED. Nguồn: [Owner Decisions](../../nghiepvu/06-bao-cao/phan-loai-readiness-api-ctsv-2026-11-05.md#p11-no-refusal-20261123).
+
+## 15. PDF.js dùng chung — owner23/11/2026
+
+- Entry công khai `shared/ui/pdf` xuất `PdfViewer`, `PdfViewerProps`, `PdfGeometry`; đọc [hướng dẫn tích hợp](../docs/shared-pdf-preview-guide.md). Mọi feature import entry này, không copy viewer/worker/geometry hoặc import viewer từ feature khác. Shared không import app/features hay chứa điều kiện tên module/role.
+- Read-only là mặc định; các tính năng chung gồm chuyển trang, zoom, xoay và tải bytes đã load. Owner xác nhận không cần tìm chữ/bôi đen/sao chép ở lần chuyển đổi này. Công cụ kéo/di chuyển/resize vùng chỉ hiện khi consumer có quyền và cấp callback; component không thực hiện lệnh ký.
+- Dùng AuthClient ổn định và fileId từ backend. Backend tiếp tục kiểm quyền trên file; module mới không tự được đọc file chỉ nhờ dùng viewer chung. Giữ API/CORS/CSRF/JWT, không tải CA/storage URL trực tiếp hoặc đưa token vào query.
+- Fetch phụ thuộc client/fileId/retry; giữ PDF khi metadata/ETag đổi, không thêm key gây remount. Hủy request/render cũ, chờ canvas cancellation và destroy loading task khi cleanup; không hiện file cũ dưới tên mới. Không cache PDF/token vào storage. Download dùng bytes đang xem và thu hồi Blob URL tạm.
+- Geometry dùng PDF points qua viewport, giữ đúng page/zoom/rotation/crop; đổi trang/file hoặc version/bước/ETag nghiệp vụ làm mất xác nhận cũ phù hợp. Viewer không thay quyền, ETag, hash check hoặc workflow riêng của module.
+- Kiểm canvas có nội dung, đúng file/hash tải xuống, n tài liệu và đổi nhanh, retry, metadata không GET thừa, desktop/mobile và quyền. Test harness chọn vùng không chứng minh quyền ký hoặc CA integration REAL; không gửi ký thật chỉ để kiểm viewer.

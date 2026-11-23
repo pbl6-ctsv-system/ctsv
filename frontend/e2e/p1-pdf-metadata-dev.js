@@ -3,7 +3,7 @@ async(page)=>{
  const x=page.__p1,c=x?.accounts?.staff;
  if(x?.createdApplication!=='10028')throw Error('The owned P1 synthetic root is required');
  await c.goto('https://127.0.0.1:5173/mghp/tiep-nhan-ho-so');await c.locator('[data-application-id="10028"]').click();
- await c.locator('iframe[title="Nội dung PDF đang xem"]').waitFor();
+ await c.locator('canvas[data-rendered-file][data-rendered-page]').waitFor();
  const details=c.locator('details').filter({has:c.locator('summary').filter({hasText:'Kiểm tra điều kiện giấy tờ khác'})});await details.locator('summary').click();
  const item=details.locator('div').filter({has:c.locator('span').filter({hasText:/^Đúng chủ thể$/})}).last();
  const button=item.getByRole('button',{name:'Xác nhận',exact:true});

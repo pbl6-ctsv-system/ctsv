@@ -6,7 +6,7 @@ import {createSigningApi} from './api.mjs';
 import {canSign,roleName,selectionKey,signContent,signingError,signingLabel,signingPhase} from './model.mjs';
 import {SigningBundle} from './SigningBundle';
 import {SigningDialog} from './SigningDialog';
-import {SigningPdf} from './SigningPdf';
+import {PdfViewer} from '../../../shared/ui/pdf';
 import type {DocumentView,FileView,Geometry,Page,SigningRequest,SigningRow} from './types';
 import styles from './SigningWorkspace.module.css';
 
@@ -76,7 +76,7 @@ export function SigningWorkspace({client}:{client:AuthClient}){
     {q?.mode==='TEST'&&<p className={styles.warning}>Ký thử nghiệm: danh tính chứng thư CA được cấu hình để kiểm thử quy trình; không chứng minh chức danh hoặc phân quyền ký thực tế.</p>}
     <div className={styles.tabs} role="tablist" aria-label="Chi tiết tài liệu">{[['pdf','Tài liệu & ký số'],['history','Lịch sử & phiên bản']].map(([v,label])=><button key={v} role="tab" aria-selected={tab===v} onClick={()=>setTab(v)}>{label}</button>)}</div>
     {tab==='pdf'&&file&&<div className={styles.documentGrid}>
-     <div>{historical&&<div className={styles.warning}><p>Đang xem bản lịch sử, chỉ đọc.</p><button onClick={()=>setPreview(null)}>Về PDF hiện hành</button></div>}<SigningPdf client={client} file={file} selectable={signable&&!busy&&!historical} selection={selection} onSelection={clearSelection}/></div>
+     <div>{historical&&<div className={styles.warning}><p>Đang xem bản lịch sử, chỉ đọc.</p><button onClick={()=>setPreview(null)}>Về PDF hiện hành</button></div>}<PdfViewer client={client} fileId={file.id} title={file.fileName} fileName={file.fileName} selectable={signable&&!busy&&!historical} selection={selection} onSelectionChange={clearSelection}/></div>
      <aside className={styles.side}>
       <section className={styles.card}><h2>Tiến trình ký</h2>{q?<><ol className={styles.signSteps}>{q.steps.map(s=><li key={s.id} className={s.status==='completed'?styles.stepDone:s.order===q.currentStep?styles.stepCurrent:''}><b>{s.order}</b><div><strong>{roleName(s.role)}</strong><span>{s.signerName??s.signerEmail}</span><small>{s.status==='completed'?'Đã ký · '+dateTime(s.signedAt):s.order===q.currentStep?isWorking(q)?signingPhase(q):'Chưa ký':'Chưa đến lượt'}</small></div></li>)}</ol><p className={styles.notice}>{signingPhase(q)}</p>
        {signable&&!historical&&<><p>{selection?'Đã chọn trang '+selection.page+'. Xem lại khung trước khi ký.':'Chọn trang và kéo vùng chữ ký trên PDF.'}</p><button className={styles.primary} disabled={busy||!selection} onClick={()=>{setAck(false);setConfirm(true);setError('');}}>Ký số</button></>}
