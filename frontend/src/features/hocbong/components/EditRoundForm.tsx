@@ -4,108 +4,69 @@ import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {errorMessage} from '../../../shared/api/error-message';
 import {Alert} from '../../../shared/ui/Alert';
 import {Button} from '../../../shared/ui/Button';
-import {isRoundEtag,readRound,updateRound} from '../api/rounds';
-import type {RoundView} from '../types/round';
+import {readRoundContext,updateRound} from '../api/rounds';
+import type {RoundView,RoundContext,ScopeSelection,ScopeCatalogSnapshot} from '../types/round';
+import {ScopePicker,ScopeSummary,scopeReady} from './ScopePicker';
 import styles from './CreateRoundForm.module.css';
-
-type Props={client:AuthClient;initial:RoundView;onCancel:()=>void;onSaved:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
-type Phase='editing'|'conflict'|'unknown'|'saved';
-const savedError='Thay đổi đã được lưu nhưng chưa tải lại đầy đủ. Hãy đọc lại kết quả; hệ thống không gửi lại lệnh lưu.';
-const unknownError='Chưa xác nhận được kết quả sửa đợt. Hãy kiểm tra bản đang lưu trước khi gửi lại; hệ thống không tự lưu lại.';
-
+type Props={client:AuthClient;initial:RoundContext;onCancel:()=>void;onSaved:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
 export function EditRoundForm({client,initial,onCancel,onSaved,onForbidden}:Props){
- const [base,setBase]=useState(initial),[number,setNumber]=useState(String(initial.round.number)),[name,setName]=useState(initial.round.name);
- const [phase,setPhase]=useState<Phase>(isRoundEtag(initial.etag)?'editing':'conflict');
- const [error,setError]=useState(isRoundEtag(initial.etag)?'':'Chưa có phiên dữ liệu hợp lệ. Hãy đọc bản mới trước khi lưu.');
- const [fields,setFields]=useState<Partial<Record<'number'|'name',string>>>({});
- const [info,setInfo]=useState(''),[busy,setBusy]=useState(false),[locked,setLocked]=useState(initial.round.status!=='draft');
- const [latest,setLatest]=useState<RoundView|null>(null),[saved,setSaved]=useState<RoundView|null>(null);
- const pending=useRef(false),alive=useRef(true),heading=useRef<HTMLHeadingElement>(null),readAbort=useRef<AbortController|null>(null);
- useEffect(()=>{alive.current=true;heading.current?.focus();return()=>{alive.current=false;readAbort.current?.abort();};},[]);
- function begin(){if(pending.current)return false;pending.current=true;setBusy(true);setError('');setInfo('');return true;}
+ const [base,setBase]=useState(initial),[selection,setSelection]=useState<ScopeSelection|null>(initial.scope?initial.scope.mode==='all'?{mode:'all'}:{mode:'groups',groups:initial.scope.groups.map(g=>({cohortId:g.cohortId,majorId:g.majorId}))}:null);
+ const [catalog,setCatalog]=useState<ScopeCatalogSnapshot|null>(null),[refresh,setRefresh]=useState(0);
+ const [phase,setPhase]=useState<'editing'|'conflict'|'unknown'|'saved'>('editing'),[locked,setLocked]=useState(!initial.scope||initial.round.status!=='draft');
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false),[stale,setStale]=useState(false),[latest,setLatest]=useState<RoundContext|null>(null),[saved,setSaved]=useState<RoundView|null>(null);
+ const pending=useRef(false),alive=useRef(true),abort=useRef<AbortController|null>(null),heading=useRef<HTMLHeadingElement>(null);
+ useEffect(()=>{alive.current=true;heading.current?.focus();return()=>{alive.current=false;abort.current?.abort();};},[]);
+ function begin(){if(pending.current)return false;pending.current=true;setBusy(true);setError('');return true;}
  function end(){pending.current=false;if(alive.current)setBusy(false);}
- function forbidden(error:unknown){if(error instanceof ApiError&&error.status===403){onForbidden();return true;}return false;}
- async function submit(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();
-  if(pending.current||phase!=='editing'||locked)return;
-  const invalid:typeof fields={};
-  if(!Number.isInteger(Number(number))||Number(number)<1||Number(number)>2147483647)invalid.number='Số đợt phải là số nguyên từ 1 đến 2147483647.';
-  if(!name.trim()||name.trim().length>512)invalid.name='Tên đợt cần từ 1 đến 512 ký tự.';
-  setFields(invalid);if(Object.keys(invalid).length||!begin())return;
-  let updated:RoundView|null=null;
+ function denied(e:unknown){if(e instanceof ApiError&&e.status===403){onForbidden();return true;}return false;}
+ async function submit(e:FormEvent){
+  e.preventDefault();if(phase!=='editing'||locked||stale||!catalog||!selection||!scopeReady(catalog,selection)||!begin())return;
+  let written:RoundView|null=null;
   try{
-   updated=await updateRound(client,base.round.id,{number:Number(number),name},base.etag);
-   if(!alive.current)return;
-   setSaved(updated);setPhase('saved');
-   await onSaved(updated,false);
-  }catch(error){
-   if(!alive.current||forbidden(error))return;
-   if(updated){setError(savedError);return;}
-   if(error instanceof ApiError&&error.status<500){
-    if(error.code==='VERSION_CONFLICT'||error.code==='PRECONDITION_REQUIRED'){
-     setPhase('conflict');setLatest(null);
-     setError(error.code==='VERSION_CONFLICT'?'Dữ liệu đã được người khác thay đổi. Đọc bản mới để đối chiếu trước khi lưu.':'Chưa xác định được phiên dữ liệu. Hãy đọc bản mới trước khi lưu.');
-    }else if(error.code==='ROUND_NOT_EDITABLE'){
-     setLocked(true);setPhase('conflict');setLatest(null);setError('Đợt không còn ở trạng thái Nháp. Hãy đọc bản mới để kiểm tra.');
-    }else if(error.code==='ROUND_EXISTS'){
-     setError('Số đợt đã tồn tại trong học kỳ. Hãy chọn số đợt khác.');setFields({number:'Số đợt đã tồn tại trong học kỳ.'});
-    }else if(error.code==='VALIDATION_ERROR'){
-     setError('Thông tin chưa hợp lệ. Hãy kiểm tra các trường được đánh dấu.');
-     const next:typeof fields={};
-     for(const field of error.fields??[]){if(field==='name')next.name='Tên đợt chưa hợp lệ.';if(field==='number')next.number='Số đợt chưa hợp lệ.';}
-     setFields(next);
-    }else setError(errorMessage(error));
-   }else{setPhase('unknown');setLatest(null);setError(unknownError);}
+   written=await updateRound(client,base.round.id,{catalogRevision:catalog.catalogRevision,scope:selection},base.etag);
+   if(!alive.current)return;setSaved(written);setPhase('saved');await onSaved(written,false);
+  }catch(e){
+   if(!alive.current||denied(e))return;
+   if(written){setError('Phạm vi đã lưu. Hãy đọc lại kết quả để tải đầy đủ dữ liệu; không cần gửi lại lệnh lưu.');return;}
+   if(e instanceof ApiError&&e.status<500){
+    if(['VERSION_CONFLICT','PRECONDITION_REQUIRED'].includes(e.code)){setPhase('conflict');setLatest(null);setError('Đợt đã thay đổi. Lựa chọn của bạn được giữ; hãy đọc bản mới để đối chiếu trước khi lưu.');}
+    else if(['SCOPE_LOCKED','ROUND_NOT_EDITABLE','LEGACY_ROUND_RECONCILIATION_REQUIRED'].includes(e.code)){setLocked(true);setPhase('conflict');setError('Phạm vi không thể sửa vì đợt đã dùng hoặc cần đối chiếu dữ liệu cũ. Hãy đọc bản mới để kiểm tra.');}
+    else if(['SCOPE_SOURCE_CHANGED','SCOPE_GROUP_UNAVAILABLE','SCOPE_EMPTY'].includes(e.code)){setStale(true);setError('Danh mục nhóm đã thay đổi. Lựa chọn vẫn được giữ; hãy đọc lại danh mục và đối chiếu trước khi lưu.');}
+    else setError(errorMessage(e));
+   }else{setPhase('unknown');setLatest(null);setError('Chưa xác nhận được kết quả lưu. Đọc bản mới để đối chiếu; hệ thống không tự gửi lại lệnh lưu.');}
   }finally{end();}
  }
  async function readLatest(){
-  if(!begin())return;
-  const abort=new AbortController();readAbort.current=abort;
-  try{
-   const view=await readRound(client,base.round.id,abort.signal);
-   if(!alive.current||abort.signal.aborted)return;
-   setLatest(view);setLocked(view.round.status!=='draft');
-  }catch(error){if(alive.current&&!abort.signal.aborted&&!forbidden(error))setError(errorMessage(error));}finally{end();}
+  if(!begin())return;const controller=new AbortController();abort.current=controller;
+  try{const value=await readRoundContext(client,base.round.id,controller.signal);if(alive.current&&!controller.signal.aborted)setLatest(value);}
+  catch(e){if(alive.current&&!controller.signal.aborted&&!denied(e))setError(errorMessage(e));}finally{end();}
  }
- function adoptLatest(replace:boolean){
-  if(!latest||latest.round.status!=='draft'||!isRoundEtag(latest.etag))return;
-  setBase(latest);setPhase('editing');setLocked(false);setSaved(null);setError('');setFields({});
-  if(replace){setNumber(String(latest.round.number));setName(latest.round.name);}
-  setLatest(null);setInfo('Đã dùng bản mới. Kiểm tra nội dung rồi bấm Lưu thay đổi.');
+ function adopt(replace:boolean){
+  if(!latest||!latest.scope||locked||latest.round.status!=='draft')return;
+  setBase(latest);if(replace)setSelection(latest.scope.mode==='all'?{mode:'all'}:{mode:'groups',groups:latest.scope.groups.map(g=>({cohortId:g.cohortId,majorId:g.majorId}))});
+  setLatest(null);setPhase('editing');setCatalog(null);setRefresh(v=>v+1);setError('');setStale(false);
  }
- async function confirm(view:RoundView,recovered:boolean){
-  if(!begin())return;
-  try{await onSaved(view,recovered);}catch(error){if(alive.current&&!forbidden(error))setError(recovered?'Chưa tải lại đầy đủ bản hiện tại. Hãy kiểm tra lại.':savedError);}finally{end();}
- }
+ async function confirm(view:RoundView){if(!begin())return;try{await onSaved(view,true);}catch(e){if(alive.current&&!denied(e))setError(errorMessage(e));}finally{end();}}
  return <section className={styles.formArea} aria-labelledby="edit-round-title">
-  <h2 id="edit-round-title" ref={heading} tabIndex={-1}>Sửa đợt xét</h2>
-  <p>Học kỳ {base.round.semester.semesterOrder} · {base.round.semester.academicYear}. Chỉ sửa số và tên đợt; học kỳ giữ nguyên.</p>
-  <form aria-label="Sửa đợt xét KKHT" onSubmit={submit} className={styles.form}>
-   <fieldset className={styles.information} disabled={busy||locked||phase==='unknown'||phase==='saved'}>
-    <legend>Thông tin đợt</legend>
-    <label htmlFor="edit-round-number">Số đợt<input id="edit-round-number" type="number" min="1" max="2147483647" step="1" required value={number} onChange={event=>{setNumber(event.target.value);setFields(current=>({...current,number:undefined}));}} aria-invalid={!!fields.number} aria-describedby={fields.number?'edit-number-error':undefined}/></label>
-    {fields.number&&<p id="edit-number-error" className={styles.fieldError}>{fields.number}</p>}
-    <label htmlFor="edit-round-name">Tên đợt<input id="edit-round-name" required value={name} onChange={event=>{setName(event.target.value);setFields(current=>({...current,name:undefined}));}} aria-invalid={!!fields.name} aria-describedby={fields.name?'edit-name-error':'edit-name-hint'}/></label>
-    <p id="edit-name-hint" className={styles.hint}>Tối đa 512 ký tự sau khi bỏ khoảng trắng đầu và cuối.</p>
-    {fields.name&&<p id="edit-name-error" className={styles.fieldError}>{fields.name}</p>}
-   </fieldset>
-   {busy&&<p role="status">{phase==='editing'?'Đang lưu thay đổi…':'Đang đọc kết quả hiện tại…'}</p>}
-   {error&&<Alert>{error}</Alert>}{info&&<p role="status">{info}</p>}
-   {(phase==='conflict'||phase==='unknown')&&<section className={styles.recovery} aria-label="Đối chiếu bản hiện tại">
-    <Button variant="secondary" disabled={busy} onClick={()=>void readLatest()}>{phase==='unknown'?'Kiểm tra kết quả đã lưu':'Đọc bản mới'}</Button>
-    {latest&&<>
-     <dl className={styles.readOnly}><div><dt>Số đợt đang lưu</dt><dd>{latest.round.number}</dd></div><div><dt>Tên đợt đang lưu</dt><dd>{latest.round.name}</dd></div><div><dt>Trạng thái hiện tại</dt><dd>{latest.round.status==='draft'?'Nháp':'Không còn ở trạng thái Nháp'}</dd></div></dl>
-     {latest.round.status==='draft'&&isRoundEtag(latest.etag)&&<>
-      <p>Lưu nội dung đang nhập sẽ thay thế số và tên đang lưu. Hãy đối chiếu trước khi tiếp tục.</p>
-      <Button disabled={busy} onClick={()=>adoptLatest(false)}>Giữ nội dung nhập và dùng bản mới</Button>
-      <Button variant="secondary" disabled={busy} onClick={()=>adoptLatest(true)}>Thay nội dung nhập bằng bản mới</Button>
+  <h2 id="edit-round-title" ref={heading} tabIndex={-1}>Sửa phạm vi đợt xét</h2>
+  <dl className={styles.readOnly}><div><dt>Đợt xét</dt><dd>{base.round.name}</dd></div></dl>
+  <p>Số, tên và học kỳ do hệ thống quản lý. Chỉ thay đổi phạm vi trước khi đợt được sử dụng.</p>
+  <form aria-label="Sửa phạm vi đợt xét KKHT" onSubmit={submit} className={styles.form}>
+   <ScopePicker client={client} sourceId={base.round.sourceSemesterId} value={selection} onChange={setSelection} onCatalog={data=>{setCatalog(data);if(data)setStale(false);}} onForbidden={onForbidden} refresh={refresh} initialGroups={base.scope?.groups} disabled={busy||locked||phase!=='editing'}/>
+   {error&&<Alert>{error}</Alert>}
+   {(phase==='conflict'||phase==='unknown')&&<div className={styles.recovery}>
+    <Button disabled={busy} onClick={()=>void readLatest()}>Đọc bản mới để đối chiếu</Button>
+    {latest&&<><ScopeSummary scope={latest.scope}/><p>Lựa chọn của bạn: {selection?.mode==='all'?'Toàn bộ nhóm':`${selection?.groups.length??0} nhóm`}</p>
+     <Button variant="secondary" disabled={busy} onClick={()=>void confirm(latest)}>Mở bản đang lưu</Button>
+     {latest.scope&&latest.round.status==='draft'&&!locked&&<>
+      <Button disabled={busy} onClick={()=>adopt(false)}>Giữ lựa chọn và dùng bản mới</Button>
+      <Button variant="secondary" disabled={busy} onClick={()=>adopt(true)}>Dùng phạm vi đang lưu</Button>
      </>}
-     <Button variant="secondary" disabled={busy} onClick={()=>void confirm(latest,true)}>Xem đợt hiện tại</Button>
     </>}
-   </section>}
+   </div>}
    <div className={styles.actions}>
-    {phase!=='saved'&&phase!=='unknown'&&<Button type="submit" disabled={busy||locked||phase!=='editing'||!isRoundEtag(base.etag)}>{busy?'Đang lưu…':'Lưu thay đổi'}</Button>}
-    {saved&&<Button disabled={busy} onClick={()=>void confirm(saved,false)}>Đọc lại kết quả</Button>}
+    {phase==='editing'&&<Button type="submit" disabled={busy||locked||stale||!scopeReady(catalog,selection)}>Lưu phạm vi</Button>}
+    {phase==='saved'&&saved&&<Button disabled={busy} onClick={()=>void confirm(saved)}>Đọc lại kết quả</Button>}
     <Button variant="secondary" disabled={busy} onClick={onCancel}>Quay lại chi tiết</Button>
    </div>
   </form>

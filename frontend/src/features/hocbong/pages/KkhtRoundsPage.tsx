@@ -4,17 +4,18 @@ import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {errorMessage} from '../../../shared/api/error-message';
 import {Button} from '../../../shared/ui/Button';
 import {Alert} from '../../../shared/ui/Alert';
-import {listRounds,readRound,readDefaultSemester,readSourceSemester} from '../api/rounds';
-import type {RoundFilters,RoundPage,RoundView,SourceSemester} from '../types/round';
+import {listRounds,readRoundContext,readDefaultSemester,readSourceSemester} from '../api/rounds';
+import type {RoundFilters,RoundPage,RoundView,RoundContext,SourceSemester} from '../types/round';
 import {RoundDetails,roundStatus} from '../components/RoundDetails';
 import {SourceSemesterPicker,sourceReason} from '../components/SourceSemesterPicker';
-import {CreateRoundForm} from '../components/CreateRoundForm';
+import {CreateRoundForm,type CreateRoundMemory} from '../components/CreateRoundForm';
 import {EditRoundForm} from '../components/EditRoundForm';
+import {ScopeSummary} from '../components/ScopePicker';
 import styles from './KkhtRoundsPage.module.css';
 
 type Location={sourceId:string|null;roundId:string|null;error:string};
 type ListState={key:string;data:RoundPage|null;error:string;loading:boolean};
-type DetailState={id:string;data:RoundView|null;error:string;loading:boolean};
+type DetailState={id:string;data:RoundContext|null;error:string;loading:boolean};
 type SemesterState={key:string;data:SourceSemester|null;error:string;loading:boolean;empty:boolean};
 const validId=(id:string)=>/^[1-9][0-9]{0,18}$/.test(id)&&BigInt(id)<=9223372036854775807n;
 function readLocation():Location{
@@ -39,7 +40,7 @@ const requestError=(error:unknown)=>error instanceof DOMException&&error.name===
 export function KkhtRoundsPage({client}:FeaturePageProps){
  const [location,setLocation]=useState(readLocation),selectedId=location.roundId;
  const [creating,setCreating]=useState(false),[notice,setNotice]=useState('');
- const [editing,setEditing]=useState<RoundView|null>(null);
+ const [editing,setEditing]=useState<RoundContext|null>(null);
  const [page,setPage]=useState(0),[number,setNumber]=useState('');
  const [filters,setFilters]=useState<RoundFilters>({});
  const [revision,setRevision]=useState(0),[sourceRevision,setSourceRevision]=useState(0);
@@ -48,6 +49,8 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
  const detailHeading=useRef<HTMLHeadingElement>(null),listHeading=useRef<HTMLHeadingElement>(null);
  const hydratedDetail=useRef<string|null>(null),hydratedSource=useRef<SourceSemester|null>(null);
  const readbackAbort=useRef<AbortController|null>(null);
+ // Per-account page lifetime only: retain uncertain commands across back/form changes, never storage.
+ const creationMemories=useRef(new Map<string,CreateRoundMemory>());
  const onForbidden=useCallback(()=>setForbidden(true),[]);
  const currentDetail=detail?.id===selectedId?detail:null;
  const fallbackRoundId=location.sourceId===null?selectedId:null;
@@ -55,6 +58,7 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
  const sourceKey=JSON.stringify([requestedSource,sourceRevision]);
  const currentSemester=semester?.key===sourceKey?semester:null;
  const source=location.error?null:currentSemester?.data??null;
+ if(source&&!creationMemories.current.has(source.sourceSemesterId))creationMemories.current.set(source.sourceSemesterId,{selection:null,intent:null,phase:'editing',saved:null});
  const listFilters={...filters,sourceSemesterId:source?.sourceSemesterId,page,size:20};
  const listKey=JSON.stringify({...listFilters,revision});
  const currentList=list?.key===listKey?list:null;
@@ -110,7 +114,7 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
   if(selectedId===null||forbidden||creating||editing||location.error)return;
   if(hydratedDetail.current===selectedId){hydratedDetail.current=null;return;}
   const abort=new AbortController();setDetail({id:selectedId,data:null,error:'',loading:true});
-  void readRound(client,selectedId,abort.signal).then(data=>{
+  void readRoundContext(client,selectedId,abort.signal).then(data=>{
    if(!abort.signal.aborted)setDetail({id:selectedId,data,error:'',loading:false});
   }).catch(error=>{
    if(abort.signal.aborted)return;
@@ -138,11 +142,12 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
  }
  async function confirmRound(view:RoundView,message:string){
   readbackAbort.current?.abort();const abort=new AbortController();readbackAbort.current=abort;
-  const confirmed=await readRound(client,view.round.id,abort.signal);if(abort.signal.aborted)return;
+  const confirmed=await readRoundContext(client,view.round.id,abort.signal);if(abort.signal.aborted)return;
   const nextFilters={number:confirmed.round.number};
   const nextPage={...nextFilters,sourceSemesterId:confirmed.round.sourceSemesterId,page:0,size:20};
   const updated=await listRounds(client,nextPage,abort.signal);if(abort.signal.aborted)return;
   if(!updated.items.some(row=>row.id===confirmed.round.id&&row.name===confirmed.round.name&&row.number===confirmed.round.number&&row.status===confirmed.round.status))throw new Error('Dữ liệu vừa thay đổi hoặc chưa xuất hiện trong danh sách. Hãy đọc lại kết quả.');
+  creationMemories.current.delete(confirmed.round.sourceSemesterId);
   setFilters(nextFilters);setNumber(String(confirmed.round.number));setPage(0);
   setList({key:JSON.stringify({...nextPage,revision}),data:updated,error:'',loading:false});
   hydratedDetail.current=confirmed.round.id;setDetail({id:confirmed.round.id,data:confirmed,error:'',loading:false});
@@ -173,18 +178,19 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
     <div><Button variant="secondary" disabled={sourceLoading||requestedSource===undefined||!!location.error} onClick={()=>{hydratedSource.current=null;setSourceRevision(rev=>rev+1);}}>Đọc lại kỳ đã chọn</Button></div>
    </section>}
    {editing?<EditRoundForm key={editing.round.id} client={client} initial={editing} onCancel={()=>setEditing(null)} onSaved={(view,recovered)=>confirmRound(view,recovered?'Đã đối chiếu kết quả sửa đợt.':'Đã lưu thay đổi đợt xét.')} onForbidden={onForbidden}/>:creating&&source?
-    <CreateRoundForm client={client} initialSource={source} onCancel={()=>{setCreating(false);hydratedSource.current=null;setSourceRevision(value=>value+1);requestAnimationFrame(()=>listHeading.current?.focus());}} onCreated={(view,recovered)=>confirmRound(view,recovered?'Đã đối chiếu đợt xét hiện có.':'Đã tạo đợt xét ở trạng thái Nháp.')} onForbidden={onForbidden}/>:selectedId!==null&&!location.error?
+    <CreateRoundForm client={client} initialSource={source} memory={creationMemories.current.get(source.sourceSemesterId)!} onCancel={()=>{setCreating(false);hydratedSource.current=null;setSourceRevision(value=>value+1);requestAnimationFrame(()=>listHeading.current?.focus());}} onCreated={(view,recovered)=>confirmRound(view,recovered?'Đã đối chiếu đợt xét hiện có.':'Đã tạo đợt xét ở trạng thái Nháp.')} onForbidden={onForbidden}/>:selectedId!==null&&!location.error?
     <section className={styles.content} aria-label="Chi tiết đợt xét">
      <div className={styles.toolbar}>
       <Button variant="secondary" onClick={()=>select(null)}>Quay lại danh sách</Button>
       <Button variant="secondary" disabled={currentDetail?.loading} onClick={()=>setRevision(value=>value+1)}>Đọc lại chi tiết</Button>
-      {round?.status==='draft'&&currentDetail?.data&&source&&!mismatch&&!sourceError&&<Button onClick={()=>{setNotice('');setEditing(currentDetail.data);}}>Sửa đợt xét</Button>}
+      {round?.status==='draft'&&currentDetail?.data?.scope&&source&&!mismatch&&!sourceError&&<Button onClick={()=>{setNotice('');setEditing(currentDetail.data);}}>Sửa phạm vi</Button>}
      </div>
      {(!currentDetail||currentDetail.loading)&&<p role="status">Đang tải chi tiết đợt xét…</p>}
      {currentDetail?.error&&<Alert>{currentDetail.error}</Alert>}
      {mismatch?<Alert>Đợt xét không thuộc học kỳ đã chọn. Hãy quay lại danh sách hoặc chọn đúng học kỳ.</Alert>:round&&<>
       <h2 ref={detailHeading} tabIndex={-1} className={styles.detailTitle}>{round.name}</h2>
       <RoundDetails round={round} onSemester={()=>chooseSourceId(round.sourceSemesterId)}/>
+      <ScopeSummary scope={currentDetail?.data?.scope??null}/>
      </>}
     </section>:
     <section className={styles.content} aria-labelledby="round-list-title">
@@ -200,7 +206,7 @@ export function KkhtRoundsPage({client}:FeaturePageProps){
      {data&&<>
       <p className={styles.resultCount} role="status">{data.totalElements} đợt xét</p>
       {data.items.length===0?<p>Không có đợt xét phù hợp trong học kỳ đã chọn.</p>:<div className={styles.tableScroll} role="region" aria-label="Danh sách đợt xét KKHT" tabIndex={0}>
-       <table className={styles.table}><thead><tr><th scope="col">Năm học</th><th scope="col">Học kỳ</th><th scope="col">Số đợt</th><th scope="col">Tên đợt xét</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead>
+       <table className={styles.table}><thead><tr><th scope="col">Năm học</th><th scope="col">Học kỳ</th><th scope="col">Đợt</th><th scope="col">Tên đợt xét</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead>
         <tbody>{data.items.map(row=><tr key={row.id}>
          <td>{row.academicYear}</td><td><button className={styles.semesterLink} type="button" aria-label={`Lọc học kỳ ${row.semesterOrder} năm học ${row.academicYear}`} onClick={()=>chooseSourceId(row.sourceSemesterId)}>Học kỳ {row.semesterOrder}</button></td>
          <td>{row.number}</td><td className={styles.roundName}>{row.name}</td><td><span className={styles.badge}>{roundStatus(row.status)}</span></td>
