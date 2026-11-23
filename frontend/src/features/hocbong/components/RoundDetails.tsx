@@ -17,7 +17,7 @@ export function RoundDetails({round,onSemester}:{round:RoundDetail;onSemester:()
    <h3 id="round-information">Thông tin đợt xét</h3>
    <dl className={styles.facts}>
     <div><dt>Tên đợt</dt><dd>{round.name}</dd></div>
-    <div><dt>Số đợt</dt><dd>{round.number}</dd></div>
+    <div><dt>Đợt</dt><dd>{round.number}</dd></div>
     <div><dt>Trạng thái đợt</dt><dd><span className={styles.badge}>{roundStatus(round.status)}</span></dd></div>
    </dl>
   </section>

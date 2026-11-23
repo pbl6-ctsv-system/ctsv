@@ -4,107 +4,81 @@ import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {errorMessage} from '../../../shared/api/error-message';
 import {Alert} from '../../../shared/ui/Alert';
 import {Button} from '../../../shared/ui/Button';
-import {createRound,listRounds,readRound} from '../api/rounds';
-import type {CreateRoundCommand,RoundView,SourceSemester} from '../types/round';
+import {createRound,lookupCreation,readRoundContext} from '../api/rounds';
+import type {CreateRoundCommand,RoundView,SourceSemester,ScopeSelection,ScopeCatalogSnapshot} from '../types/round';
+import {ScopePicker,scopeReady} from './ScopePicker';
 import styles from './CreateRoundForm.module.css';
-
-type Props={client:AuthClient;initialSource:SourceSemester;onCancel:()=>void;onCreated:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
-type FieldErrors=Partial<Record<'sourceSemesterId'|'number'|'name',string>>;
-const savedError='Đợt đã được tạo nhưng chưa tải lại đầy đủ. Hãy đọc lại kết quả; hệ thống không gửi lại lệnh tạo.';
-const unknownError='Chưa xác nhận được kết quả tạo đợt. Hãy kiểm tra đợt đã lưu trước khi gửi lại; hệ thống không tự tạo lại.';
-
-export function CreateRoundForm({client,initialSource,onCancel,onCreated,onForbidden}:Props){
- const source=initialSource;
- const [sourceBlocked,setSourceBlocked]=useState(false);
- const [number,setNumber]=useState('1'),[name,setName]=useState('');
- const [error,setError]=useState(''),[fields,setFields]=useState<FieldErrors>({});
- const [busy,setBusy]=useState(false);
- const [saved,setSaved]=useState<RoundView|null>(null),[uncertain,setUncertain]=useState<CreateRoundCommand|null>(null),[found,setFound]=useState<RoundView|null>(null);
- const pending=useRef(false),alive=useRef(true),heading=useRef<HTMLHeadingElement>(null);
- useEffect(()=>{alive.current=true;heading.current?.focus();return()=>{alive.current=false;};},[]);
+type Intent={command:CreateRoundCommand;key:string};
+export type CreateRoundMemory={selection:ScopeSelection|null;intent:Intent|null;phase:'editing'|'unknown'|'saved';saved:RoundView|null};
+type Props={client:AuthClient;initialSource:SourceSemester;memory:CreateRoundMemory;onCancel:()=>void;onCreated:(view:RoundView,recovered:boolean)=>Promise<void>;onForbidden:()=>void};
+export function CreateRoundForm({client,initialSource:source,memory,onCancel,onCreated,onForbidden}:Props){
+ const [selection,setSelection]=useState<ScopeSelection|null>(memory.selection),[catalog,setCatalog]=useState<ScopeCatalogSnapshot|null>(null);
+ const [phase,setPhase]=useState(memory.phase),[error,setError]=useState(''),[busy,setBusy]=useState(false),[stale,setStale]=useState(false);
+ const [saved,setSaved]=useState<RoundView|null>(memory.saved);
+ const intent=useRef<Intent|null>(memory.intent),pending=useRef(false),alive=useRef(true),heading=useRef<HTMLHeadingElement>(null),abort=useRef<AbortController|null>(null);
+ useEffect(()=>{alive.current=true;heading.current?.focus();return()=>{alive.current=false;abort.current?.abort();};},[]);
  function begin(){if(pending.current)return false;pending.current=true;setBusy(true);setError('');return true;}
  function end(){pending.current=false;if(alive.current)setBusy(false);}
- function forbidden(error:unknown){if(error instanceof ApiError&&error.status===403){onForbidden();return true;}return false;}
- async function submit(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();
-  if(pending.current||saved||uncertain||sourceBlocked)return;
-  const invalid:FieldErrors={};
-  if(!source?.selectable)invalid.sourceSemesterId='Chọn một học kỳ đủ điều kiện.';
-  if(!Number.isInteger(Number(number))||Number(number)<1||Number(number)>2147483647)invalid.number='Số đợt phải là số nguyên từ 1 đến 2147483647.';
-  if(!name.trim()||name.trim().length>512)invalid.name='Tên đợt cần từ 1 đến 512 ký tự.';
-  setFields(invalid);
-  if(Object.keys(invalid).length||!source)return;
+ function denied(e:unknown){if(e instanceof ApiError&&e.status===403){onForbidden();return true;}return false;}
+ async function send(current:Intent){
   if(!begin())return;
-  const command={sourceSemesterId:source.sourceSemesterId,number:Number(number),name};
-  let created:RoundView|null=null;
+  let written:RoundView|null=null;
   try{
-   created=await createRound(client,command);
-   if(!alive.current)return;
-   setSaved(created);
-   await onCreated(created,false);
-  }catch(error){
-   if(!alive.current||forbidden(error))return;
-   if(created){setError(savedError);return;}
-   if(error instanceof ApiError&&error.status<500){
-    if(error.code==='ROUND_EXISTS')setError('Số đợt đã tồn tại trong học kỳ. Hãy chọn số đợt khác.');
-    else if(['SOURCE_SEMESTER_UNAVAILABLE','SEMESTER_MAPPING_REQUIRED','SEMESTER_MAPPING_CONFLICT'].includes(error.code)){
-     setError('Học kỳ nguồn chưa đủ điều kiện hoặc đã thay đổi. Hãy chọn lại sau khi dữ liệu được đọc mới.');
-     setSourceBlocked(true);
-    }else if(error.code==='VALIDATION_ERROR'){
-     setError('Thông tin tạo đợt chưa hợp lệ. Hãy kiểm tra các trường được đánh dấu.');
-     const next:FieldErrors={};
-     for(const field of error.fields??[]){
-      if(field==='name')next.name='Tên đợt chưa hợp lệ.';
-      if(field==='number')next.number='Số đợt chưa hợp lệ.';
-      if(field==='sourceSemesterId')next.sourceSemesterId='Học kỳ nguồn chưa hợp lệ.';
-     }
-     setFields(next);
-    }else setError(errorMessage(error));
-   }else{setUncertain(command);setError(unknownError);}
+   const result=await createRound(client,current.command,current.key);written=result;
+   memory.saved=result;memory.phase='saved';
+   if(!alive.current)return;setSaved(result);setPhase('saved');await onCreated(result,result.replayed);
+  }catch(e){
+   if(!written&&e instanceof ApiError&&e.status<500&&e.code!=='IDEMPOTENCY_KEY_REUSED'){memory.phase='editing';memory.intent=null;}
+   if(!alive.current||denied(e))return;
+   if(written){setError('Đợt đã được lưu. Hãy đọc lại kết quả để tải đầy đủ phạm vi; không cần tạo lại.');return;}
+   if(e instanceof ApiError&&e.status<500){
+    setPhase('editing');intent.current=null;
+    const messages:Record<string,string>={
+     SCOPE_SOURCE_CHANGED:'Danh mục nhóm đã thay đổi. Lựa chọn vẫn được giữ; hãy đọc lại danh mục và kiểm tra trước khi tạo.',
+     SCOPE_GROUP_UNAVAILABLE:'Một số nhóm không còn trong nguồn. Hãy đọc lại danh mục và đối chiếu lựa chọn.',
+     SCOPE_EMPTY:'Học kỳ chưa có nhóm sinh viên hợp lệ để tạo đợt.',
+     ROUND_SEQUENCE_NOT_READY:'Đợt trước chưa hoàn tất chạy xét. Hãy quay lại danh sách để tiếp tục xử lý đợt đó.',
+     LEGACY_ROUND_RECONCILIATION_REQUIRED:'Học kỳ có đợt cũ chưa được đối chiếu phạm vi. Cần xử lý dữ liệu đợt cũ trước khi tạo tiếp.',
+     IDEMPOTENCY_KEY_REUSED:'Yêu cầu tạo đã được dùng với nội dung khác. Hãy kiểm tra kết quả trước khi tạo tiếp.',
+     VALIDATION_ERROR:'Phạm vi chưa hợp lệ. Hãy kiểm tra các nhóm đã chọn (tối đa 2000 nhóm).',
+    };
+    if(['SCOPE_SOURCE_CHANGED','SCOPE_GROUP_UNAVAILABLE','SCOPE_EMPTY'].includes(e.code))setStale(true);
+    if(e.code==='IDEMPOTENCY_KEY_REUSED'){intent.current=current;setPhase('unknown');}
+    setError(messages[e.code]??errorMessage(e));
+   }else{setPhase('unknown');setError('Chưa xác nhận được kết quả tạo đợt. Hãy kiểm tra kết quả; hệ thống không tự gửi lại yêu cầu.');}
   }finally{end();}
  }
- async function retrySaved(view:RoundView,recovered=false){
-  if(!begin())return;
-  try{await onCreated(view,recovered);}catch(error){if(alive.current&&!forbidden(error))setError(savedError);}finally{end();}
+ function submit(e:FormEvent){e.preventDefault();if(phase!=='editing'||pending.current||stale||!scopeReady(catalog,selection)||!catalog||!selection)return;
+  const current={key:crypto.randomUUID(),command:{sourceSemesterId:source.sourceSemesterId,catalogRevision:catalog.catalogRevision,scope:selection}};intent.current=current;memory.intent=current;memory.phase='unknown';void send(current);
  }
  async function checkSaved(){
-  if(!uncertain||!begin())return;
+  if(!begin())return;const controller=new AbortController();abort.current=controller;
   try{
-   const page=await listRounds(client,{sourceSemesterId:uncertain.sourceSemesterId,number:uncertain.number});
-   if(!alive.current)return;
-   if(page.totalElements===0){setError('Chưa tìm thấy đợt theo học kỳ và số đợt đã gửi. Bạn có thể kiểm tra lại; hệ thống không tự gửi thêm lệnh tạo.');return;}
-   if(page.totalElements!==1||page.items.length!==1)throw new Error('Kết quả đối chiếu không duy nhất. Vui lòng kiểm tra danh sách đợt xét.');
-   const view=await readRound(client,page.items[0].id);
-   if(alive.current)setFound(view);
-  }catch(error){if(alive.current&&!forbidden(error))setError(errorMessage(error));}finally{end();}
+   let view=saved;
+   if(!view){
+    if(!intent.current)throw new Error('Chưa có yêu cầu tạo để kiểm tra.');
+    const found=await lookupCreation(client,intent.current.key,controller.signal);
+    if(!alive.current)return;
+    if(!found){setError('Chưa thấy yêu cầu đã hoàn tất. Yêu cầu ban đầu có thể vẫn đang xử lý; hãy kiểm tra lại hoặc gửi lại chính yêu cầu đó.');return;}
+    view=await readRoundContext(client,found.roundId,controller.signal);
+   }
+   memory.saved=view;memory.phase='saved';if(!alive.current)return;setSaved(view);setPhase('saved');await onCreated(view,true);
+  }catch(e){if(alive.current&&!controller.signal.aborted&&!denied(e))setError(errorMessage(e));}finally{end();}
  }
  return <section className={styles.formArea} aria-labelledby="create-round-title">
   <h2 id="create-round-title" ref={heading} tabIndex={-1}>Tạo đợt xét</h2>
-  <p>Nhập thông tin đợt trong học kỳ đã chọn. Đợt được lưu ở trạng thái Nháp để cấu hình trước khi mở.</p>
-  <form aria-label="Tạo đợt xét KKHT" onSubmit={submit} className={styles.form}>
-   <fieldset className={styles.information}>
-    <legend>Học kỳ xét</legend><p>{source.code} · {source.name??'Chưa có tên'}</p>
-    <p>{source.academicYear} · Học kỳ {source.semesterOrder}</p>
-    <p className={styles.hint}>Để đổi học kỳ, hủy tạo đợt và chọn lại từ danh sách.</p>
-    {fields.sourceSemesterId&&<p className={styles.fieldError}>{fields.sourceSemesterId}</p>}
-   </fieldset>
-   <fieldset className={styles.information} disabled={busy||!!saved||!!uncertain}>
-    <legend>Thông tin đợt</legend>
-    <label htmlFor="create-round-number">Số đợt<input id="create-round-number" type="number" min="1" max="2147483647" step="1" required value={number} onChange={event=>{setNumber(event.target.value);setFields(current=>({...current,number:undefined}));}} aria-invalid={!!fields.number} aria-describedby={fields.number?'create-number-error':undefined}/></label>
-    {fields.number&&<p id="create-number-error" className={styles.fieldError}>{fields.number}</p>}
-    <label htmlFor="create-round-name">Tên đợt<input id="create-round-name" required value={name} onChange={event=>{setName(event.target.value);setFields(current=>({...current,name:undefined}));}} aria-invalid={!!fields.name} aria-describedby={fields.name?'create-name-error':'create-name-hint'}/></label>
-    <p id="create-name-hint" className={styles.hint}>Tối đa 512 ký tự sau khi bỏ khoảng trắng đầu và cuối.</p>
-    {fields.name&&<p id="create-name-error" className={styles.fieldError}>{fields.name}</p>}
-   </fieldset>
+  <p>Chọn phạm vi sinh viên cho học kỳ này. Hệ thống tự cấp số và tên đợt sau khi lưu.</p>
+  <dl className={styles.readOnly}><div><dt>Học kỳ xét</dt><dd>{source.academicYear} · Học kỳ {source.semesterOrder}</dd></div></dl>
+  <form aria-label="Tạo đợt xét KKHT" className={styles.form} onSubmit={submit}>
+   <ScopePicker client={client} sourceId={source.sourceSemesterId} value={selection} onChange={value=>{memory.selection=value;setSelection(value);}} onCatalog={data=>{setCatalog(data);if(data)setStale(false);}} onForbidden={onForbidden} disabled={busy||phase!=='editing'}/>
    {error&&<Alert>{error}</Alert>}
-   {uncertain&&<div className={styles.recovery}>
-    {found&&<><p>Đợt tìm thấy: {found.round.name}</p><p>Học kỳ {found.round.semester.semesterOrder} · {found.round.semester.academicYear} · Số đợt {found.round.number}</p><p>Đối chiếu thông tin trước khi mở đợt hiện có.</p><Button disabled={busy} onClick={()=>void retrySaved(found,true)}>Mở đợt tìm thấy</Button></>}
-    <Button variant={found?'secondary':'primary'} disabled={busy} onClick={()=>void checkSaved()}>Kiểm tra đợt đã lưu</Button>
-    <Button variant="secondary" disabled={busy} onClick={()=>{setUncertain(null);setFound(null);setError('');}}>Quay lại chỉnh sửa</Button>
+   {phase==='unknown'&&<div className={styles.recovery}>
+    <Button disabled={busy} onClick={()=>void checkSaved()}>Kiểm tra kết quả tạo đợt</Button>
+    <Button variant="secondary" disabled={busy} onClick={()=>{if(intent.current)void send(intent.current);}}>Gửi lại cùng yêu cầu</Button>
    </div>}
    <div className={styles.actions}>
-    {!saved&&!uncertain&&<Button type="submit" disabled={busy||sourceBlocked||!source.selectable}>{busy?'Đang tạo…':'Tạo đợt xét'}</Button>}
-    {saved&&<Button disabled={busy} onClick={()=>void retrySaved(saved)}>Đọc lại kết quả</Button>}
+    {phase==='editing'&&<Button type="submit" disabled={busy||stale||!source.selectable||!scopeReady(catalog,selection)}>{busy?'Đang tạo…':'Tạo đợt xét'}</Button>}
+    {phase==='saved'&&<Button disabled={busy} onClick={()=>void checkSaved()}>Đọc lại kết quả</Button>}
     <Button variant="secondary" disabled={busy} onClick={onCancel}>Quay lại danh sách</Button>
    </div>
   </form>
