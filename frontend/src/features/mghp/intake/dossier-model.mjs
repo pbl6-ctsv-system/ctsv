@@ -4,6 +4,12 @@ export function applicationListUrl(page=0,status='',semesterId='') {
  if(semesterId)query.set('semesterId',semesterId);
  return '/api/ctsv/mghp/ho-so?'+query;
 }
+export function noticeAction(url){
+ if(typeof url!=='string')return null;
+ if(/^\/mghp\/ky-so\?yeu-cau=[1-9]\d*$/.test(url))return {href:url,label:'Xem tài liệu ký số'};
+ if(/^\/mghp\/ho-so\?(bo-sung|ho-so)=[1-9]\d*$/.test(url))return {href:url,label:url.includes('bo-sung=')?'Xem yêu cầu bổ sung':'Xem hồ sơ liên quan'};
+ return null;
+}
 
 export function declarationChanges(before,after) {
  const fields=(a={},b={})=>[...new Set([...Object.keys(a),...Object.keys(b)])]

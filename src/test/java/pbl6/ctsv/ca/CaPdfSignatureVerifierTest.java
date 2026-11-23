@@ -16,8 +16,8 @@ import java.util.*;
 import pbl6.ctsv.shared.ca.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-class CaPdfSignatureVerifierTest {
-    static byte[] signed(byte[] input,int serial) throws Exception {
+public class CaPdfSignatureVerifierTest {
+    public static byte[] signed(byte[] input,int serial) throws Exception {
         var gen=KeyPairGenerator.getInstance("RSA");gen.initialize(2048);var pair=gen.generateKeyPair();
         var name=new X500Name("CN=Synthetic signer "+serial+",E=signer"+serial+"@example.test");
         var certificate=new JcaX509v3CertificateBuilder(name,BigInteger.valueOf(serial),new Date(0),new Date(4_000_000_000_000L),name,pair.getPublic()).build(new JcaContentSignerBuilder("SHA256withRSA").build(pair.getPrivate()));

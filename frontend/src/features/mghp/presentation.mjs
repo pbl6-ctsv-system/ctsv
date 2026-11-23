@@ -1,7 +1,9 @@
 export const applicationStates={
  submitted:'Đã nộp',withdrawn:'Đã rút',reopened:'Đã mở lại',processing:'Đang xử lý',
- supplementing:'Cần bổ sung',supplement_responded:'Sinh viên đã bổ sung',approved:'Đã duyệt',rejected:'Từ chối',completed:'Hoàn tất',
+ supplementing:'Cần bổ sung',supplement_responded:'Sinh viên đã bổ sung',approved:'Đã duyệt V1 — hồ sơ online',rejected:'Từ chối',completed:'Đã kết thúc (dữ liệu cũ)',
+ approved_v1:'Đã duyệt V1 — hồ sơ online',approved_v2:'Đã duyệt V2 — bản cứng',hard_copy_failed:'Đã từ chối bản cứng',awaiting_council:'Chờ Hội đồng',selected:'Được chọn',not_selected:'Không được chọn',
 };
+export function applicationStatusLabel(value){return applicationStates[value?.workflowStatus??value?.status]??'Chưa xác định';}
 export const claimLabels={
  fullName:'Họ và tên',citizenId:'Số CCCD',birthDate:'Ngày sinh',birthPlace:'Nơi sinh',
  gender:'Giới tính',ethnicityId:'Dân tộc',classId:'Lớp',studentCode:'Mã sinh viên',

@@ -7,6 +7,7 @@ public final class FileProblem extends RuntimeException {
         this.status = status;
     }
     public static FileProblem unavailable() { return new FileProblem(503, "STORAGE_UNAVAILABLE"); }
+    public int status() { return status; }
     static FileProblem invalid() { return new FileProblem(400, "VALIDATION_ERROR"); }
     static FileProblem tooLarge() { return new FileProblem(413, "FILE_TOO_LARGE"); }
     static FileProblem notFound() { return new FileProblem(404, "NOT_FOUND"); }

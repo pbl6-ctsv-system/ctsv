@@ -251,3 +251,18 @@ Tiếp thu có chọn lọc từ tài liệu tham khảo `frontend-design` do ow
 - Rà độ ưu tiên CSS trong cùng component, nhất là tổ hợp selected/hover/focus/disabled/pending: selector không được vô tình triệt tiêu padding, màu hoặc dấu trạng thái. Dùng CSS Modules, tokens và state/variant rõ theo §6; không tăng specificity hoặc thêm override toàn cục để che xung đột.
 - Với phần hình thức đã đổi, xem ảnh desktop/mobile thực và trả lời: mắt nhìn vào đâu trước; tác vụ chính có nổi rõ; chữ/nhóm có dễ đọc; căn hàng/khoảng cách có đều; có thể bỏ trang trí nào mà vẫn giữ đủ thông tin và nghiệp vụ? Sửa đúng điểm chưa đạt. Không lấy sở thích thẩm mỹ để bỏ warning, dữ liệu hoặc điều kiện bắt buộc.
 - Kiểm thị giác bổ sung cho assertion hành vi tại §12. Không dùng ảnh đẹp để kết luận request/quyền/dữ liệu đúng; không dùng build xanh để kết luận bố cục dễ dùng. Báo riêng phần đã kiểm, vấn đề còn lại và phạm vi chưa xác minh.
+<a id="p11-signing-memory-20261123"></a>
+
+## 14. Memory UX ký số MGHP — owner23/11/2026
+
+Đọc [thiết kế P11 đã chốt](../../nghiepvu/09-trien-khai/p11-signing-design.md) trước khi làm phần ký; chưa có UI P11 runtime ở lượt đồng bộ này. Các quy tắc sau chỉ cho ký văn bản MGHP, không đổi UI/quyền module khác:
+
+- Một mục Tài liệu ký số MGHP trong navigation/AppShell hiện có. CV điều phối/BB bước1, PP QĐ bước1, PHT bước2; đúng actor tự bấm, hiển thị chờ ai và tiến độ sau ký. Giữ kho đã xử lý/lịch sử, không làm file biến mất sau thao tác.
+- CV không có Từ chối ký. P11 không có Từ chối ký ở mọi role theo quyết định cuối23/11. PP xác nhận xem đúng PDF trong dialog Ký số, không nút Đã xem riêng. PP được xem/tải BB đã ký xong của đúng bộ QĐ được giao; quyền do backend cấp, không mọi BB.
+- Màn hình ký dùng PDF.js/canvas + overlay chọn trang/kéo/di chuyển/resize; không nhập point/ID/hash/cert/token. Đúng page/zoom/rotation/crop và đúng input PDF; thay file bỏ vùng cũ. Sau thành công mở đúng trang của file CTSV mới lưu. Iframe chỉ đọc ở màn hình khác giữ nguyên, chưa thêm PDF.js package/version ở task tài liệu.
+- Sau mỗi bước phải lưu PDF riêng authenticated ở Cloudinary CTSV và liên kết SQL commit mới báo hoàn tất/chuyển bước. Viewer/download lấy qua backend file CTSV, không CA URL. UI có trạng thái Đang nhận PDF/Đang lưu kết quả/lỗi/unknown; lỗi nhìn thấy sau cuộn và có đường phục hồi đúng bước.
+- Không thêm user_signature_id/chọn mẫu, không tái đưa external pin/trust vào gate. CV thu hồi tài liệu đang chờ ký là DEFERRED, không dựng chức năng hoặc test nhánh đó trước khi owner giao; vẫn giữ bất biến signed/unknown/history.
+
+### Quyết định P11 cuối23/11 — không Từ chối ký
+
+Owner đã bỏ **toàn bộ Từ chối ký của PP/PHT trong P11**, CV cũng không có. Không tái dựng nút/API/reason từ chối hoặc case sửa dữ liệu đã chốt. Phần memory cũ về PP/PHT refusal đã superseded. Giữ ký chủ động đúng bước, PP ACK, PDF.js, output từng bước CTSV, lịch sử và phục hồi lỗi; không auto retry unknown. Thu hồi tài liệu chờ ký vẫn DEFERRED. Nguồn: [Owner Decisions](../../nghiepvu/06-bao-cao/phan-loai-readiness-api-ctsv-2026-11-05.md#p11-no-refusal-20261123).

@@ -100,3 +100,12 @@ Giữ Auth/sync JDBC và mọi module khác; service dùng Entity/typed paramete
 ## Đợt xét: delta owner21/11/2026
 
 V18 bỏ huong_dan_ke_khai/huong_dan_can_cu_nop_muon tại mghp_dot_xet; MghpDotXet, ConfigurationEntities/Mapper/Repository và wire hiện hành cùng bỏ hai field. Các entity/FK/rowversion/timeline/history khác giữ nguyên. Không sửa V1–V17.
+
+
+**Delta review lifecycle22/11:** không thêm cột/bảng/Entity hoặc migration. ApplicationWorkflow là repository read projection trên hồ sơ/evaluation/receiving-round/candidate/publication hiện có; ReviewLifecycleRules phân loại trạng thái. status intake giữ nguyên, workflowStatus/evaluationAllowed là DTO, không lưu đè snapshot nguồn đã chốt. JPA validation/Flyway vẫn V23.
+
+## P11 — văn bản và pipeline ký23/11
+
+`mghp.application.SigningEntities` thêm5 Entity nghiệp vụ trên bảng đã có: Document→van_ban; DocumentVersion→phien_ban_van_ban; Link→mghp_lien_ket_phien_ban_van_ban; Request→yeu_cau_ky; Step→buoc_ky. FK scalar, không cascade, không trả Entity ra API. V24 bổ sung request rowversion read-only byte[8], checkpoint/lease/principal/output ở lan_goi_dich_vu_ky; không sửa V1–V23.
+
+Attempt/receipt/artifact/certificate observation dùng JDBC chuyên biệt trong SigningRepository để giữ fencing/CAS/short transaction; storage bytes ở Cloudinary authenticated, metadata/ledger Shared Files. Dùng public ManagedFiles/FileReadPolicy, không import repository/entity Shared Files xuyên module. Thêm role PHT vào registry và danh mục role Foundation, không tự grant account. SQL/JPA mapping được validate trên DB P11 riêng; DEV nâng sau gate UI.

@@ -5,7 +5,7 @@ import java.time.Clock;
 import java.util.*;
 import static pbl6.ctsv.shared.ca.CaProviderDtos.*;
 
-/** Technical spike sequence. P11 must supply durable journal, approved authority and PKI trust policy. */
+/** Technical spike sequence. P11 supplies durable journal and approved per-step business authority. */
 public final class CaSigningSequence {
     public record Step(CaSignerBinding.Signer signer,CaPdfPreflight.Box box) {}
     public record Event(String type,int step,UUID document,Receipt receipt,String hash,Uploaded upload) {
@@ -50,7 +50,7 @@ public final class CaSigningSequence {
                 CaSignerBinding.requireConsent(authority.consent(signer,current.sha256(),number),signer,current.sha256(),number);
                 CaPdfPreflight.inspect(current.bytes(),step.box());
                 journal.record(new Event("SIGN_DISPATCHED",number,document,null,current.sha256()));
-                var receipt=client.sign(document,signer.certificate().id(),signer.email(),signer.name(),signer.template(),step.box());
+                var receipt=client.sign(document,signer.certificate().id(),signer.email(),signer.name(),step.box());
                 journal.record(new Event("SIGN_RECEIVED",number,document,receipt,current.sha256()));
                 boolean correlated=document.equals(receipt.document()) && signer.certificate().id().equals(receipt.certificate())
                         && signer.certificate().serialNumber().equals(receipt.certificateSerial())
@@ -70,11 +70,8 @@ public final class CaSigningSequence {
                     throw new CaFailure("CA_CRYPTO_NOT_VERIFIED");
                 evidence.set(index,new StepEvidence(number,receipt,true,true,true,true,verified.trustStatus()));
                 journal.artifact(number,bytes);
-                // CA's serial_number is an opaque provider identifier, not necessarily X.509 hex.
-                // Without a comparable X.509 serial/fingerprint, do not invent a cryptographic cert link.
-                var signedCert=verified.signatures().getLast();
-                if(signer.expectedFingerprint()==null || !signer.expectedFingerprint().equals(signedCert.fingerprint()))
-                    throw new CaFailure("CA_CERTIFICATE_LINK_NOT_VERIFIED");
+                // Owner23/11: external certificate pin / PKI trust are not acceptance gates.
+                // Provider binding, receipt, PDF hash, CMS and prior revisions remain checked.
                 journal.record(new Event("STEP_VERIFIED",number,document,receipt,next.sha256()));
                 current=next;prior=verified;
             }
@@ -83,9 +80,9 @@ public final class CaSigningSequence {
         catch(IOException e){return new Result(document,sideEffect?"UNKNOWN":"FAILED",evidence,"CA_EVIDENCE_WRITE_FAILED");}
     }
     private CaSignerBinding.Signer recheck(CaSignerBinding.Signer signer) {
-        var current=CaSignerBinding.bind(signer.email(),signer.certificate().user(),signer.certificate().id(),signer.template(),client.certificates(signer.email()),client.templates(signer.email()),clock.instant());
+        var current=CaSignerBinding.bind(signer.email(),signer.certificate().user(),signer.certificate().id(),null,client.certificates(signer.email()),new Templates(signer.email(),List.of()),clock.instant());
         if(!current.certificate().serialNumber().equals(signer.certificate().serialNumber()) || !current.name().equals(signer.name()))throw new CaFailure("CA_BINDING_CHANGED");
-        return new CaSignerBinding.Signer(current.email(),current.name(),current.certificate(),current.template(),signer.expectedFingerprint());
+        return new CaSignerBinding.Signer(current.email(),current.name(),current.certificate(),null,signer.expectedFingerprint());
     }
     private static boolean overlap(CaPdfPreflight.Box a,CaPdfPreflight.Box b) {
         return a.page()==b.page() && a.x()<b.x()+b.width() && b.x()<a.x()+a.width() && a.y()<b.y()+b.height() && b.y()<a.y()+a.height();

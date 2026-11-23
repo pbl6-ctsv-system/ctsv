@@ -8,8 +8,12 @@ import org.springframework.web.bind.annotation.*;
 import pbl6.ctsv.auth.AuthFailure;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 
-@RestControllerAdvice(assignableTypes={ApplicationController.class,EvaluationController.class,BenefitController.class,DecisionController.class})
+@RestControllerAdvice(assignableTypes={ApplicationController.class,EvaluationController.class,BenefitController.class,DecisionController.class,SigningController.class})
 class IntakeErrors {
+    @ExceptionHandler(pbl6.ctsv.shared.files.FileProblem.class)
+    ResponseEntity<?> file(pbl6.ctsv.shared.files.FileProblem error,HttpServletRequest req) {
+        return response(error.status(),error.getMessage(),"fileId",req);
+    }
     @ExceptionHandler(IntakeProblem.class)
     ResponseEntity<?> problem(IntakeProblem error,HttpServletRequest req) {
         return response(error.status,error.getMessage(),error.field,req);

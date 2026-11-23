@@ -67,7 +67,10 @@ class ApplicationController {
     ResponseEntity<?> detail(@PathVariable String idHoSo,HttpServletRequest request) {
         var principal=principal(request);
         query(request);
-        var detail=tx.execute(s -> reads.detail(reads.scoped(access.authorize(principal,true,null),id(idHoSo,"idHoSo"))));
+        var detail=tx.execute(s -> {
+            var actor=access.authorize(principal,true,null);
+            return reads.detail(reads.scoped(actor,id(idHoSo,"idHoSo")),actor.studentId()!=null);
+        });
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).eTag(detail.tag()).body(detail.body());
     }
 

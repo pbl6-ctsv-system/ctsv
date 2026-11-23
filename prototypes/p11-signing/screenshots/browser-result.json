@@ -1,0 +1,29 @@
+{
+  "scope": "PROTOTYPE SIMULATED",
+  "main": {
+    "assertions": 22,
+    "result": "PASS",
+    "resume": "at uploaded BB after correcting script wait/navigation"
+  },
+  "faults": {
+    "assertions": 25,
+    "result": "PASS"
+  },
+  "filters": {
+    "assertions": 2,
+    "result": "PASS"
+  },
+  "images": 70,
+  "consolePageErrors": 0,
+  "priorFailures": [
+    "PDF.js getDocument string input unsupported; corrected to {url}",
+    "mobile wait incorrectly required height>600; corrected render marker",
+    "resume started from list without document; corrected navigation"
+  ],
+  "realBackend": false,
+  "realCa": false,
+  "additionalSafeRetryAssertions": 2,
+  "assertions": 57,
+  "additionalViewerAssertions": 4,
+  "phaseCaptionAssertions": 2
+}

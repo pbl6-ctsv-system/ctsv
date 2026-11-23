@@ -73,6 +73,8 @@ class DocumentReviewService {
             """,id).get("ho_so_id");
         var root=repo.root(rootId);
         reads.match(root,tag);
+        if(repo.terminalReview(rootId))throw conflict("DOCUMENT_VERSION_CONFLICT");
+        if(hardCopy&&!"approved".equals(root.status))throw conflict("DOCUMENT_VERSION_CONFLICT");
         var document=repo.find(Document.class,id);
         var current=repo.versions(rootId).stream().findFirst().orElseThrow(IntakeProblem::missing);
         configuration.requireReviewOpen(current.roundId==null?root.roundId:current.roundId);

@@ -18,6 +18,13 @@ class IntakeRepository {
 
     <T extends Row> T save(T row) { em.persist(row); return row; }
     void flush() { em.flush(); }
+    boolean terminalReview(long application) {
+        return !rows("""
+            SELECT e.id FROM dbo.mghp_danh_gia_dieu_kien e
+            WHERE e.ho_so_nguon_id=? AND e.trang_thai_xu_ly=N'confirmed'
+            AND e.la_ban_hien_hanh=1 AND e.ket_qua=N'khong_dat'
+            """,application).isEmpty();
+    }
     <T> T find(Class<T> type,long id) { return em.find(type,id); }
     <T> jakarta.persistence.TypedQuery<T> query(String statement,Class<T> type) {
         return em.createQuery(statement,type);

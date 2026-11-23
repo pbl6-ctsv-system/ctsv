@@ -23,7 +23,7 @@ final class UploadLedger {
     void complete(Attempt a, long file, PrivateFileStorage.Asset asset) {
         if (jdbc.update("""
             UPDATE dbo.luot_tai_tep SET trang_thai='committed',tep_id=?,ma_tai_nguyen=?
-            WHERE id=? AND trang_thai IN ('started','unknown') AND tep_id IS NULL
+            WHERE id=? AND trang_thai IN ('started','unknown','orphan','not_found') AND tep_id IS NULL
             """, file, asset.id(), a.id().toString()) != 1) {
             throw new IllegalStateException("Upload ledger state changed before commit");
         }

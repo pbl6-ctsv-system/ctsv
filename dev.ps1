@@ -93,6 +93,7 @@ try{
       }
     }
     $cloudinary=if($Action -eq 'start'){Get-DevCloudinaryEnvironment $devHome}else{@{}}
+    $caEnvironment=if($Action -eq 'start'){Get-DevCaEnvironment (Join-Path $env:LOCALAPPDATA 'CTSV/ca-dut')}else{@{}}
     $cloudinaryReady=(Get-DevFileProperties $cloudinary) -contains 'ctsv.files.cloudinary.enabled=true'
     Set-DevEnvironment $devHome $config $cloudinary
     if($Action -eq 'build'){Build-DevApplication $root $devHome;Write-Output 'Dev application built without test execution or migration.';return}
@@ -123,6 +124,10 @@ try{
         $backendArgs=@("-Dspring.config.additional-location=$properties",'-jar',('"'+$jar+'"'),'--spring.profiles.active=dev',"--spring.datasource.url=$jdbc",'--spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration','--spring.flyway.enabled=false','--spring.jpa.hibernate.ddl-auto=validate','--ctsv.auth.bootstrap-enabled=false','--foundation.units.enabled=false','--foundation.resources.enabled=false')
         $originalCloudinary=@{}
         try{
+            foreach($name in $caEnvironment.Keys){
+                $originalCloudinary[$name]=[Environment]::GetEnvironmentVariable($name,'Process')
+                [Environment]::SetEnvironmentVariable($name,$caEnvironment[$name],'Process')
+            }
             if($cloudinaryReady){
                 foreach($name in $cloudinary.Keys){
                     $originalCloudinary[$name]=[Environment]::GetEnvironmentVariable($name,'Process')

@@ -13,16 +13,17 @@ export const navigationItems=Object.freeze([
  {id:'mghp-rounds',label:'Đợt xét MGHP',feature:'mghp',view:'rounds',studentView:'public-rounds',path:'/mghp/dot-xet',group:'intake',allow:['student','mghpSpecialist']},
  {id:'mghp-applications',label:'Hồ sơ của tôi',feature:'mghp',view:'applications',path:'/mghp/ho-so',group:'intake',allow:['student']},
  {id:'mghp-casework',label:'Tiếp nhận & bổ sung hồ sơ',feature:'mghp',view:'staff-applications',path:'/mghp/tiep-nhan-ho-so',group:'intake',allow:['mghpSpecialist']},
- {id:'mghp-evaluations',label:'Đánh giá hồ sơ',feature:'mghp',view:'evaluations',path:'/mghp/danh-gia',group:'review',allow:['mghpSpecialist']},
+ {id:'mghp-evaluations',label:'Đối chiếu bản cứng',feature:'mghp',view:'evaluations',path:'/mghp/danh-gia',group:'review',allow:['mghpSpecialist']},
  {id:'mghp-benefits',label:'Rà soát quyền hưởng',studentLabel:'Quyền hưởng của tôi',feature:'mghp',view:'benefits',studentView:'own-benefits',preferSpecialist:true,path:'/mghp/quyen-huong',group:'review',allow:['student','mghpSpecialist']},
  {id:'mghp-decisions',label:'Hội đồng & quyết định',feature:'mghp',view:'decisions',path:'/mghp/hoi-dong-quyet-dinh',group:'decisions',allow:['mghpSpecialist']},
+ {id:'mghp-signing',label:'Tài liệu ký số MGHP',feature:'mghp',view:'signing',path:'/mghp/ky-so',group:'decisions',allow:['mghpSigning']},
  {id:'mghp-inbox',label:'Thông báo',feature:'mghp',view:'inbox',path:'/thong-bao',group:'notifications',allow:['ctsvIdentity']},
  {id:'hocbong-rounds',label:'Đợt xét KKHT',feature:'hocbong',view:'rounds',path:'/hoc-bong/kkht/dot-xet',group:'scholarship-kkht',allow:['hocBongSpecialist']},
 ].map(item=>Object.freeze(item)));
 
 /**
  * @param {{code:string,active:boolean}[]} functions
- * @param {{student:boolean,mghpSpecialist:boolean,ctsvRoleAdmin:boolean,shcnFacultyRead?:boolean,shcnRoundRead?:boolean}|null} access
+ * @param {{student:boolean,mghpSpecialist:boolean,ctsvRoleAdmin:boolean,mghpSigning?:boolean,shcnFacultyRead?:boolean,shcnRoundRead?:boolean}|null} access
  * @param {{student:boolean,specialist:boolean}|null} [scholarship]
  */
 export function visibleNavigation(functions,access,scholarship=null) {
@@ -35,6 +36,7 @@ export function visibleNavigation(functions,access,scholarship=null) {
  if(access?.student===true)capabilities.add('student');
  if(access?.mghpSpecialist===true)capabilities.add('mghpSpecialist');
  if(access?.ctsvRoleAdmin===true)capabilities.add('ctsvRoleAdmin');
+ if(access?.mghpSigning===true)capabilities.add('mghpSigning');
  if(access?.shcnRoundRead===true)capabilities.add('shcnRoundRead');
  if(access?.shcnFacultyRead===true)capabilities.add('shcnFacultyRead');
  if(access)capabilities.add('ctsvIdentity');

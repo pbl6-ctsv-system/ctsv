@@ -8,11 +8,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 final class FoundationSecurity implements FoundationAccess, FoundationRoleAccess {
  private final AuthAccess auth; private final JdbcTemplate jdbc;
  FoundationSecurity(AuthAccess auth,JdbcTemplate jdbc){this.auth=auth;this.jdbc=jdbc;}
- record MenuAccess(boolean student,boolean mghpSpecialist,boolean ctsvRoleAdmin){}
+ record MenuAccess(boolean student,boolean mghpSpecialist,boolean ctsvRoleAdmin,boolean mghpSigning){
+  MenuAccess(boolean student,boolean mghpSpecialist,boolean ctsvRoleAdmin){this(student,mghpSpecialist,ctsvRoleAdmin,false);}
+ }
  MenuAccess menuAccess(AuthAccess.Principal principal){
   var identity=identify(principal,true);
   long user=identity.userId();
-  return new MenuAccess(identity.studentId()!=null,role(user,"mghp_chuyen_vien"),role(user,"ctsv.roles.manage"));
+  boolean specialist=role(user,"mghp_chuyen_vien");
+  return new MenuAccess(identity.studentId()!=null,specialist,role(user,"ctsv.roles.manage"),
+   specialist||role(user,"mghp_pho_phong")||role(user,"mghp_pho_hieu_truong"));
  }
  public Identity authorize(AuthAccess.Principal p,boolean online,String capability){
   var identity=identify(p,online);

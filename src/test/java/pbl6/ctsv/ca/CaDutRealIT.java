@@ -27,14 +27,14 @@ class CaDutRealIT {
         Files.move(temp,path,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
     }
     static CaSignerBinding.Signer lookup(CaDutClient client,String email,String alias) {
-        var certs=client.certificates(email);var templates=client.templates(email);
+        var certs=client.certificates(email);
         var preferred=System.getenv("CA_DUT_SIGNER_"+alias+"_CERTIFICATE_ID");
         var now=Instant.now();var candidates=certs.items().stream().filter(c->"active".equals(c.status()) && c.valid() && c.hasPrivateKey() && !now.isBefore(c.validFrom()) && now.isBefore(c.validTo()))
                 .filter(c->preferred==null || c.id().toString().equals(preferred)).toList();
         if(candidates.size()!=1)throw new CaFailure("CA_CERTIFICATE_SELECTION_REQUIRED");
-        var chosen=candidates.getFirst();var template=System.getenv("CA_DUT_SIGNER_"+alias+"_TEMPLATE_ID");
-        var bound=CaSignerBinding.bind(email,chosen.user(),chosen.id(),template==null?null:UUID.fromString(template),certs,templates,now);
-        return new CaSignerBinding.Signer(bound.email(),bound.name(),bound.certificate(),bound.template(),System.getenv("CA_DUT_SIGNER_"+alias+"_CERTIFICATE_SHA256"));
+        var chosen=candidates.getFirst();
+        var bound=CaSignerBinding.bind(email,chosen.user(),chosen.id(),null,certs,new Templates(email,List.of()),now);
+        return new CaSignerBinding.Signer(bound.email(),bound.name(),bound.certificate(),null,System.getenv("CA_DUT_SIGNER_"+alias+"_CERTIFICATE_SHA256"));
     }
     static UUID authorizedDocument(Receipt receipt,CaSigningSequence.Event upload,CaSigningSequence.Event dispatch,CaSigningSequence.Result result,String inputHash) {
         if(receipt==null || upload==null || dispatch==null || result==null || !"UPLOAD_RECEIVED".equals(upload.type()) || !"SIGN_DISPATCHED".equals(dispatch.type())
@@ -72,6 +72,7 @@ class CaDutRealIT {
             }
             var categories=client.categories();var e=lookup(client,E,"E");var c=lookup(client,C,"C");
             CaSignerBinding.requireDistinct(List.of(e,c));
+            if(mode.equals("READ_ONLY")){client.templates(E);client.templates(C);}
             save(dir.resolve("read-only.json"),Map.of("at",Instant.now(),"service","CA REAL","mode",mode,"input",Map.of("sha256",input.sha256(),"bytes",pdf.length,"pages",input.pages(),"existingSignatures",input.existingSignatures(),"rotation",input.rotation(),"cropWidth",input.cropWidth(),"cropHeight",input.cropHeight()),"categories",categories,"signers",List.of(e,c),"sourceCrypto",CaPdfSignatureVerifier.verify(pdf)));
             if(mode.equals("READ_ONLY")) {
                 System.out.println("CA REAL read-only: PDF preflight, categories, two distinct certificates/templates verified. No upload/sign performed.");return;

@@ -10,6 +10,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CaDutClientTest {
     static final UUID ID=UUID.fromString("11111111-1111-4111-8111-111111111111");
+    @Test void signingOmitsTemplateOverridesAndUsesProviderDefault() throws Exception {
+        try(var s=new CaHttpStub()) {
+            var posted=new java.util.concurrent.atomic.AtomicReference<String>();
+            s.handler=r->{
+                if(r.path().endsWith("token/"))return CaHttpStub.token();
+                posted.set(new String(r.body(),java.nio.charset.StandardCharsets.UTF_8));
+                return CaHttpStub.Reply.json(201,"{\"success\":true,\"data\":{\"id\":\""+ID+"\",\"document\":\""+ID+"\",\"certificate\":\""+ID+"\",\"certificate_serial\":\"TEST-E\",\"signer_email\":\"e@example.test\",\"signer_name\":\"Actual E\",\"document_hash\":\""+"0".repeat(64)+"\",\"signed_pdf_hash\":\""+"1".repeat(64)+"\",\"signed_at\":\"2026-11-23T00:00:00Z\",\"status\":\"valid\"}}");
+            };
+            for(UUID legacyOverride:new UUID[]{null,ID}){
+                s.client().sign(ID,ID,"e@example.test","Actual E",legacyOverride,new CaPdfPreflight.Box(1,100,100,200,60));
+                var body=new com.fasterxml.jackson.databind.ObjectMapper().readTree(posted.get());
+                assertFalse(body.has("user_signature_id"));assertFalse(body.has("signature_image_base64"));
+                assertEquals(ID.toString(),body.path("certificate_id").asText());assertEquals("e@example.test",body.path("signer_email").asText());
+            }
+        }
+    }
     @Test void readsPaginatedCategoriesAndDifferentTemplateEnvelope() throws Exception {
         try(var s=new CaHttpStub()) {
             s.handler=r->{if(r.path().endsWith("token/"))return CaHttpStub.token();

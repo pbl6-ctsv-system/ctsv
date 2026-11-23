@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tài liệu ký số MGHP · Prototype</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="demo-bar"><span>PROTOTYPE · Dữ liệu và chữ ký mô phỏng · Không gọi CA/backend</span><label>Góc nhìn <select id="role"><option value="cv">Chuyên viên MGHP</option><option value="pp">Phó phòng</option><option value="pht">Phó Hiệu trưởng</option></select></label><button id="reset" class="text-button">Đặt lại bản demo</button></div>
+<header><strong class="brand">CTSV</strong><span>Hệ thống Công tác sinh viên</span><span id="actor" class="actor"></span></header>
+<nav class="main-nav" aria-label="Điều hướng chính"><a href="#list">TRANG CHỦ</a><a href="#list" class="active">MIỄN GIẢM HỌC PHÍ</a><a href="#inbox">THÔNG BÁO <span id="notice-count">0</span></a></nav>
+<main id="app"></main><div id="toast" role="status" aria-live="polite" hidden></div><dialog id="dialog"></dialog>
+<script src="node_modules/pdf-lib/dist/pdf-lib.min.js"></script><script type="module" src="app.mjs"></script></body></html>
