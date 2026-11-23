@@ -19,7 +19,8 @@ class FoundationMvcTest {
   mvc.perform(get(path).header("Authorization","Bearer test")).andExpect(status().isOk())
    .andExpect(header().string("Cache-Control","no-store"))
    .andExpect(jsonPath("$.student").value(true)).andExpect(jsonPath("$.mghpSpecialist").value(false))
-   .andExpect(jsonPath("$.ctsvRoleAdmin").value(false));
+   .andExpect(jsonPath("$.ctsvRoleAdmin").value(false))
+   .andExpect(jsonPath("$.mghpSigning").value(false));
   verify(service).menuAccess(principal);
   verifyNoMoreInteractions(service);
  }

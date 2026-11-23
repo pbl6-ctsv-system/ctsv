@@ -23,6 +23,7 @@ test('navigation identifies implemented feature entries without publishing empty
   ['mghp-evaluations','mghp'],
   ['mghp-benefits','mghp'],
   ['mghp-decisions','mghp'],
+  ['mghp-signing','mghp'],
   ['mghp-inbox','mghp'],
   ['hocbong-rounds','hocbong']
  ]);

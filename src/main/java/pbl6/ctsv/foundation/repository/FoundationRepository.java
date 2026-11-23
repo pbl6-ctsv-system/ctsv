@@ -35,7 +35,7 @@ public final class FoundationRepository implements AcademicSemesterSource {
         return new FoundationDtos.Page<>(rows.stream().map(u->new LookupItem(u.getId().toString(),u.getDiaChiEmail(),u.getHoTen())).toList(),page,size,count);
     }
     public List<Map<String,Object>> roleChoices() {
-        return em.createQuery("from VaiTro where dangHoatDong=true and ma in ('mghp_chuyen_vien','mghp_pho_phong') order by ma,id",VaiTro.class).getResultList().stream().map(r->Map.<String,Object>of("id",r.getId().toString(),"code",r.getMa(),"name",r.getTen()==null?r.getMa():r.getTen(),"active",true)).toList();
+        return em.createQuery("from VaiTro where dangHoatDong=true and ma in ('mghp_chuyen_vien','mghp_pho_phong','mghp_pho_hieu_truong') order by ma,id",VaiTro.class).getResultList().stream().map(r->Map.<String,Object>of("id",r.getId().toString(),"code",r.getMa(),"name",r.getTen()==null?r.getMa():r.getTen(),"active",true)).toList();
     }
     public FoundationDtos.Page<Map<String,Object>> profileChoices(String type,String q,Set<String> sources,int page,int size,int offset){
         if(sources.isEmpty())return new FoundationDtos.Page<>(List.of(),page,size,0);
@@ -157,7 +157,7 @@ public final class FoundationRepository implements AcademicSemesterSource {
     }
     public boolean applicableRole(long role) {
         var r=em.find(VaiTro.class,role);
-        return r!=null&&Boolean.TRUE.equals(r.getDangHoatDong())&&Set.of("mghp_chuyen_vien","mghp_pho_phong").contains(r.getMa());
+        return r!=null&&Boolean.TRUE.equals(r.getDangHoatDong())&&Set.of("mghp_chuyen_vien","mghp_pho_phong","mghp_pho_hieu_truong").contains(r.getMa());
     }
     public byte[] version(String table,long id) {
         root(table); em.flush();

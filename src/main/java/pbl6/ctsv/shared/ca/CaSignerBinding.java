@@ -7,7 +7,7 @@ import static pbl6.ctsv.shared.ca.CaProviderDtos.*;
 /** Technical identity binding, NOT an authorization/role grant. P11 supplies approved business authority. */
 public final class CaSignerBinding {
     private CaSignerBinding() {}
-    /** expectedFingerprint must come from independently verified certificate material, never auto-TOFU. */
+    /** Optional legacy metadata; no external pin is required or used as a signing gate. */
     public record Signer(String email,String name,Certificate certificate,UUID template,String expectedFingerprint) {
         public Signer(String email,String name,Certificate certificate,UUID template) {this(email,name,certificate,template,null);}
         public Signer {
@@ -35,8 +35,8 @@ public final class CaSignerBinding {
         return new Signer(email,cert.userDisplay(),cert,template);
     }
     public static void requireDistinct(List<Signer> signers) {
-        var emails=new HashSet<String>();var users=new HashSet<UUID>();var certs=new HashSet<UUID>();var serials=new HashSet<String>();var fingerprints=new HashSet<String>();
-        for(var signer:signers)if(!emails.add(signer.email()) || !users.add(signer.certificate().user()) || !certs.add(signer.certificate().id()) || !serials.add(signer.certificate().serialNumber()) || signer.expectedFingerprint()!=null&&!fingerprints.add(signer.expectedFingerprint()))
+        var emails=new HashSet<String>();var users=new HashSet<UUID>();var certs=new HashSet<UUID>();var serials=new HashSet<String>();
+        for(var signer:signers)if(!emails.add(signer.email()) || !users.add(signer.certificate().user()) || !certs.add(signer.certificate().id()) || !serials.add(signer.certificate().serialNumber()))
             throw new CaFailure("CA_SIGNERS_NOT_DISTINCT");
     }
     public static void requireConsent(Consent consent,Signer signer,String inputHash,int step) {

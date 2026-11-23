@@ -33,8 +33,8 @@ import pbl6.ctsv.foundation.api.FoundationAccess;
 class FileConfiguration {
     @Bean
     FileService fileService(FoundationAccess access, ObjectProvider<PrivateFileStorage> storage,
-                            PlatformTransactionManager manager, JdbcTemplate jdbc) {
-        return new FileService(access,storage,new TransactionTemplate(manager),new FileMetadata(jdbc),new UploadLedger(jdbc));
+                            PlatformTransactionManager manager, JdbcTemplate jdbc,ObjectProvider<FileReadPolicy> policies) {
+        return new FileService(access,storage,new TransactionTemplate(manager),new FileMetadata(jdbc),new UploadLedger(jdbc),policies);
     }
 
     @Bean

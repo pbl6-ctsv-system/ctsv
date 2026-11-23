@@ -74,7 +74,7 @@ export function StaffDossierReview({client,application,rootTag,refresh,download,
   if(!rootTag||!decision||loadingReview)return;const result=decision;
   await run(async()=>{
    await client.request('/api/ctsv/mghp/ho-so/'+application.id+'/ket-luan',{method:'POST',headers:{'Content-Type':'application/json','If-Match':rootTag},body:JSON.stringify(result==='rejected'?{result,reason}:{result})});
-   setDecision(null);await refresh();setMessage(result==='approved'?'Đã đồng ý hồ sơ.':'Đã từ chối hồ sơ và lưu lý do.');
+   setDecision(null);await refresh();setMessage(result==='approved'?'Đã duyệt hồ sơ online (V1).':'Đã từ chối hồ sơ và lưu lý do.');
   });
  }
  const responded=application.supplementRequests?.find(s=>s.status==='responded');
@@ -105,17 +105,17 @@ export function StaffDossierReview({client,application,rootTag,refresh,download,
    </>}
    {review&&!papers.length&&<p>Không có PDF trong bản nộp mới nhất.</p>}
   </section>
-  <section className={styles.contentBlock}><h3>Kết luận hồ sơ</h3>
+  <section className={styles.contentBlock}><h3>Kết quả tiếp nhận online</h3>
    {locked?<p>Hồ sơ đã có đánh giá xác nhận. Kết luận và nguồn đã chốt được giữ nguyên.</p>:editable?<div className={styles.reviewActions}>
     <p className={styles.muted}>Đồng ý khi đã kiểm tra đủ PDF. Từ chối kết thúc hồ sơ và yêu cầu nhập lý do.</p>
     {review&&blocked&&<div role="status"><p>{!papers.length?'Chưa có PDF để kiểm tra.':blockers.pendingPdfIds.length?'Còn '+blockers.pendingPdfIds.length+' PDF chưa đồng ý.':blockers.otherCheckIds.length?'Còn điều kiện giấy tờ chưa được xác minh.':'Còn yêu cầu bổ sung chưa xử lý xong.'}</p>
      <div className={styles.actions}>{(blockers.pendingPdfIds.length>0||blockers.otherCheckIds.length>0)&&<button type="button" className="secondary" onClick={()=>{setSelected(blockers.pendingPdfIds[0]??blockers.otherCheckIds[0]);document.getElementById('review-pdf-'+application.id)?.scrollIntoView({block:'start'});}}>Xem giấy cần kiểm tra</button>}{blockers.supplementIds.length>0&&<button type="button" className="secondary" onClick={onSupplement}>Xử lý yêu cầu bổ sung</button>}</div></div>}
-    <div className={styles.actions}><button type="button" className="primary" disabled={busy||!review||blocked} onClick={()=>{setReason('');setDecision('approved');}}>Đồng ý hồ sơ</button><button type="button" className="danger" disabled={busy||!review} onClick={()=>{setReason('');setDecision('rejected');}}>Từ chối hồ sơ</button></div>
+    <div className={styles.actions}><button type="button" className="primary" disabled={busy||!review||blocked} onClick={()=>{setReason('');setDecision('approved');}}>Duyệt hồ sơ online</button><button type="button" className="danger" disabled={busy||!review} onClick={()=>{setReason('');setDecision('rejected');}}>Từ chối hồ sơ</button></div>
    </div>:<p>Hồ sơ đang ở trạng thái kết thúc hoặc chưa đủ điều kiện thao tác; không sửa kết luận tại đây.</p>}
-   <p className={styles.muted}>Đồng ý hồ sơ chưa phải công bố quyền hưởng MGHP.</p>
+   <p className={styles.muted}>Duyệt hồ sơ online chưa phải công bố quyền hưởng MGHP.</p>
   </section>
   <dialog className={styles.confirmDialog} ref={dialog} aria-labelledby="disposition-title" onCancel={e=>{e.preventDefault();if(!busy)setDecision(null);}}>
-   <h3 id="disposition-title">{decision==='approved'?'Đồng ý hồ sơ này?':'Từ chối hồ sơ này?'}</h3>
+   <h3 id="disposition-title">{decision==='approved'?'Duyệt hồ sơ online này?':'Từ chối hồ sơ này?'}</h3>
    {decision==='rejected'&&<label className={styles.reviewActions}>Lý do từ chối hồ sơ<textarea required maxLength={4000} value={reason} onChange={e=>{setReason(e.currentTarget.value);setError('');}}/></label>}
    <p>Kết luận sẽ được lưu vào lịch sử hồ sơ.</p>
    {error&&<p role="alert">{error}</p>}

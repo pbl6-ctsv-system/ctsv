@@ -31,6 +31,15 @@ function Open-DevSecret([string]$Encrypted) {
     [System.Net.NetworkCredential]::new('local',$secure).Password
 }
 function Protect-DevSecret([string]$Plain) { ConvertFrom-SecureString (ConvertTo-SecureString $Plain -AsPlainText -Force) }
+function Get-DevCaEnvironment([string]$CredentialDirectory) {
+    $path=Join-Path $CredentialDirectory 'credential.clixml'
+    if(-not (Test-Path -LiteralPath $path)){return @{}}
+    try{
+        $credential=Import-Clixml -LiteralPath $path
+        if($credential -isnot [pscredential] -or [string]::IsNullOrWhiteSpace($credential.UserName) -or $credential.Password.Length -eq 0){throw 'Invalid local credential'}
+        return @{CA_DUT_URL='https://chukyso.dut.udn.vn';CA_DUT_CLIENT_ID=$credential.UserName;CA_DUT_CLIENT_SECRET=$credential.GetNetworkCredential().Password}
+    }catch{throw 'Cannot load local CA DUT credential with this Windows account. Existing configuration was kept; no secret was logged.'}
+}
 function Get-DevCloudinaryEnvironment([string]$HomePath) {
     $values=@{}
     $credentialNames=@('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET')

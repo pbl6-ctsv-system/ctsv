@@ -72,6 +72,8 @@ class InboxService {
             && n.objectId.matches("[1-9][0-9]*")?"/mghp/ho-so?bo-sung="+n.objectId:null;
         String applicationAction="mghp_ho_so".equals(n.objectType)&&n.objectId!=null&&n.objectId.matches("[1-9][0-9]*")?"/mghp/ho-so?ho-so="+n.objectId:null;
         String action=applicationAction!=null&&(applicationAction.equals(n.actionUrl)||"/mghp".equals(n.actionUrl))?applicationAction:supplementAction!=null&&supplementAction.equals(n.actionUrl)?supplementAction:null;
+        String signingAction="yeu_cau_ky".equals(n.objectType)&&n.objectId!=null&&n.objectId.matches("[1-9][0-9]*")?"/mghp/ky-so?yeu-cau="+n.objectId:null;
+        if(action==null&&signingAction!=null&&signingAction.equals(n.actionUrl))action=signingAction;
         return map("id",n.id,"title",n.title,"content",n.content,"category",n.category,
             "actionUrl",action,"deadline",n.deadline,"important",n.important,
             "publishedAt",n.publishedAt,"createdAt",n.createdAt,"readAt",r.readAt);

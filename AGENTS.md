@@ -106,3 +106,16 @@ Công nghệ hoặc mẫu thiết kế mà skill khuyến nghị không được
 - Migration riêng **chưa áp dụng**: đổi sang số tiếp theo còn trống, giữ SQL của main. Migration **đã áp dụng**: không chạy lại SQL vừa đổi tên; trước hết đối chiếu chính xác script/checksum/schema và backup, rồi chuyển định danh history có guard/audit theo phạm vi owner đã cho phép. Giữ checksum và dấu vết thực thi; không repair bừa hoặc xóa history để qua validation. Chỉ chạy các migration còn thiếu; nếu không khớp thì dừng phần ghi và báo nguyên nhân cụ thể.
 - Kiểm đủ và có trọng tâm: chuỗi version duy nhất, Flyway validate, schema/Entity, dữ liệu/tài khoản cũ, idempotency; sau nâng DEV kiểm launcher và smoke hành trình bị tác động. Tái sử dụng bằng chứng vừa đạt nếu source/đích/phạm vi không thay đổi; không chạy lại toàn bộ phase hoặc upload/seed thêm chỉ để tăng số PASS.
 - Thực hiện liên tục phần đã được giao, không hỏi lại các phê duyệt còn hiệu lực. Chỉ dừng khi thiếu quyền thực sự, conflict không rõ hoặc rủi ro dữ liệu chưa xử lý. Lỗi được owner cho bỏ qua phải ghi nguyên trạng FAIL/ERROR và phạm vi miễn, không đổi expected hoặc báo PASS. [Ví dụ chuyển DEV V21 có bảo toàn dữ liệu](docs/dev-v21-upgrade-20261122.md).
+<a id="p11-signing-memory-20261123"></a>
+
+## 12. P11 ký số MGHP — quyết định owner23/11/2026
+
+- Trước plan/code P11 đọc [thiết kế đã chốt](../nghiepvu/09-trien-khai/p11-signing-design.md) cùng signing/FILE contracts. Đây là memory theo dự án; business/UX APPROVED, wire/DTO/schema/version PDF.js còn phải đóng kỹ thuật trước code, không tự bắt đầu P11 từ task tài liệu.
+- Một mục ký chung CV/PP/PHT theo capability/assignment. BB CV→PHT rồi QĐ PP→PHT; mỗi người tự bấm. CV không Từ chối ký; mọi role không có Từ chối ký theo quyết định cuối23/11, ký không cần lý do. PP ACK xem PDF gộp trong dialog/command ký, PP đọc BB đã ký xong của đúng bộ QĐ được giao. Không áp quy tắc này sang quyền CV từ chối hồ sơ HS08.
+- PDF.js/canvas/overlay chọn trang-kéo-di chuyển-resize vùng, không nhập tọa độ; viewer lấy bytes CTSV, backend kiểm đúng input/geometry. TX SQL ngắn trước/sau CA/Cloudinary, không network trong TX, không rollback HTTP hoặc blind POST retry.
+- Mỗi người ký thành công phải có output riêng trên Cloudinary CTSV authenticated và metadata/link SQL commit; chỉ khi đó hoàn tất/chuyển bước. Giữ file1người/2người, xem/tải từ CTSV qua backend; CA URL/receipt success không thay lưu bền. Không khôi phục user_signature_id, external pin/trust gate đã bỏ.
+- CV thu hồi tài liệu đang chờ PHT là [ghi chú DEFERRED](../nghiepvu/09-trien-khai/master-implementation-backlog.md#p11-future-cv-recall); không dựng nút/API/case chức năng trong P11 hiện tại hoặc sửa ngầm bản đã ký. Giữ history/unknown guards và scope C10/C14 đã chốt.
+
+### Quyết định P11 cuối23/11 — không Từ chối ký
+
+Owner đã bỏ **toàn bộ Từ chối ký của PP/PHT trong P11**, CV cũng không có. Không tái dựng nút/API/reason từ chối hoặc case sửa dữ liệu đã chốt. Phần memory cũ về PP/PHT refusal đã superseded. Giữ ký chủ động đúng bước, PP ACK, PDF.js, output từng bước CTSV, lịch sử và phục hồi lỗi; không auto retry unknown. Thu hồi tài liệu chờ ký vẫn DEFERRED. Nguồn: [Owner Decisions](../nghiepvu/06-bao-cao/phan-loai-readiness-api-ctsv-2026-11-05.md#p11-no-refusal-20261123).

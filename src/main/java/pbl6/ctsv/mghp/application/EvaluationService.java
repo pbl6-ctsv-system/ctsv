@@ -44,7 +44,7 @@ class EvaluationService {
     ||!Objects.equals(root.policyId.toString(),policy.get("policyId")))throw conflict("EVALUATION_SOURCE_CONFLICT");
    if(repo.rows("SELECT id FROM dbo.mghp_hoc_ky_de_nghi WHERE phien_ban_ho_so_id=? AND hoc_ky_id=? AND phien_ban_chinh_sach_id=?",sub.id,e.semesterId,e.policyVersionId).isEmpty())
     throw conflict("EVALUATION_SOURCE_CONFLICT");
-   if("withdrawn".equals(root.status)||"rejected".equals(root.status))throw conflict("EVALUATION_SOURCE_CONFLICT");
+   if(!ReviewLifecycleRules.canEvaluate(root.status,repo.terminalReview(root.id)))throw conflict("EVALUATION_SOURCE_CONFLICT");
    e.studentId=root.studentId;e.roundId=sub.roundId==null?root.roundId:sub.roundId;sourceSubmission=sub.id;
   }else{
    var benefit=store.benefit(e.benefitId);
@@ -84,8 +84,13 @@ class EvaluationService {
  }
  private boolean sameSource(Evaluation a,Evaluation b){return Objects.equals(a.applicationId,b.applicationId)&&Objects.equals(a.benefitId,b.benefitId)&&a.processId.equals(b.processId)&&a.semesterId.equals(b.semesterId)&&a.policyVersionId.equals(b.policyVersionId)&&a.scopeCode.equals(b.scopeCode);}
  private Evaluation locked(long id){
+  config.lockWrites();
   var fields=repo.row("SELECT ho_so_nguon_id app,quyen_huong_nguon_id benefit FROM dbo.mghp_danh_gia_dieu_kien WHERE id=?",id);
-  if(fields.get("app") instanceof Long root){if("rejected".equals(repo.root(root).status))throw conflict("EVALUATION_SOURCE_CONFLICT");}else store.benefit((Long)fields.get("benefit"));
+  if(fields.get("app") instanceof Long root){
+   var application=repo.root(root);
+   if(repo.terminalReview(root))throw conflict("EVALUATION_IMMUTABLE");
+   if(!ReviewLifecycleRules.canEvaluate(application.status,false))throw conflict("EVALUATION_SOURCE_CONFLICT");
+  }else store.benefit((Long)fields.get("benefit"));
   var e=store.evaluation(id);if(e.roundId!=null)config.requireReviewOpen(e.roundId);lockChain(e);return e;
  }
  private void touchParent(Evaluation e){
@@ -122,6 +127,7 @@ class EvaluationService {
  ApplicationReads.Detail confirm(Identity actor,long id,String reason,String tag){
   var e=locked(id);ApplicationReads.matchTag(view(e).tag(),tag);
   if(!"draft".equals(e.status))throw conflict("EVALUATION_IMMUTABLE");
+  if((e.applicationId==null||!"dat".equals(e.result))&&(reason==null||reason.isBlank()))throw invalid("reason");
   source(e);ready(e);var chain=store.chain(e);
   if(!chain.getLast().id.equals(e.id))throw conflict("EVALUATION_CHAIN_CONFLICT");
   for(var old:chain)if(Boolean.TRUE.equals(old.current)){
@@ -140,7 +146,7 @@ class EvaluationService {
  }
  // Same-module preflight reuses the confirmed assessment rules; it never changes the assessment.
  void ready(Evaluation e){
-  if(e.result==null||e.reason==null||e.reason.isBlank())throw conflict("EVALUATION_NOT_READY");
+  if(e.result==null||(e.applicationId==null||!"dat".equals(e.result))&&(e.reason==null||e.reason.isBlank()))throw conflict("EVALUATION_NOT_READY");
   var policy=config.policy(e.policyVersionId);var criteria=store.children(Criterion.class,e.id);
   boolean failed=false,unknown=false;
   for(var c:IntakeConfiguration.list(policy,"criteria")){

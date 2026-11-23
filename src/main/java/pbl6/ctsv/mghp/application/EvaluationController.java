@@ -45,7 +45,7 @@ class EvaluationController {
   query(r);var b=body(r);return reply(tx.execute(s->service.update(actor(r),id(id,"id"),b,r.getHeader("If-Match"))),200,false,false);
  }
  @PostMapping("/{id}/xac-nhan") ResponseEntity<?> confirm(@PathVariable String id,HttpServletRequest r)throws IOException {
-  query(r);var b=shape(body(r),List.of("reason"));String reason=text(b.get("reason"),"reason",4000,true);
+  query(r);var b=shape(body(r),List.of("reason"));String reason=text(b.get("reason"),"reason",4000,false);
   return reply(tx.execute(s->service.confirm(actor(r),id(id,"id"),reason,r.getHeader("If-Match"))),200,false);
  }
  @PostMapping("/{id}/phien-ban") ResponseEntity<?> revision(@PathVariable String id,HttpServletRequest r)throws IOException {

@@ -58,6 +58,13 @@ class CaSigningSequenceTest {
     List<CaSigningSequence.Step> steps(){return List.of(new CaSigningSequence.Step(e,new CaPdfPreflight.Box(1,100,100,200,60)),new CaSigningSequence.Step(c,new CaPdfPreflight.Box(1,100,200,200,60)));}
     CaSigningSequence.Result run(){return new CaSigningSequence(client,Clock.systemUTC()).run(CaPdfPreflight.inspect(original,steps().getFirst().box()),"Synthetic TEST",CAT,steps(),(s,h,i)->new CaSignerBinding.Consent("owner-test",s.email(),s.certificate().id(),h,i),events::add);}
     @AfterEach void stop(){server.close();}
+    @Test void signingUsesDefaultAppearanceWithoutDependingOnTemplateLookup() {
+        var templateLookups=new AtomicInteger();
+        e=new CaSignerBinding.Signer(e.email(),e.name(),e.certificate(),UUID.randomUUID());
+        c=new CaSignerBinding.Signer(c.email(),c.name(),c.certificate(),UUID.randomUUID());
+        server.handler=r->{if(r.path().contains("user-signatures")){templateLookups.incrementAndGet();return CaHttpStub.Reply.json(403,"{}");}return reply(r);};
+        assertEquals("COMPLETED",run().status());assertEquals(2,signs.get());assertEquals(0,templateLookups.get());
+    }
     @Test void twoStepsUseSameDocumentVerifiedPriorBytesAndDistinctCerts() {
         var result=run();assertEquals("COMPLETED",result.status());assertEquals(2,signs.get());assertEquals(1,uploads.get());
         assertTrue(result.steps().stream().allMatch(s->s.caReportedSuccess()&&s.pdfRetrieved()&&s.hashVerified()&&s.cryptoVerified()));
@@ -94,10 +101,10 @@ class CaSigningSequenceTest {
         var result=new CaSigningSequence(client,Clock.systemUTC()).run(CaPdfPreflight.inspect(original,steps().getFirst().box()),"TEST",CAT,steps(),(s,h,i)->new CaSignerBinding.Consent("owner-test",s.email(),s.certificate().id(),h,i),event->{throw new java.io.IOException("fixture-disk-failure");});
         assertNotEquals("COMPLETED",result.status());assertEquals(0,uploads.get());assertEquals(0,signs.get());
     }
-    @Test void opaqueProviderSerialMustNotPreventUploadOrInventX509CertificateLink() {
+    @Test void opaqueProviderSerialDoesNotRequireExternalCertificatePinPerOwner23() {
         var t=e.certificate();e=new CaSignerBinding.Signer(e.email(),e.name(),new Certificate(t.id(),t.user(),t.userDisplay(),"TEST-OFFICER.E-SERIAL",t.status(),t.validFrom(),t.validTo(),true,true),null);
-        var result=run();assertEquals(1,uploads.get());assertEquals(1,signs.get());
-        assertEquals("CA_CERTIFICATE_LINK_NOT_VERIFIED",result.failureCode());assertTrue(result.steps().getFirst().caReportedSuccess());
+        var result=run();assertEquals(1,uploads.get());assertEquals(2,signs.get());
+        assertEquals("COMPLETED",result.status());assertTrue(result.steps().getFirst().caReportedSuccess());
     }
     @Test void externallyPinnedCertificateFingerprintAllowsOpaqueSerialWithoutGuessing() {
         var t=e.certificate();var fp=CaPdfSignatureVerifier.verify(first).signatures().getLast().fingerprint();
@@ -126,13 +133,14 @@ class CaSigningSequenceTest {
         var result=new CaSigningSequence(client,Clock.systemUTC()).run(forged,"TEST",CAT,steps(),(s,h,i)->new CaSignerBinding.Consent("owner-test",s.email(),s.certificate().id(),h,i),events::add);
         assertNotEquals("COMPLETED",result.status());assertEquals(0,uploads.get());
     }
-    @Test void hexLookingProviderSerialIsNotIndependentProofOfCertificateLink() {
+    @Test void bothSignersCanCompleteWithoutExternalPinsPerOwner23() {
         e=new CaSignerBinding.Signer(e.email(),e.name(),e.certificate(),null);
-        assertEquals("CA_CERTIFICATE_LINK_NOT_VERIFIED",run().failureCode());assertEquals(1,signs.get());
+        c=new CaSignerBinding.Signer(c.email(),c.name(),c.certificate(),null);
+        assertEquals("COMPLETED",run().status());assertEquals(2,signs.get());
     }
-    @Test void twoSignersCannotPinTheSameRealCertificateFingerprint() {
+    @Test void optionalLegacyPinMetadataDoesNotOverrideDistinctProviderIdentitiesPerOwner23() {
         c=new CaSignerBinding.Signer(c.email(),c.name(),c.certificate(),null,e.expectedFingerprint());
-        var result=run();assertNotEquals("COMPLETED",result.status());assertEquals(0,uploads.get());assertEquals(0,signs.get());
+        var result=run();assertEquals("COMPLETED",result.status());assertEquals(1,uploads.get());assertEquals(2,signs.get());
     }
     @Test void uploadMismatchRetainsKnownDocumentForReconciliation() {
         badUpload=true;assertEquals(DOC,run().document());assertEquals(0,signs.get());

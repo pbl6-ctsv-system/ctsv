@@ -18,9 +18,10 @@ class ApplicationReads {
     private final IntakeRepository repo;
     private final IntakeConfiguration cfg;
     private final ObjectMapper json;
+    private final ApplicationWorkflow workflow;
 
-    ApplicationReads(IntakeRepository repo,IntakeConfiguration cfg,ObjectMapper json) {
-        this.repo=repo; this.cfg=cfg; this.json=json;
+    ApplicationReads(IntakeRepository repo,IntakeConfiguration cfg,ObjectMapper json,ApplicationWorkflow workflow) {
+        this.repo=repo; this.cfg=cfg; this.json=json; this.workflow=workflow;
     }
 
     Object form(long student,long roundId) {
@@ -47,37 +48,20 @@ class ApplicationReads {
     }
 
     Object list(Identity actor,Long round,Long semester,String status,int page,int size) {
-        String filter=" where 1=1";
-        var params=new LinkedHashMap<String,Object>();
-        if(actor.studentId()!=null){filter+=" and a.studentId=:student";params.put("student",actor.studentId());}
-        if(round!=null){filter+=" and a.roundId=:round";params.put("round",round);}
-        if(semester!=null){
-            var ids=repo.rows("SELECT id FROM dbo.mghp_dot_xet WHERE hoc_ky_id=?",semester).stream().map(r->(Long)r.get("id")).toList();
-            if(ids.isEmpty())filter+=" and 1=0";
-            else{filter+=" and a.roundId in :semesterRounds";params.put("semesterRounds",ids);}
-        }
-        if("UNSPECIFIED".equals(status))filter+=" and a.status is null";
-        else if(status!=null){filter+=" and a.status=:status";params.put("status",status);}
-        var query=repo.query("from P06Application a"+filter+" order by a.updatedAt desc,a.id desc",Application.class);
-        params.forEach(query::setParameter);
-        long offset=(long)page*size;
-        var items=offset>Integer.MAX_VALUE?List.of():query.setFirstResult((int)offset).setMaxResults(size).getResultList()
-            .stream().map(a -> {
-                var summary=summary(a);
-                if(actor.studentId()==null) {
-                    var student=repo.row("SELECT mssv studentCode,ho_ten fullName FROM dbo.sinh_vien WHERE id=?",a.studentId);
-                    summary.putAll(map("studentId",a.studentId,"studentCode",student.get("studentCode"),"fullName",student.get("fullName")));
-                    var latest=repo.versions(a.id).stream().findFirst().orElse(null);
-                    summary.put("classCode",latest==null?null:latest.classCode);
-                    summary.put("policyCode",cfg.policyCode(a.policyVersionId));
-                }
-                return summary;
-            }).toList();
-        var count=repo.query("select count(a) from P06Application a"+filter,Long.class);
-        params.forEach(count::setParameter);
-        return Map.of("items",items,"page",page,"size",size,"totalElements",count.getSingleResult());
+        var result=workflow.page(actor.studentId(),round,semester,status,page,size);
+        var items=result.facts().stream().map(facts->{
+            var a=repo.find(Application.class,((Number)facts.get("id")).longValue());
+            var dto=summary(a);dto.putAll(workflow.fields(facts,actor.studentId()!=null));
+            if(actor.studentId()==null){
+                var student=repo.row("SELECT mssv studentCode,ho_ten fullName FROM dbo.sinh_vien WHERE id=?",a.studentId);
+                dto.putAll(map("studentId",a.studentId,"studentCode",student.get("studentCode"),"fullName",student.get("fullName")));
+                var latest=repo.versions(a.id).stream().findFirst().orElse(null);
+                dto.put("classCode",latest==null?null:latest.classCode);dto.put("policyCode",cfg.policyCode(a.policyVersionId));
+            }
+            return dto;
+        }).toList();
+        return Map.of("items",items,"page",page,"size",size,"totalElements",result.count());
     }
-
     Application scoped(Identity actor,long id) {
         var root=repo.root(id);
         if(actor.studentId()!=null && !actor.studentId().equals(root.studentId)) throw IntakeProblem.missing();
@@ -85,7 +69,11 @@ class ApplicationReads {
     }
 
     Detail detail(Application root) {
+        return detail(root,false);
+    }
+    Detail detail(Application root,boolean student) {
         var response=summary(root);
+        response.putAll(workflow.fields(root.id,student));
         var versions=repo.versions(root.id).stream().map(v -> {
             var dto=version(v);
             dto.put("documents",documents(v.id));

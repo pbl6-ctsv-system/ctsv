@@ -5,8 +5,8 @@ import {Alert} from '../../../shared/ui/Alert';
 import {DeclarationForm,submissionErrorMessage,type FormContext,type SubmissionForm,type Attachment} from './DeclarationForm';
 import styles from './IntakeWorkspace.module.css';
 import {StaffSupplement,StudentSupplement} from './SupplementWorkspace';
-import {applicationTitle,displayName,dateTime,claimLabels,submissionWindow,applicationStates} from '../presentation.mjs';
-import {applicationListUrl} from './dossier-model.mjs';
+import {applicationTitle,displayName,dateTime,claimLabels,submissionWindow,applicationStates,applicationStatusLabel} from '../presentation.mjs';
+import {applicationListUrl,noticeAction} from './dossier-model.mjs';
 import {DeclarationSummary} from './DeclarationSummary';
 import {PdfPreview} from './PdfPreview';
 import {StaffDossierReview} from './StaffDossierReview';
@@ -162,8 +162,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
    }}/> Chỉ thông báo chưa đọc</label>
    {!messages.length&&!busy&&<p>Không có thông báo.</p>}
    <ul className={styles.list}>{messages.map(n=><li className={styles.listItem} key={n.id}><div><h2>{n.title||'Thông báo'}</h2><p>{n.content}</p>
-    {n.actionUrl&&/^\/mghp\/ho-so\?(bo-sung|ho-so)=[1-9]\d*$/.test(n.actionUrl)&&
-     <p><a href={n.actionUrl}>{n.actionUrl.includes('bo-sung=')?'Xem yêu cầu bổ sung':'Xem hồ sơ liên quan'}</a></p>}
+    {noticeAction(n.actionUrl)&&<p><a href={noticeAction(n.actionUrl)!.href}>{noticeAction(n.actionUrl)!.label}</a></p>}
     </div>{n.readAt?<span className={styles.badge}>Đã đọc</span>:<button disabled={busy} onClick={()=>void run(async()=>{
      await client.request(inbox+'/'+n.id+'/da-doc',{method:'PUT'});await list();
     })}>Đánh dấu đã đọc</button>}</li>)}</ul>
@@ -177,18 +176,18 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
     onCancel={()=>{setContext(null);setCreating(false);clearStartQuery();setError('');}}/>}
    {!context&&!detail&&!creating&&<><div className={styles.heading}><h2>{student?'Hồ sơ đã nộp của tôi':'Danh sách hồ sơ'}</h2>{!student&&<div><button type="button" disabled title="Chức năng xuất Excel chưa được triển khai">Xuất Excel</button><small className={styles.muted}> · Sắp có</small></div>}</div>
     {!student&&<><div className={styles.toolbar}><label>Học kỳ <select value={semester} disabled={busy} onChange={e=>{const value=e.currentTarget.value;setSemester(value);void run(()=>list(0,unread,status,value));}}><option value="">Tất cả học kỳ</option>{semesters.map(term=><option key={term.id} value={term.id}>{term.name||term.code}</option>)}</select></label><p>{count} hồ sơ phù hợp</p></div>
-     <div className={styles.statusFilters} aria-label="Lọc trạng thái hồ sơ">{[['','Tất cả'],...Object.entries(labels)].map(([value,title])=><button type="button" key={value} aria-pressed={status===value} disabled={busy} onClick={()=>{setStatus(value);void run(()=>list(0,unread,value,semester));}}>{title}</button>)}</div>
+     <div className={styles.statusFilters} aria-label="Lọc trạng thái hồ sơ">{[['','Tất cả'],...Object.entries(labels).filter(([key])=>!['approved','completed'].includes(key))].map(([value,title])=><button type="button" key={value} aria-pressed={status===value} disabled={busy} onClick={()=>{setStatus(value);void run(()=>list(0,unread,value,semester));}}>{title}</button>)}</div>
     </>}
     {!rows.length&&!busy&&<p className={styles.empty}>{student?'Chưa có hồ sơ. Chọn “Nộp hồ sơ mới” để bắt đầu.':'Không có hồ sơ phù hợp với học kỳ và trạng thái đã chọn.'}</p>}
-    {!student?<div className={styles.reviewTable}><table aria-label="Danh sách tiếp nhận hồ sơ"><thead><tr><th>MSSV</th><th>Họ và tên</th><th>Lớp</th><th>Diện M</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{row.studentCode||'Chưa ghi nhận'}</td><td>{row.fullName||'Chưa ghi nhận'}</td><td>{row.classCode||'Chưa ghi nhận lớp'}</td><td>{row.policyCode||'Chưa ghi nhận'}</td><td><span className={styles.badge}>{labels[row.status??'']??'Chưa xác định'}</span></td><td><button data-application-id={row.id} disabled={busy} onClick={()=>void run(async()=>{await select(row.id);setTab('overview');})}>Xem hồ sơ</button></td></tr>)}</tbody></table></div>:
+    {!student?<div className={styles.reviewTable}><table aria-label="Danh sách tiếp nhận hồ sơ"><thead><tr><th>MSSV</th><th>Họ và tên</th><th>Lớp</th><th>Diện M</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{row.studentCode||'Chưa ghi nhận'}</td><td>{row.fullName||'Chưa ghi nhận'}</td><td>{row.classCode||'Chưa ghi nhận lớp'}</td><td>{row.policyCode||'Chưa ghi nhận'}</td><td><span className={styles.badge}>{applicationStatusLabel(row)}</span></td><td><button data-application-id={row.id} disabled={busy} onClick={()=>void run(async()=>{await select(row.id);setTab('overview');})}>Xem hồ sơ</button></td></tr>)}</tbody></table></div>:
     <ul className={styles.list}>{rows.map(row=><li className={styles.listItem} key={row.id}>
      <div><strong>{student?displayName(rounds.find(r=>r.id===row.roundId)?.name,applicationTitle(row.id,row.code)):applicationTitle(row.id,row.code)}</strong><p>{student?applicationTitle(row.id,row.code)+' · ':''}{row.fullName?row.fullName+' · ':''}{row.studentCode?row.studentCode+' · ':''}{row.submittedAt?'Nộp '+dateTime(row.submittedAt):'Chưa ghi nhận thời điểm nộp'}</p></div>
-     <div className={styles.actions}><span className={styles.badge}>{labels[row.status??'']??'Chưa xác định'}</span>
+     <div className={styles.actions}><span className={styles.badge}>{applicationStatusLabel(row)}</span>
       <button data-application-id={row.id} disabled={busy} onClick={()=>void run(async()=>{await select(row.id);setTab('overview');setCreating(false);})}>Xem hồ sơ</button></div>
     </li>)}</ul>}
    </>}
    {!context&&detail&&<section className={styles.panel} aria-label="Chi tiết hồ sơ">
-    <div className={styles.heading}><div><h2>{applicationTitle(detail.id,detail.code)}</h2><span className={styles.badge}>{labels[detail.status??'']??'Chưa xác định'}</span></div>
+    <div className={styles.heading}><div><h2>{applicationTitle(detail.id,detail.code)}</h2><span className={styles.badge}>{applicationStatusLabel(detail)}</span></div>
      <div className={styles.actions}><button disabled={busy} onClick={()=>{setDetail(null);setTab('overview');setHistory(null);}}>Về danh sách</button>
       {!student&&tab==='overview'&&<button type="button" className="primary" onClick={()=>document.getElementById('review-pdf-'+detail.id)?.scrollIntoView({block:'start'})}>Kiểm tra & kết luận</button>}
       <button disabled={busy} onClick={()=>void run(()=>select(detail.id))}>Đọc lại hồ sơ</button></div>
@@ -200,7 +199,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
      {student&&<section className={styles.contentBlock}><h3>Giấy tờ đính kèm</h3><p className={styles.muted}>Minh chứng của bản nộp mới nhất. Các bản trước nằm trong Lịch sử & minh chứng.</p><ul className={styles.list}>
       {detail.submittedVersions[0]?.documents.map((document,index)=><li className={styles.listItem} key={document.id}><div><strong>{detail.documentRequirements?.find(r=>r.id===document.requirementId)?.name||document.documentNumber||'Minh chứng '+(index+1)}</strong>{document.issuer&&<p>Nơi cấp: {document.issuer}</p>}</div><div className={styles.actions}><button type="button" onClick={()=>setPreview(document)}>Xem PDF {index+1}</button><button type="button" disabled={busy} onClick={()=>void run(()=>download(document.fileId))}>Tải PDF {index+1}</button></div></li>)}
      </ul>{preview&&<PdfPreview client={client} fileId={preview.fileId} title={detail.documentRequirements?.find(r=>r.id===preview.requirementId)?.name||'Minh chứng PDF'} onDownload={()=>void run(()=>download(preview.fileId))}/>}</section>}
-     <section className={styles.contentBlock}><h3>Trạng thái và thao tác</h3><p><span className={styles.badge}>{labels[detail.status??'']??'Chưa xác định'}</span> · {detail.submittedVersions.length} bản nộp</p>
+     <section className={styles.contentBlock}><h3>Trạng thái và thao tác</h3><p><span className={styles.badge}>{applicationStatusLabel(detail)}</span> · {detail.submittedVersions.length} bản nộp</p>
       {detail.dispositionHistory?.[0]?.reason&&<p>Lý do: {detail.dispositionHistory[0].reason}</p>}
       {detail.status==='supplementing'&&<button type="button" onClick={()=>setTab('supplement')}>{student?'Xem yêu cầu và trả lời bổ sung':'Xem yêu cầu đã gửi'}</button>}
       {detail.status==='supplement_responded'&&<p>Đã nhận bổ sung, đang chờ chuyên viên kiểm tra.</p>}
@@ -211,7 +210,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
        <button className="danger" disabled={busy||!reason.trim()} onClick={()=>void run(withdraw)}>Rút hồ sơ</button>
       </details>}
      </section>
-     {!student&&detail.status==='approved'&&<p><a href={'/mghp/danh-gia?ho-so='+detail.id}>Tiếp tục đánh giá căn cứ và thời gian hưởng</a></p>}
+     {!student&&detail.status==='approved'&&<p><a href={'/mghp/danh-gia?ho-so='+detail.id}>Đến bước đối chiếu bản cứng</a></p>}
      {!student&&<StaffDossierReview declaredNames={declaration?.claimDisplayNames} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} download={download} onSupplement={()=>setTab('supplement')}/>}
     </div>}
     {tab==='supplement'&&!student&&<StaffSupplement key={detail.id} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} download={download} onOverview={()=>setTab('overview')}/>}

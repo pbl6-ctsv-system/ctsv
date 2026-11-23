@@ -139,10 +139,14 @@ public final class CaDutClient implements AutoCloseable {
         return uploaded;
         }catch(CaFailure failure){throw new CaFailure(failure.code(),201,true,knownDocument);}
     }
-    public Receipt sign(UUID document,UUID certificate,String signerEmail,String signerName,UUID template,CaPdfPreflight.Box box) {
+    /** Compatibility overload: template overrides are no longer sent by CTSV. */
+    public Receipt sign(UUID document,UUID certificate,String signerEmail,String signerName,UUID ignoredTemplate,CaPdfPreflight.Box box) {
+        return sign(document,certificate,signerEmail,signerName,box);
+    }
+    public Receipt sign(UUID document,UUID certificate,String signerEmail,String signerName,CaPdfPreflight.Box box) {
         if(document==null || certificate==null || box==null || signerName==null || signerName.isBlank())throw new CaFailure("CA_SIGN_INVALID");
         var payload=new LinkedHashMap<String,Object>();payload.put("document_id",document);payload.put("certificate_id",certificate);payload.put("signer_email",email(signerEmail));payload.put("signer_name",signerName);
-        payload.put("page_number",box.page());payload.put("pos_x",box.x());payload.put("pos_y",box.y());payload.put("width",box.width());payload.put("height",box.height());if(template!=null)payload.put("user_signature_id",template);
+        payload.put("page_number",box.page());payload.put("pos_x",box.x());payload.put("pos_y",box.y());payload.put("width",box.width());payload.put("height",box.height());
         var reply=post("/api/v1/signatures/sign/",encode(payload),"application/json");
         try {
         var n=data(parse(reply));

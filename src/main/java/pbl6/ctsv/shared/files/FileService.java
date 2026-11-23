@@ -27,15 +27,17 @@ final class FileService {
     private final TransactionTemplate transaction;
     private final FileMetadata metadata;
     private final UploadLedger ledger;
+    private final ObjectProvider<FileReadPolicy> policies;
     private final PdfSpool spool = new PdfSpool();
 
     FileService(FoundationAccess access, ObjectProvider<PrivateFileStorage> storage, TransactionTemplate transaction,
-                FileMetadata metadata, UploadLedger ledger) {
+                FileMetadata metadata, UploadLedger ledger,ObjectProvider<FileReadPolicy> policies) {
         this.access = access;
         this.storage = storage;
         this.transaction = transaction;
         this.metadata = metadata;
         this.ledger = ledger;
+        this.policies = policies;
     }
 
     FileMetadata.View upload(AuthAccess.Principal principal, boolean document, HttpServletRequest request) throws IOException {
@@ -86,10 +88,14 @@ final class FileService {
 
     void download(AuthAccess.Principal principal, long id, PdfResponse response) throws IOException {
         var file = transaction.execute(status -> {
-            var identity = access.authorize(principal,true,null);
+            var identity = access.identify(principal,true);
             var entry = metadata.get(id).orElseThrow(FileProblem::notFound);
             var links = metadata.links(id,identity.studentId());
-            if (!canRead(entry,links,identity)) throw FileProblem.notFound();
+            if (!policies.orderedStream().anyMatch(policy -> policy.canRead(id,identity))) {
+                // Keep the established evidence/template gate when no module grants this object.
+                access.authorize(principal,false,null);
+                if (!canRead(entry,links,identity)) throw FileProblem.notFound();
+            }
             if (!"available".equals(entry.state()) || entry.deleted()) throw new FileProblem(409,"FILE_NOT_READY");
             return entry;
         });

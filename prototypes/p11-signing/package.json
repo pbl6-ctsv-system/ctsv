@@ -1,0 +1,12 @@
+{
+  "name": "ctsv-p11-signing-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.5.438"
+  }
+}

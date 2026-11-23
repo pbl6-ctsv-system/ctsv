@@ -37,7 +37,7 @@ class DecisionHttpIT {
   excludeFilters={@ComponentScan.Filter(type=FilterType.CUSTOM,classes=org.springframework.boot.context.TypeExcludeFilter.class),
    @ComponentScan.Filter(type=FilterType.REGEX,pattern=".*(?:Test|IT)(?:\\$.*)?")})
  static class Config {
-  @Bean DataSource timelineSource() throws Exception {return DecisionDatabase.migrate();}
+  @Bean DataSource timelineSource() throws Exception {return Boolean.getBoolean("p11.test.enabled")?pbl6.ctsv.mghp.application.SigningDatabase.migrate():Boolean.getBoolean("review.lifecycle.test.enabled")?pbl6.ctsv.mghp.application.ReviewLifecycleDatabase.migrate():DecisionDatabase.migrate();}
   @Bean @Primary Clock timelineClock(){return new Clock(){public ZoneId getZone(){return ZoneOffset.UTC;}public Clock withZone(ZoneId z){return Clock.fixed(instant(),z);}public Instant instant(){return TIME.get();}};}
  }
  @DynamicPropertySource static void configuration(DynamicPropertyRegistry r)throws Exception {AuthHttpIT.configuration(r);}
@@ -134,6 +134,8 @@ class DecisionHttpIT {
  }
  void assess(Source f,String until)throws Exception{
   for(var kind:List.of("form","content","validity","subject"))send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/kiem-tra",Map.of("kind",kind,"result","pass","note","Đã đối chiếu fixture P10","replacesCheckId",JSON.nullNode()),cvToken,read("/api/ctsv/mghp/ho-so/"+f.root).tag()).expect(201);
+  approveOnline(f);
+  send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/xac-nhan-ban-cung",JSON.createObjectNode().put("received",true).putNull("note"),cvToken,read("/api/ctsv/mghp/ho-so/"+f.root).tag()).expect(201);
   var body=f.evaluation.deepCopy();body.put("result","dat").put("reason","Đủ căn cứ synthetic P10").put("timeEvidence","Chỉ hưởng trong khoảng nguồn");
   ((ObjectNode)body.path("criteria").get(0)).put("result","dat");
   ((ObjectNode)body.path("evidence").get(0)).put("result","dat").put("from","2026-09-01").put("to",until);
@@ -296,12 +298,17 @@ class DecisionHttpIT {
   var n=content();n.withArray("policyVersions").addObject().put("policyVersionId",""+low).putNull("applicationTemplateFileId").put("order",2);
   String round=BASE+"/"+send("POST",BASE,n,cvToken,null).expect(201).json().path("id").asText();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);
   var high=source(round);assess(high,"2026-10-31");
-  try{policy=low;requirement=req;criterion=cr;assess(source(round,high.process),"2027-01-31");}
+  Source lower;try{policy=low;requirement=req;criterion=cr;lower=source(round,high.process);assess(lower,"2027-01-31");}
   finally{policy=original;requirement=originalRequirement;criterion=originalCriterion;}
   closeReview(round);var d=send("POST","/api/ctsv/mghp/quyet-dinh",decision(round),cvToken,null).expect(201).json();
   assertThat(d.path("candidates").path("totalElements").asInt()).isEqualTo(2);assertThat(d.path("lineCount").asInt()).isEqualTo(1);
   var l=d.path("lines").path("items").get(0);assertThat(l.path("policyVersionId").asLong()).isEqualTo(original);
   assertThat(l.path("rate").asText()).isEqualTo("0.500000000");assertThat(l.path("periods").size()).isEqualTo(1);assertThat(l.path("periods").get(0).path("to").asText()).isEqualTo("2026-10-31");
+  var head=read("/api/ctsv/mghp/phien-ban-quyet-dinh/"+d.path("id").asText());
+  var after=send("POST",vp(head)+"/ket-luan-hop",meeting(),cvToken,head.tag()).expect(201);
+  send("POST",vp(after)+"/xac-nhan",Map.of("reason","Chốt mức cao nhất"),cvToken,after.tag()).expect(200);
+  assertThat(read("/api/ctsv/mghp/ho-so/"+high.root).json().path("workflowStatus").asText()).isEqualTo("selected");
+  assertThat(read("/api/ctsv/mghp/ho-so/"+lower.root).json().path("workflowStatus").asText()).isEqualTo("not_selected");
  }
  @Test void documentMetadataAndEtagStayBoundToTheirOwnVersion()throws Exception{
   var d=draft(prepared());var after=send("POST",vp(d)+"/ket-luan-hop",meeting(),cvToken,d.tag()).expect(201);
@@ -320,7 +327,7 @@ class DecisionHttpIT {
  }
  @Test void confirmedUnknownIsExcludedWithoutChangingItsConclusion()throws Exception{
   String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);assess(source(round),"2026-10-31");
-  var unknown=source(round);var e=send("POST","/api/ctsv/mghp/danh-gia",unknown.evaluation,cvToken,null).expect(201);
+  var unknown=source(round);approveOnline(unknown);var e=send("POST","/api/ctsv/mghp/danh-gia",unknown.evaluation,cvToken,null).expect(201);
   String path="/api/ctsv/mghp/danh-gia/"+e.json().path("id").asText();
   send("POST",path+"/xac-nhan",Map.of("reason","Giữ nhận định cần xác minh, không tự không đạt"),cvToken,e.tag()).expect(200);
   closeReview(round);var d=send("POST","/api/ctsv/mghp/quyet-dinh",decision(round),cvToken,null).expect(201).json();
@@ -342,4 +349,76 @@ class DecisionHttpIT {
   try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){var gate=new java.util.concurrent.CyclicBarrier(2);var tasks=new ArrayList<java.util.concurrent.Future<Reply>>();for(int i=0;i<2;i++)tasks.add(pool.submit(()->{gate.await();return command.call();}));return List.of(tasks.get(0).get(40,java.util.concurrent.TimeUnit.SECONDS),tasks.get(1).get(40,java.util.concurrent.TimeUnit.SECONDS));}
  }
 
+ void approveOnline(Source f)throws Exception {
+  String app="/api/ctsv/mghp/ho-so/"+f.root;
+  send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/kiem-tra",JSON.createObjectNode().put("kind","content").put("result","pass").putNull("note").putNull("replacesCheckId"),cvToken,read(app).tag()).expect(201);
+  send("POST",app+"/ket-luan",Map.of("result","approved"),cvToken,read(app).tag()).expect(200);
+ }
+ @Test void reviewLifecycleRejectsUnapprovedSourcesWithoutWriting()throws Exception {
+  String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);
+  for(String status:List.of("submitted","processing","supplementing","supplement_responded","reopened","withdrawn","rejected")){
+   var f=source(round);jdbc.update("UPDATE dbo.mghp_ho_so SET trang_thai=? WHERE id=?",status,f.root);
+   send("POST","/api/ctsv/mghp/danh-gia",f.evaluation,cvToken,null).expect(409);
+   assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_danh_gia_dieu_kien WHERE ho_so_nguon_id=?",Integer.class,f.root)).isZero();
+  }
+ }
+ @Test void reviewLifecycleApprovedProgressAndDraftDecisionIsNotOfficial()throws Exception {
+  String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);
+  approveOnline(f);String app="/api/ctsv/mghp/ho-so/"+f.root;
+  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v1");
+  assess(f,"2026-10-31");assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v2");
+  var filtered=read("/api/ctsv/mghp/ho-so?roundId="+round.substring(round.lastIndexOf('/')+1)+"&status=approved_v2&size=1").json();
+  assertThat(filtered.path("totalElements").asInt()).isEqualTo(1);assertThat(filtered.path("items").get(0).path("id").asText()).isEqualTo(""+f.root);
+  closeReview(round);assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  var d=send("POST","/api/ctsv/mghp/quyet-dinh",decision(round),cvToken,null).expect(201);
+  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  var after=send("POST",vp(d)+"/ket-luan-hop",meeting(),cvToken,d.tag()).expect(201);
+  String before=read(app).tag();send("POST",vp(after)+"/xac-nhan",Map.of("reason","Xác nhận kết quả Hội đồng"),cvToken,after.tag()).expect(200);
+  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("selected");assertThat(read(app).tag()).isNotEqualTo(before);
+  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  String list="/api/ctsv/mghp/ho-so?roundId="+round.substring(round.lastIndexOf('/')+1);
+  assertThat(send("GET",list+"&status=selected",null,svToken,null).expect(200).json().path("totalElements").asInt()).isZero();
+  assertThat(send("GET",list+"&status=awaiting_council",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
+  // SQL-only publication fixture tests the read predicate; not a P12 publication integration claim.
+  jdbc.update("INSERT dbo.mghp_cong_bo(phien_ban_qd_id,ma_cong_bo,thoi_diem_cong_bo,sha256_tap_du_lieu) VALUES(?,?,?,?)",after.json().path("id").asLong(),"RL-PUB-"+UUID.randomUUID(),NOW.atOffset(ZoneOffset.UTC),after.json().path("datasetSha256").asText());
+  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("selected");
+  assertThat(send("GET",list+"&status=selected",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
+ }
+ @Test void reviewLifecycleApprovalDoesNotRequireReason()throws Exception {
+  String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);approveOnline(f);
+  String app="/api/ctsv/mghp/ho-so/"+f.root;
+  for(var kind:List.of("form","validity","subject"))send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/kiem-tra",JSON.createObjectNode().put("kind",kind).put("result","pass").putNull("note").putNull("replacesCheckId"),cvToken,read(app).tag()).expect(201);
+  send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/xac-nhan-ban-cung",JSON.createObjectNode().put("received",true).putNull("note"),cvToken,read(app).tag()).expect(201);
+  var body=f.evaluation.deepCopy();body.put("result","dat").putNull("reason").put("timeEvidence","Khoảng đã kiểm chứng synthetic");
+  ((ObjectNode)body.path("criteria").get(0)).put("result","dat");
+  ((ObjectNode)body.path("evidence").get(0)).put("result","dat").put("from","2026-09-01").put("to","2026-10-31").putNull("reason");
+  body.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-10-31").put("evidence","Nguồn đã xác minh");
+  var e=send("POST","/api/ctsv/mghp/danh-gia",body,cvToken,null).expect(201);String path="/api/ctsv/mghp/danh-gia/"+e.json().path("id").asText();
+  send("POST",path+"/xac-nhan",JSON.createObjectNode().putNull("reason"),cvToken,e.tag()).expect(200);
+  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v2");
+  assertThat(read(path).json().path("reason").isNull()).isTrue();
+ }
+ @Test void reviewLifecycleHardCopyFailureIsTerminal()throws Exception {
+  String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);approveOnline(f);
+  var body=f.evaluation.deepCopy();body.put("result","khong_dat").put("reason","Bản cứng không đáp ứng nội dung bắt buộc");
+  ((ObjectNode)body.path("criteria").get(0)).put("result","khong_dat").put("note","Nội dung giấy không đúng");
+  ((ObjectNode)body.path("evidence").get(0)).put("result","khong_dat").put("reason","Giấy không đáp ứng");
+  var e=send("POST","/api/ctsv/mghp/danh-gia",body,cvToken,null).expect(201);String path="/api/ctsv/mghp/danh-gia/"+e.json().path("id").asText();
+  send("POST",path+"/xac-nhan",JSON.createObjectNode().putNull("reason"),cvToken,e.tag()).expect(400);
+  assertThat(read(path).json().path("status").asText()).isEqualTo("draft");
+  send("POST",path+"/xac-nhan",Map.of("reason","Kết thúc hồ sơ bản cứng không đáp ứng"),cvToken,e.tag()).expect(200);
+  String app="/api/ctsv/mghp/ho-so/"+f.root;assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("hard_copy_failed");
+  assertThat(read(app).json().path("evaluationAllowed").asBoolean()).isFalse();
+  send("POST",path+"/phien-ban",Map.of("reason","Không được đối chiếu lại"),cvToken,read(path).tag()).expect(409);
+  send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/xac-nhan-ban-cung",JSON.createObjectNode().put("received",true).putNull("note"),cvToken,read(app).tag()).expect(409);
+ }
+ @Test void reviewLifecycleMutationsRecheckApprovalInsideTransaction()throws Exception {
+  String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);approveOnline(f);
+  var e=send("POST","/api/ctsv/mghp/danh-gia",f.evaluation,cvToken,null).expect(201);String path="/api/ctsv/mghp/danh-gia/"+e.json().path("id").asText();
+  jdbc.update("UPDATE dbo.mghp_ho_so SET trang_thai=N'submitted' WHERE id=?",f.root);
+  send("PUT",path,f.evaluation,cvToken,e.tag()).expect(409);
+  send("POST",path+"/xac-nhan",Map.of("reason","Không được vượt bước V1"),cvToken,e.tag()).expect(409);
+  send("POST",path+"/phien-ban",Map.of("reason","Không được vượt bước V1"),cvToken,e.tag()).expect(409);
+  assertThat(read(path).json().path("status").asText()).isEqualTo("draft");
+ }
 }
