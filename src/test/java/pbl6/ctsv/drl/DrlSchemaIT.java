@@ -1,6 +1,9 @@
 package pbl6.ctsv.drl;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import javax.sql.DataSource;
@@ -19,7 +22,7 @@ class DrlSchemaIT {
     @BeforeAll
     static void migrateFreshDatabase() throws Exception {
         fresh = DrlTestDatabase.source(DrlTestDatabase.FRESH);
-        DrlTestDatabase.flyway(fresh, "17").migrate();
+        DrlTestDatabase.flyway(fresh, DrlTestDatabase.TARGET).migrate();
     }
 
     @Test
@@ -33,13 +36,13 @@ class DrlSchemaIT {
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM sys.columns c JOIN sys.tables t ON t.object_id = c.object_id
                 WHERE t.schema_id = SCHEMA_ID('dbo') AND t.name LIKE 'RL%'
-                """, Integer.class)).isEqualTo(74);
+                """, Integer.class)).isEqualTo(75); // V17's 74 columns + V26 RLLopDot.NgayLapHoSo.
         assertThat(jdbc.queryForList("""
                 SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('dbo.RLKetQuaSV', 'V')
                 ORDER BY column_id
                 """, String.class)).containsExactly("PhieuID", "SinhVienID", "LopDotID", "DotID",
                 "HocKyID", "TongDiemCN", "TongDiemLop", "XepLoai", "DaCongBo");
-        var flyway = DrlTestDatabase.flyway(fresh, "17");
+        var flyway = DrlTestDatabase.flyway(fresh, DrlTestDatabase.TARGET);
         flyway.validate();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
@@ -48,8 +51,9 @@ class DrlSchemaIT {
     void ratingThresholdsAndCriterionScoresHaveIdentityKeysAndUniqueBusinessKeys() {
         var jdbc = new JdbcTemplate(fresh);
         assertThat(jdbc.queryForList("""
-                SELECT CONCAT(t.name, '/', k.type, '/',
-                       STRING_AGG(CONCAT(c.name, CASE WHEN c.is_identity = 1 THEN ' IDENTITY' ELSE '' END), ',')
+                SELECT CONCAT(t.name COLLATE DATABASE_DEFAULT, '/', k.type COLLATE DATABASE_DEFAULT, '/',
+                       STRING_AGG(CONCAT(c.name COLLATE DATABASE_DEFAULT,
+                           CASE WHEN c.is_identity = 1 THEN ' IDENTITY' ELSE '' END), ',')
                            WITHIN GROUP (ORDER BY ic.key_ordinal))
                 FROM sys.key_constraints k
                 JOIN sys.tables t ON t.object_id = k.parent_object_id
@@ -64,29 +68,63 @@ class DrlSchemaIT {
     }
 
     @Test
-    void upgradesFromV16PreservingExistingMigrations() throws Exception {
+    void upgradesFromV25PreservingExistingMigrationsAndDrlData() throws Exception {
         var source = DrlTestDatabase.source(DrlTestDatabase.UPGRADE);
         var jdbc = new JdbcTemplate(source);
         boolean alreadyUpgraded = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM sys.tables WHERE object_id = OBJECT_ID('dbo.RLBieuMau')
+                SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.RLLopDot') AND name='NgayLapHoSo'
                 """, Integer.class) == 1;
         if (!alreadyUpgraded) {
-            DrlTestDatabase.flyway(source, "16").migrate();
+            DrlTestDatabase.flyway(source, "25").migrate();
+            try (var connection = source.getConnection()) {
+                connection.setAutoCommit(false);
+                try {
+                    var fixtureJdbc = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+                    var probe = DrlDossierFixture.create(fixtureJdbc);
+                    DrlDossierFixture.pair(fixtureJdbc, probe.root());
+                    // Retain synthetic legacy records to verify the real V25 -> V26 boundary.
+                    connection.commit();
+                } finally {
+                    connection.rollback();
+                }
+            }
         }
         String earlierHistory = """
-                SELECT version, description, checksum, success FROM dbo.flyway_schema_history
-                WHERE TRY_CONVERT(int, version) BETWEEN 1 AND 16 ORDER BY installed_rank
+                SELECT * FROM dbo.flyway_schema_history
+                WHERE TRY_CONVERT(int, version) BETWEEN 1 AND 25 ORDER BY installed_rank
                 """;
         var before = jdbc.queryForList(earlierHistory);
-        assertThat(before).hasSize(16);
-        var flyway = DrlTestDatabase.flyway(source, "17");
+        assertThat(before).hasSize(25);
+        var rowsBefore = legacyDrlRows(jdbc);
+        int completedBefore = alreadyUpgraded
+                ? jdbc.queryForObject("SELECT COUNT(*) FROM dbo.RLLopDot WHERE NgayLapHoSo IS NOT NULL", Integer.class) : 0;
+        var flyway = DrlTestDatabase.flyway(source, DrlTestDatabase.TARGET);
         var result = flyway.migrate();
         assertThat(result.migrationsExecuted).isEqualTo(alreadyUpgraded ? 0 : 1);
         flyway.validate();
         assertThat(jdbc.queryForList(earlierHistory)).isEqualTo(before);
+        assertThat(legacyDrlRows(jdbc)).isEqualTo(rowsBefore);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM dbo.flyway_schema_history WHERE version = '17' AND success = 1
                 """, Integer.class)).isOne();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM dbo.flyway_schema_history WHERE version='26' AND success=1
+                """, Integer.class)).isOne();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.RLLopDot WHERE NgayLapHoSo IS NOT NULL", Integer.class)).isEqualTo(completedBefore);
+        assertThat(flyway.migrate().migrationsExecuted).isZero();
+    }
+
+    private static Map<String, List<Map<String, Object>>> legacyDrlRows(JdbcTemplate jdbc) {
+        var snapshot = new LinkedHashMap<String, List<Map<String, Object>>>();
+        for (String table : List.of("RLBieuMau", "RLNhomTieuChi", "RLBieuMauCT", "RLXepLoai", "RLDot",
+                "RLKhoaDot", "RLLopDot", "RLPhieu", "RLPhieuDiemCT", "RLHopLop", "RLVanBanKy")) {
+            var columns = jdbc.queryForList("""
+                    SELECT QUOTENAME(name) FROM sys.columns
+                    WHERE object_id=OBJECT_ID(?) AND name<>'NgayLapHoSo' ORDER BY column_id
+                    """, String.class, "dbo." + table);
+            snapshot.put(table, jdbc.queryForList("SELECT " + String.join(",", columns) + " FROM dbo." + table + " ORDER BY ID"));
+        }
+        return snapshot;
     }
 
     @Test

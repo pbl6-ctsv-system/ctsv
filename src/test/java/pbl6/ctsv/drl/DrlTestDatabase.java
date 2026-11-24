@@ -9,6 +9,7 @@ import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 
 /** SQL Server databases provisioned for the DRL integration tests on DEV2022. */
 final class DrlTestDatabase {
+    static final String TARGET = "26";
     static final String FRESH = "ctsv_drl_fresh_test";
     static final String UPGRADE = "ctsv_drl_upgrade_test";
 
