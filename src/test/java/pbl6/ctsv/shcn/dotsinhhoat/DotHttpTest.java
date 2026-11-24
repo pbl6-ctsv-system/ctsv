@@ -22,7 +22,7 @@ import pbl6.ctsv.shcn.dotsinhhoat.service.DotService;
 class DotHttpTest {
  final DotServiceTest fixture=new DotServiceTest();final AuthAccess auth=mock(AuthAccess.class);MockMvc mvc;
  final String body="""
- {"maHocKy":"0010","tenDot":"Synthetic round","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":[{"tietDau":5,"tietCuoi":6}],"hanChotDangKyLich":"2026-12-02T00:00:00Z"}
+ {"maHocKy":"0010","tenDot":"Synthetic round","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":[{"tietDau":5,"tietCuoi":6}],"hanChotDangKyLich":"2026-12-02T00:00:00Z","doiTuongApDung":[{"loaiDoiTuong":"KHOA_HOC","maDoiTuong":"2023","hinhThucChoPhep":"OFFLINE","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":null}]}
  """;
  @BeforeEach void setup(){fixture.setup();when(auth.verifyAccessToken("fixture")).thenReturn(fixture.principal);mvc=MockMvcBuilders.standaloneSetup(new DotController(auth,fixture.service,new DotRequests(new ObjectMapper()))).setControllerAdvice(new DotErrors()).build();}
  @Test void rejectsUnauthenticatedBeforeAnyLookup()throws Exception{mvc.perform(get("/api/shcn/dot-sinh-hoat")).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));verifyNoInteractions(fixture.reference,fixture.repository);}
@@ -51,8 +51,8 @@ class DotHttpTest {
  }
  @Test void createAcceptsGroupsAndReturnsThemWithVersion()throws Exception{
   when(fixture.repository.create(any(),any(),any())).thenReturn(fixture.root());
-  var groups=List.of(new DoiTuong("KHOA_HOC","2023","ONLINE",null,null,null));when(fixture.repository.audiences(7)).thenReturn(groups);
-  var n=(com.fasterxml.jackson.databind.node.ObjectNode)new ObjectMapper().readTree(body);n.set("doiTuongApDung",new ObjectMapper().valueToTree(groups));
+  var groups=List.of(new DoiTuong("KHOA_HOC","2023","ONLINE",java.time.LocalDate.of(2026,12,1),java.time.LocalDate.of(2026,12,7),null));when(fixture.repository.audiences(7)).thenReturn(groups);
+  var n=(com.fasterxml.jackson.databind.node.ObjectNode)new ObjectMapper().readTree(body);((com.fasterxml.jackson.databind.node.ObjectNode)n.withArray("doiTuongApDung").get(0)).put("hinhThucChoPhep","ONLINE");
   mvc.perform(post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(n.toString())).andExpect(status().isCreated()).andExpect(jsonPath("$.doiTuongApDung[0].hinhThucChoPhep").value("ONLINE")).andExpect(jsonPath("$.version").value("AAAAAAAAAAE="));
  }
 }

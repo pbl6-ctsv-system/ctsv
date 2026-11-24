@@ -10,7 +10,7 @@ import pbl6.ctsv.auth.AuthFailure;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 import pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure;
 
-@RestControllerAdvice(assignableTypes=DotController.class)
+@RestControllerAdvice(assignableTypes={DotController.class,MauController.class})
 public class DotErrors {
     @ExceptionHandler(DotFailure.class) ResponseEntity<ProblemDetail> known(DotFailure e,HttpServletRequest r){return problem(e.status(),e.code(),e.errors(),r);}
     @ExceptionHandler(AuthFailure.class) ResponseEntity<ProblemDetail> auth(AuthFailure e,HttpServletRequest r){return problem(e.status(),e.code(),List.of(),r);}
@@ -20,7 +20,7 @@ public class DotErrors {
         return problem(500,"INTERNAL_ERROR",List.of(),r);
     }
     private ResponseEntity<ProblemDetail> problem(int status,String code,List<DotFailure.FieldError> errors,HttpServletRequest r){
-        String detail=switch(code){case "VALIDATION_ERROR"->"Kiểm tra thông tin đã nhập.";case "VERSION_CONFLICT"->"Đợt đã được cập nhật. Hãy đọc bản mới để đối chiếu.";case "STATE_CONFLICT"->"Đợt không còn cho phép sửa thông tin chung.";case "DEPENDENCY_UNAVAILABLE"->"Chưa kiểm tra được dữ liệu phụ thuộc.";case "FORBIDDEN"->"Bạn chưa được cấp quyền SHCN phù hợp.";case "NOT_FOUND"->"Không tìm thấy đợt SHCN.";default->"Chưa thể hoàn tất yêu cầu.";};
+        String detail=switch(code){case "VALIDATION_ERROR"->"Kiểm tra thông tin đã nhập.";case "VERSION_CONFLICT"->"Đợt đã được cập nhật. Hãy đọc bản mới để đối chiếu.";case "SYSTEM_SECTION_IMMUTABLE"->"Không được thay đổi hoặc xóa mục cố định của mẫu.";case "STATE_CONFLICT"->"Đợt không còn cho phép sửa thông tin chung.";case "TARGET_CONFIG_CONFLICT"->"Một lớp đang nhận các cấu hình khác nhau. Hãy kiểm tra nhóm đã chọn.";case "SOURCE_MAPPING_INCOMPLETE"->"Chưa đủ ánh xạ dữ liệu nguồn để xác định danh sách sinh viên.";case "DEPENDENCY_UNAVAILABLE"->"Chưa kiểm tra được dữ liệu phụ thuộc.";case "FORBIDDEN"->"Bạn chưa được cấp quyền SHCN phù hợp.";case "NOT_FOUND"->"Không tìm thấy đợt SHCN.";default->"Chưa thể hoàn tất yêu cầu.";};
         var p=ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(status),detail);p.setType(URI.create("about:blank"));p.setInstance(URI.create(r.getRequestURI()));p.setProperty("code",code);p.setProperty("traceId",UUID.randomUUID().toString());
         if(status==400)p.setProperty("errors",errors.isEmpty()?List.of(new DotFailure.FieldError("request",code,"Yêu cầu không hợp lệ.")):errors);
         return ResponseEntity.status(status).header(HttpHeaders.CACHE_CONTROL,"private, no-store").contentType(MediaType.APPLICATION_PROBLEM_JSON).body(p);

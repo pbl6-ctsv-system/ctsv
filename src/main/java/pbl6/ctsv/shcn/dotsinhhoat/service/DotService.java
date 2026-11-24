@@ -11,6 +11,7 @@ import pbl6.ctsv.shcn.dotsinhhoat.dto.DotDtos.*;
 import pbl6.ctsv.shcn.dotsinhhoat.entity.DotSinhHoat;
 import pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure;
 import pbl6.ctsv.shcn.dotsinhhoat.reference.DotReference;
+import pbl6.ctsv.shcn.dotsinhhoat.reference.AudiencePreviewResolver;
 import pbl6.ctsv.shcn.dotsinhhoat.repository.DotRepository;
 
 public final class DotService {
@@ -28,11 +29,18 @@ public final class DotService {
             return new Result<>(command.apply(new Actor(identity,p)),p.prepare());});
     }
     public NhomLopDTO groups(String code){return reference.groups(code);}
+    public Page<LopTheoKyDTO> classes(String semester,String type,String selector,Query query){return reference.classes(semester,type,selector,query);}
+    public Page<SinhVienTheoKyDTO> students(String semester,String classroom,Query query){return reference.students(semester,classroom,query);}
     public Page<HocKyDTO> semesters(Query query){return reference.semesters(query);}
     public Page<DotDTO> list(Query q){var p=repository.list(q);return new Page<>(p.items().stream().map(this::dto).toList(),p.page(),p.size(),p.totalElements());}
     public DotDTO detail(long id){return dto(repository.find(id,false));}
+    public DoiTuongDTO audiences(long id,Query query){
+        var root=repository.find(id,false);writable(root);
+        var configuration=new CauHinh(root.getMaHocKy(),root.getTenDot(),root.getKhungNgayBatDau(),root.getKhungNgayKetThuc(),repository.ranges(root.getKhungTietChoPhep()),root.getHanChotDangKyLich(),repository.audiences(id));
+        return AudiencePreviewResolver.resolve(Long.toString(id),Base64.getEncoder().encodeToString(root.getPhienBanGhi()),configuration,reference.projection(root.getMaHocKy()),query);
+    }
     public DotDTO create(Actor actor,CauHinh input){
-        reference.requireSemester(input.maHocKy());if(input.doiTuongApDung()!=null)reference.requireAudiences(input.maHocKy(),input.doiTuongApDung());var root=repository.create(input,actor.identity().principal().accountId().toString(),OffsetDateTime.now(clock));
+        validateAudiences(input,input.doiTuongApDung());reference.requireSemester(input.maHocKy());if(input.doiTuongApDung()!=null)reference.requireAudiences(input.maHocKy(),input.doiTuongApDung());var root=repository.create(input,actor.identity().principal().accountId().toString(),OffsetDateTime.now(clock));
         if(input.doiTuongApDung()!=null)repository.replaceAudiences(root.getId(),input.doiTuongApDung(),OffsetDateTime.now(clock));
         repository.audit(actor.identity().userId(),"SHCN_DOT_CREATE_DRAFT",root.getId());return dto(root);
     }
@@ -40,10 +48,24 @@ public final class DotService {
         var root=repository.find(id,true);if(!Arrays.equals(root.getPhienBanGhi(),input.expectedVersion()))throw new DotFailure(409,"VERSION_CONFLICT");
         writable(root);reference.requireSemester(input.cauHinh().maHocKy());
         var c=input.cauHinh();var old=repository.audiences(id);var effective=c.doiTuongApDung()==null?old:c.doiTuongApDung();
+        validateAudiences(c,effective);
         boolean groupsChanged=c.doiTuongApDung()!=null&&!old.equals(c.doiTuongApDung());
-        if(c.doiTuongApDung()!=null||!Objects.equals(root.getMaHocKy(),c.maHocKy()))reference.requireAudiences(c.maHocKy(),effective);
+        reference.requireAudiences(c.maHocKy(),effective);
         boolean reset=groupsChanged||!Objects.equals(root.getMaHocKy(),c.maHocKy())||!Objects.equals(root.getKhungNgayBatDau(),c.khungNgayBatDau())||!Objects.equals(root.getKhungNgayKetThuc(),c.khungNgayKetThuc())||!repository.ranges(root.getKhungTietChoPhep()).equals(c.khungTietChoPhep())||!root.getHanChotDangKyLich().toInstant().equals(c.hanChotDangKyLich().toInstant());
         var saved=repository.update(id,input.expectedVersion(),c,reset,OffsetDateTime.now(clock));if(c.doiTuongApDung()!=null)repository.replaceAudiences(id,c.doiTuongApDung(),OffsetDateTime.now(clock));repository.audit(actor.identity().userId(),"SHCN_DOT_UPDATE_DRAFT",id);return dto(saved);
+    }
+    private static void validateAudiences(CauHinh input,List<DoiTuong> groups){
+        if(groups==null||groups.isEmpty()||groups.size()>1000)throw DotFailure.invalid("doiTuongApDung");
+        LocalDate from=null,until=null;var keys=new HashSet<String>();
+        for(var group:groups){
+            if(!keys.add(group.loaiDoiTuong()+":"+group.maDoiTuong()))throw DotFailure.invalid("doiTuongApDung");
+            var a=group.khungNgayBatDau()==null?input.khungNgayBatDau():group.khungNgayBatDau();
+            var b=group.khungNgayKetThuc()==null?input.khungNgayKetThuc():group.khungNgayKetThuc();
+            if(a==null||b==null||b.isBefore(a))throw DotFailure.invalid("doiTuongApDung");
+            if(from==null||a.isBefore(from))from=a;if(until==null||b.isAfter(until))until=b;
+        }
+        if(!Objects.equals(from,input.khungNgayBatDau()))throw DotFailure.invalid("khungNgayBatDau");
+        if(!Objects.equals(until,input.khungNgayKetThuc()))throw DotFailure.invalid("khungNgayKetThuc");
     }
     public static void writable(DotSinhHoat root){
         if(!Set.of("NHAP","BI_TRA_LAI").contains(root.getTrangThai())||Set.of("CHO_PHO_PHONG_DUYET","CHO_BGH_KY","CO_HIEU_LUC").contains(root.getTrangThaiPhanCong())
