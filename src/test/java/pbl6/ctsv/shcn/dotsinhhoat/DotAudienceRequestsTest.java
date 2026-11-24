@@ -22,14 +22,14 @@ class DotAudienceRequestsTest {
         assertEquals("ONLINE",out.at("/doiTuongApDung/1/hinhThucChoPhep").textValue());
         assertEquals("0010",out.path("maHocKy").textValue());
     }
-    @Test void permitsDraftWithoutAnyAudienceAndExplicitEmptyArray()throws Exception{
-        assertNotNull(requests.create(json.readTree(root)));assertNotNull(requests.create(input("[]")));
+    @Test void rejectsNewDraftWithoutAnyAudienceAndExplicitEmptyArray()throws Exception{
+        assertThrows(DotFailure.class,()->requests.create(json.readTree(root)));assertThrows(DotFailure.class,()->requests.create(input("[]")));
     }
     @Test void rejectsDuplicateSelectorInsteadOfSilentlyPickingLast()throws Exception{
         var e=assertThrows(DotFailure.class,()->requests.create(input("["+group+","+group+"]")));assertEquals(400,e.status());
     }
     @Test void rejectsInvalidModeMissingDateAndReversedDates()throws Exception{
-        for(String row:new String[]{group.replace("OFFLINE","invalid"),group.replace("\"2026-12-07\"","null"),group.replace("2026-12-07","2026-11-30")}){
+        for(String row:new String[]{group.replace("OFFLINE","invalid"),group.replace("OFFLINE","CA_HAI"),group.replace("\"2026-12-07\"","null"),group.replace("2026-12-07","2026-11-30")}){
             assertEquals("VALIDATION_ERROR",assertThrows(DotFailure.class,()->requests.create(input("["+row+"]"))).code());
         }
     }
@@ -38,8 +38,8 @@ class DotAudienceRequestsTest {
             assertThrows(DotFailure.class,()->requests.create(input(value)));
         }
     }
-    @Test void permitsExplicitInheritanceOfCommonDateAndPeriods()throws Exception{
-        var c=requests.create(input("["+group.replace("\"2026-12-01\"","null").replace("\"2026-12-07\"","null")+"]"));
-        assertTrue(json.valueToTree(c).at("/doiTuongApDung/0/khungNgayBatDau").isNull());
+    @Test void rejectsInheritedDatesForNewAudienceWhileNullPeriodsStillInherit()throws Exception{
+        assertThrows(DotFailure.class,()->requests.create(input("["+group.replace("\"2026-12-01\"","null").replace("\"2026-12-07\"","null")+"]")));
+        assertNull(requests.create(input("["+group+"]")).doiTuongApDung().getFirst().khungTietChoPhep());
     }
 }
