@@ -22,7 +22,7 @@ function detail(value:unknown):value is RoundDetail{
  return !!v&&!!s&&id(v.id)&&id(v.sourceSemesterId)&&id(v.createdBy)
   &&integer(v.number,1,2147483647)&&typeof v.name==='string'&&typeof v.status==='string'
   &&id(s.id)&&typeof s.academicYear==='string'&&integer(s.semesterOrder,1,2)
-  &&typeof s.startDate==='string'&&typeof s.endDate==='string'&&typeof s.status==='string'
+  &&typeof s.startDate==='string'&&nullableText(s.endDate)&&typeof s.status==='string'
   &&nullableText(v.opensAt)&&nullableText(v.closedAt)&&nullableText(v.tuitionSnapshotAt)
   &&(v.ruleVersionId===null||id(v.ruleVersionId));
 }
@@ -66,7 +66,7 @@ function sourceSemester(value:unknown):value is SourceSemester{
   ||!nullableText(v.startDate)||!nullableText(v.endDate)
   ||!(v.scholarshipSemesterId===null||id(v.scholarshipSemesterId))||typeof v.selectable!=='boolean')return false;
  return v.selectable
-  ?typeof v.academicYear==='string'&&integer(v.semesterOrder,1,2)&&typeof v.startDate==='string'&&typeof v.endDate==='string'&&v.unavailableReason===null
+  ?typeof v.academicYear==='string'&&integer(v.semesterOrder,1,2)&&typeof v.startDate==='string'&&v.unavailableReason===null
   :typeof v.unavailableReason==='string'&&v.unavailableReason.length>0;
 }
 

@@ -71,7 +71,7 @@ public class DiemKyHoc {
     @Column(name="hoc_phan_id", nullable=false)
     private Long hocPhanId;
 
-    @Column(name="hoc_phan_tuong_duong_id", nullable=false)
+    @Column(name="hoc_phan_tuong_duong_id", nullable=true)
     private Long hocPhanTuongDuongId;
 
     @Column(name="diem_nguon", nullable=true, precision=28, scale=10)

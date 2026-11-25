@@ -6,7 +6,7 @@ import pbl6.ctsv.hocbong.kkht.round.entity.*;
 final class RoundMapper {
     static RoundDtos.SemesterDto semester(ScholarshipSemester s) {
         return new RoundDtos.SemesterDto(s.getId().toString(),s.getAcademicYear(),s.getSemesterOrder(),
-            s.getStartDate().toString(),s.getEndDate().toString(),s.getStatus());
+            s.getStartDate().toString(),s.getEndDate()==null?null:s.getEndDate().toString(),s.getStatus());
     }
     static RoundDtos.RoundDetail detail(ScholarshipRound r,ScholarshipSemester s,SourceSemesterMapping m) {
         return new RoundDtos.RoundDetail(r.getId().toString(),m.getSourceSemesterCode(),r.getNumber(),r.getName(),

@@ -11,7 +11,7 @@ import styles from './CreateRoundForm.module.css';
 const reasons:Record<string,string>={
  SOURCE_NOT_PRESENT:'Học kỳ không còn hiện diện ở nguồn Đào tạo.',
  SUMMER_MERGED_INTO_SEMESTER_2:'Học kỳ hè không tạo đợt riêng; chọn học kỳ 2.',
- SOURCE_DATES_UNVERIFIED:'Ngày học kỳ chưa đủ hoặc chưa được xác minh.',
+ SOURCE_DATES_UNVERIFIED:'Chưa có ngày bắt đầu hoặc khoảng ngày học kỳ không hợp lệ.',
  SEMESTER_MAPPING_REQUIRED:'Chưa xác định được năm học hoặc học kỳ học bổng.',
  SEMESTER_MAPPING_CONFLICT:'Thông tin học kỳ đang có mâu thuẫn ánh xạ.',
 };

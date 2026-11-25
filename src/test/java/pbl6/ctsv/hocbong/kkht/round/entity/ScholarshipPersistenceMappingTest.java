@@ -17,7 +17,7 @@ class ScholarshipPersistenceMappingTest {
             assertColumn(metadata, entity, "academicYear", "nam_hoc", "nvarchar(9)", false);
             assertColumn(metadata, entity, "semesterOrder", "thu_tu_ky", "smallint", false);
             assertColumn(metadata, entity, "startDate", "ngay_bat_dau", "date", false);
-            assertColumn(metadata, entity, "endDate", "ngay_ket_thuc", "date", false);
+            assertColumn(metadata, entity, "endDate", "ngay_ket_thuc", "date", true);
             assertColumn(metadata, entity, "status", "trang_thai", "nvarchar(32)", false);
         });
     }

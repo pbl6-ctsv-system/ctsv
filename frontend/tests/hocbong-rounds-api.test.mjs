@@ -6,6 +6,12 @@ import {listRounds,readRound,readScholarshipGroups} from '../src/features/hocbon
 const summary={id:'9007199254740993',sourceSemesterId:'21',semesterId:'501',academicYear:'2025-2026',semesterOrder:2,number:1,name:'Đợt xét KKHT lần 1',status:'draft'};
 const detail={id:summary.id,sourceSemesterId:'21',number:1,name:summary.name,status:'draft',createdBy:'301',semester:{id:'501',academicYear:'2025-2026',semesterOrder:2,startDate:'2026-01-16',endDate:'2026-06-30',status:'draft'},opensAt:null,closedAt:null,tuitionSnapshotAt:null,ruleVersionId:null};
 const page={items:[summary],page:0,size:20,totalElements:1};
+test('HB-START-ONLY: round detail preserves null semester end and its ETag',async()=>{
+ const body={...detail,semester:{...detail.semester,endDate:null}};
+ const result=await readRound(fixture(body,{ETag:'"start-only"'}).client,body.id);
+ assert.deepEqual(result.round,body);
+ assert.equal(result.etag,'"start-only"');
+});
 function fixture(body,headers={}){
  const calls=[];
  const client={request:async(path,options)=>{calls.push({path,options});return Response.json(body,{headers});}};

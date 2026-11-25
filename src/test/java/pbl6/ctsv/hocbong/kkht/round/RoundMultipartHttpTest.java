@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestComponent;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -59,6 +60,8 @@ import static org.mockito.Mockito.when;
                 "ctsv.auth.origins[0]=https://ctsv.example.test", "spring.servlet.multipart.resolve-lazily=false"})
 @ActiveProfiles("test")
 class RoundMultipartHttpTest extends RoundMultipartCases {
+    // This explicit test root must be excluded from the application's component scan.
+    @TestComponent
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class,
             FlywayAutoConfiguration.class})
@@ -113,6 +116,7 @@ class RoundMultipartHttpTest extends RoundMultipartCases {
                 "ctsv.files.cloudinary.enabled=false"})
 @ActiveProfiles("test")
 class RoundFileResolverHttpTest extends RoundMultipartCases {
+    @TestComponent
     @Configuration(proxyBeanMethods = false)
     @Import(FileConfigurationImport.class)
     static class FilesConfiguration {}

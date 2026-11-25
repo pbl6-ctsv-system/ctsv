@@ -93,6 +93,9 @@ class ScholarshipConfiguration {
         policy.setAllowedHeaders(List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.IF_MATCH,"Idempotency-Key"));
         policy.setExposedHeaders(List.of(HttpHeaders.ETAG, HttpHeaders.LOCATION,"Idempotency-Replayed"));
         var source = new UrlBasedCorsConfigurationSource();
+        var combinations = new CorsConfiguration(policy);
+        combinations.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        source.registerCorsConfiguration("/api/ctsv/hoc-bong/kkht/to-hop-dao-tao/**", combinations);
         source.registerCorsConfiguration(RoundController.BASE + "/**", policy);
         CorsFilter filter = new CorsFilter(source) {
             @Override
