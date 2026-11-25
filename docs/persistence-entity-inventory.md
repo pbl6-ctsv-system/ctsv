@@ -16,7 +16,7 @@ Nguồn: migrations CTSV V1–V8; không thay schema. 24 resource + 7 bảng h�
 | Foundation | NganhNoiBo | `nganh_noi_bo` | nganh_quoc_gia_id → nganh_quoc_gia; he_thong_nguon_id → he_thong_ngoai | — |
 | Foundation | ChuongTrinhDaoTao | `chuong_trinh_dao_tao` | nganh_noi_bo_id → nganh_noi_bo; nganh_quoc_gia_id → nganh_quoc_gia; hoc_ky_bat_dau_id → hoc_ky; hoc_ky_ket_thuc_id → hoc_ky; he_thong_nguon_id → he_thong_ngoai | — |
 | Foundation | LopSinhHoat | `lop_sinh_hoat` | chuong_trinh_dao_tao_id → chuong_trinh_dao_tao; khoa_quan_ly_id → don_vi; khoa_hoc_id → khoa_hoc; he_thong_nguon_id → he_thong_ngoai | — |
-| Foundation | SinhVien | `sinh_vien` | nguoi_dung_id → nguoi_dung; noi_sinh_id → dia_phuong; dan_toc_id → dan_toc; quoc_tich_id → quoc_tich; lop_hien_tai_id → lop_sinh_hoat; khoa_quan_ly_hien_tai_id → don_vi; khoa_hoc_hien_tai_id → khoa_hoc; chuong_trinh_hien_tai_id → chuong_trinh_dao_tao; hoc_ky_ap_dung_nguon_id → hoc_ky; hoc_ky_bat_dau_nguon_id → hoc_ky; hoc_ky_ket_thuc_nguon_id → hoc_ky; he_thong_nguon_id → he_thong_ngoai; hoc_ky_han_hoc_nguon_id → hoc_ky | — |
+| Foundation | SinhVien | `sinh_vien` | nguoi_dung_id → nguoi_dung; noi_sinh_id → dia_phuong; dan_toc_id → dan_toc; quoc_tich_id → quoc_tich; lop_hien_tai_id → lop_sinh_hoat; khoa_quan_ly_hien_tai_id → don_vi; khoa_hoc_hien_tai_id → khoa_hoc; chuong_trinh_hien_tai_id → chuong_trinh_dao_tao; hoc_ky_ap_dung_nguon_id → hoc_ky; hoc_ky_bat_dau_nguon_id → hoc_ky; hoc_ky_ket_thuc_nguon_id → hoc_ky; he_thong_nguon_id → he_thong_ngoai; hoc_ky_han_hoc_nguon_id → hoc_ky | `ma_chuc_vu_nguon` là mã nguồn nullable do V30 bổ sung. |
 | Foundation | DuLieuHocVuDongBo | `du_lieu_hoc_vu_dong_bo` | sinh_vien_id → sinh_vien; hoc_ky_id → hoc_ky; chuong_trinh_dao_tao_id → chuong_trinh_dao_tao; qua_trinh_hoc_id → qua_trinh_theo_hoc; he_thong_nguon_id → he_thong_ngoai | dot_dong_bo_id → dot_dong_bo |
 | Foundation | HocPhan | `hoc_phan` | he_thong_nguon_id → he_thong_ngoai | — |
 | Foundation | KhungChuongTrinh | `khung_chuong_trinh` | he_thong_nguon_id → he_thong_ngoai; hoc_phan_id → hoc_phan; hoc_phan_duoc_thay_the_id → hoc_phan | — |
@@ -109,3 +109,33 @@ V18 bỏ huong_dan_ke_khai/huong_dan_can_cu_nop_muon tại mghp_dot_xet; MghpDot
 `mghp.application.SigningEntities` thêm5 Entity nghiệp vụ trên bảng đã có: Document→van_ban; DocumentVersion→phien_ban_van_ban; Link→mghp_lien_ket_phien_ban_van_ban; Request→yeu_cau_ky; Step→buoc_ky. FK scalar, không cascade, không trả Entity ra API. V24 bổ sung request rowversion read-only byte[8], checkpoint/lease/principal/output ở lan_goi_dich_vu_ky; không sửa V1–V23.
 
 Attempt/receipt/artifact/certificate observation dùng JDBC chuyên biệt trong SigningRepository để giữ fencing/CAS/short transaction; storage bytes ở Cloudinary authenticated, metadata/ledger Shared Files. Dùng public ManagedFiles/FileReadPolicy, không import repository/entity Shared Files xuyên module. Thêm role PHT vào registry và danh mục role Foundation, không tự grant account. SQL/JPA mapping được validate trên DB P11 riêng; DEV nâng sau gate UI.
+
+## ĐRL — DRL-02.3
+
+Module ĐRL sở hữu 11 bảng ghi trong schema `dbo`, ánh xạ tại `pbl6.ctsv.drl.entity`. [V17](../src/main/resources/db/migration/V17__drl_schema.sql) tạo các bảng và view. [V26](../src/main/resources/db/migration/V26__drl_dossier_freeze.sql) bổ sung `dbo.RLLopDot.NgayLapHoSo` kiểu `datetimeoffset(7) NULL`, ánh xạ thành `OffsetDateTime` với `@TimeZoneStorage(NATIVE)`. 11 bảng có tổng cộng 75 cột và dùng PK `ID bigint IDENTITY(1,1)` qua `DrlEntity`.
+
+| Entity | Bảng `dbo` | FK giữ ID scalar `Long` → bảng/cột đích |
+|---|---|---|
+| `RlBieuMau` | `RLBieuMau` | — |
+| `RlNhomTieuChi` | `RLNhomTieuChi` | `BieuMauID` → `RLBieuMau.ID` |
+| `RlBieuMauCt` | `RLBieuMauCT` | `NhomTieuChiID` → `RLNhomTieuChi.ID`, `TieuChiChaID` → `RLBieuMauCT.ID` (NULL) |
+| `RlXepLoai` | `RLXepLoai` | `BieuMauID` → `RLBieuMau.ID` |
+| `RlDot` | `RLDot` | `HocKyID` → `hoc_ky.id`, `BieuMauID` → `RLBieuMau.ID` |
+| `RlKhoaDot` | `RLKhoaDot` | `DotID` → `RLDot.ID`, `KhoaID` → `don_vi.id`, `DaiDienKhoaID` → `can_bo.id` (NULL) |
+| `RlLopDot` | `RLLopDot` | `KhoaDotID` → `RLKhoaDot.ID`, `LopID` → `lop_sinh_hoat.id`, `LopTruongID` → `sinh_vien.id` (NULL), `GVCNID` → `can_bo.id` (NULL), `NguoiXNCTSVID` → `nguoi_dung.id` (NULL) |
+| `RlPhieu` | `RLPhieu` | `LopDotID` → `RLLopDot.ID`, `SinhVienID` → `sinh_vien.id` |
+| `RlPhieuDiemCt` | `RLPhieuDiemCT` | `PhieuID` → `RLPhieu.ID`, `BieuMauCTID` → `RLBieuMauCT.ID` |
+| `RlHopLop` | `RLHopLop` | `LopDotID` → `RLLopDot.ID` |
+| `RlVanBanKy` | `RLVanBanKy` | `LopDotID` → `RLLopDot.ID`, `PhienBanVanBanID` → `phien_ban_van_ban.id` |
+
+Cả 21 FK đều giữ ID scalar, không dùng association hay cascade, kể cả các FK tới Foundation và bảng văn bản dùng chung. Giữ Entity và proxy trong nội bộ ĐRL. API và trao đổi xuyên module dùng DTO hoặc projection qua public boundary.
+
+Read-model `RlKetQuaSv` ánh xạ view `dbo.RLKetQuaSV` bằng `@Immutable`, dùng `PhieuID` làm `@Id` và chỉ có truy vấn đọc. View có 9 cột gồm `PhieuID`, `SinhVienID`, `LopDotID`, `DotID`, `HocKyID`, `TongDiemCN`, `TongDiemLop`, `XepLoai` và `DaCongBo`. Các ID trong view là cột chiếu, nằm ngoài 21 FK của bảng ghi.
+
+- `DrlRepository` phục vụ truy cập dữ liệu nội bộ qua `EntityManager`, dùng `JdbcTemplate` để khóa dòng lớp–đợt trong transaction chung của CTSV, và cung cấp truy vấn đọc kết quả từ view. Application service sở hữu transaction và kiểm quyền.
+- `DrlConfiguration` đăng ký `DrlPhysicalNamingStrategy`. Strategy giữ nguyên tên PascalCase đã quote của ĐRL trong các danh sách `TABLES` và `COLUMNS` và dùng quy tắc mặc định cho các tên khác. Nếu V27 trở đi bổ sung bảng, view hoặc cột PascalCase cho ĐRL, cập nhật danh sách tương ứng cùng annotation mapping và kiểm lại Hibernate validate.
+
+**Phạm vi Hibernate validate đã ghi nhận ở DRL-02.2**
+
+- **SQL Server test `ctsv_drl_fresh_test`.** `DrlPersistenceIT` chạy `ddl-auto=validate` với scan toàn bộ `pbl6.ctsv` và kiểm đếm 91 mapping gồm ĐRL 12, Foundation 31, MGHP 38, Học bổng 6 và SHCN 4.
+- **DEV `ctsv_dev`.** Log khởi động JAR qua launcher với profile `dev` ngày 24/11/2026 ghi nhận `EntityManagerFactory` mặc định khởi tạo thành công và backend đã khởi động với `ddl-auto=validate`. Mốc 91 là số đếm của SQL IT. Lượt DRL-02.3 chỉ đối chiếu tài liệu và bằng chứng đã có.

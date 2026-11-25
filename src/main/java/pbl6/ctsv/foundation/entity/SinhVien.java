@@ -212,6 +212,10 @@ public class SinhVien {
     private String heDaoTaoNguon;
 
     @Nationalized
+    @Column(name="ma_chuc_vu_nguon", nullable=true, length=128)
+    private String maChucVuNguon;
+
+    @Nationalized
     @Column(name="ngay_luu_nguon", nullable=true, length=512)
     private String ngayLuuNguon;
 
@@ -390,6 +394,8 @@ public class SinhVien {
     public void setNgayNhapHocNguon(String value) { this.ngayNhapHocNguon = value; }
     public String getHeDaoTaoNguon() { return heDaoTaoNguon; }
     public void setHeDaoTaoNguon(String value) { this.heDaoTaoNguon = value; }
+    public String getMaChucVuNguon() { return maChucVuNguon; }
+    public void setMaChucVuNguon(String value) { this.maChucVuNguon = value; }
     public String getNgayLuuNguon() { return ngayLuuNguon; }
     public void setNgayLuuNguon(String value) { this.ngayLuuNguon = value; }
     public String getLoaiLuuNguon() { return loaiLuuNguon; }

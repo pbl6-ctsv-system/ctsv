@@ -98,7 +98,7 @@ class DrlSchemaIT {
         var rowsBefore = legacyDrlRows(jdbc);
         int completedBefore = alreadyUpgraded
                 ? jdbc.queryForObject("SELECT COUNT(*) FROM dbo.RLLopDot WHERE NgayLapHoSo IS NOT NULL", Integer.class) : 0;
-        var flyway = DrlTestDatabase.flyway(source, DrlTestDatabase.TARGET);
+        var flyway = DrlTestDatabase.flyway(source, DrlTestDatabase.DOSSIER_FREEZE_TARGET);
         var result = flyway.migrate();
         assertThat(result.migrationsExecuted).isEqualTo(alreadyUpgraded ? 0 : 1);
         flyway.validate();

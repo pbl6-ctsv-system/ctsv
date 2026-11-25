@@ -5,7 +5,7 @@ import {AppShell} from './layouts/AppShell';
 import {navigationSections,normalizePath,resolveRoute} from './navigation/modules.mjs';
 import {Navbar} from './navigation/Navbar';
 import {ApiError} from '../shared/auth/auth-client.mjs';
-import {LoginPage,readCurrentAccount} from '../features/auth';
+import {LoginLayout,LoginPage,readCurrentAccount} from '../features/auth';
 import {probeRoundAccess,probeFacultyScope} from '../features/shcn';
 import {featurePages} from './navigation/featureRegistry';
 import {Alert} from '../shared/ui/Alert';
@@ -38,7 +38,7 @@ function Workspace(){
 
  if(auth.me)return <AccountWorkspace key={String(auth.me.accountId)} auth={auth} me={auth.me} path={path} onNavigate={go}/>;
 
- return <AppShell busy={auth.busy} onLogout={auth.logout}>
+ return <LoginLayout>
   {restoring?<p role="status">Đang khôi phục đăng nhập…</p>:<>
    {auth.error&&<Alert>{auth.error}</Alert>}
    <LoginPage onLogin={(username,password)=>{
@@ -47,7 +47,7 @@ function Workspace(){
    }}
     onRestore={auth.restore} busy={auth.busy}/>
   </>}
- </AppShell>;
+ </LoginLayout>;
 }
 
 type Auth=ReturnType<typeof useAuth>;

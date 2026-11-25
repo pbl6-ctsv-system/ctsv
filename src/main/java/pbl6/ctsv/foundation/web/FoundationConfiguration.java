@@ -9,7 +9,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationUsage;
 import pbl6.ctsv.foundation.api.ScholarshipCombinationSource;
+import pbl6.ctsv.foundation.api.StaffReferenceSource;
+import pbl6.ctsv.foundation.api.StudentReferenceSource;
 import pbl6.ctsv.foundation.repository.FoundationRepository;
+import pbl6.ctsv.foundation.repository.JdbcStaffReferenceRepository;
+import pbl6.ctsv.foundation.repository.JdbcStudentReferenceRepository;
 import pbl6.ctsv.foundation.repository.ScholarshipCombinationRepository;
 @Configuration(proxyBeanMethods=false)
 @ConditionalOnProperty(name="ctsv.foundation.enabled",havingValue="true")
@@ -21,6 +25,12 @@ class FoundationConfiguration {
  }
  @Bean ScholarshipCombinationSource scholarshipCombinationSource(EntityManager em,JdbcTemplate jdbc) {
   return new ScholarshipCombinationRepository(em,jdbc);
+ }
+ @Bean StudentReferenceSource studentReferenceSource(JdbcTemplate jdbc) {
+  return new JdbcStudentReferenceRepository(jdbc);
+ }
+ @Bean StaffReferenceSource staffReferenceSource(JdbcTemplate jdbc) {
+  return new JdbcStaffReferenceRepository(jdbc);
  }
  @Bean
  FoundationService foundationService(FoundationSecurity security, FoundationRepository repository,
