@@ -7,7 +7,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationUsage;
+import pbl6.ctsv.foundation.api.StaffReferenceSource;
+import pbl6.ctsv.foundation.api.StudentReferenceSource;
 import pbl6.ctsv.foundation.repository.FoundationRepository;
+import pbl6.ctsv.foundation.repository.JdbcStaffReferenceRepository;
+import pbl6.ctsv.foundation.repository.JdbcStudentReferenceRepository;
 @Configuration(proxyBeanMethods=false)
 @ConditionalOnProperty(name="ctsv.foundation.enabled",havingValue="true")
 class FoundationConfiguration {
@@ -15,6 +19,12 @@ class FoundationConfiguration {
  @Bean pbl6.ctsv.foundation.repository.FoundationRepository foundationRepository(jakarta.persistence.EntityManager em,JdbcTemplate jdbc){return new pbl6.ctsv.foundation.repository.FoundationRepository(em,jdbc);}
  @Bean pbl6.ctsv.foundation.api.ScholarshipScopeSource scholarshipScopeSource(JdbcTemplate jdbc,FoundationRepository repository,ObjectMapper json) {
   return new pbl6.ctsv.foundation.repository.ScholarshipScopeRepository(jdbc,repository,json);
+ }
+ @Bean StudentReferenceSource studentReferenceSource(JdbcTemplate jdbc) {
+  return new JdbcStudentReferenceRepository(jdbc);
+ }
+ @Bean StaffReferenceSource staffReferenceSource(JdbcTemplate jdbc) {
+  return new JdbcStaffReferenceRepository(jdbc);
  }
  @Bean
  FoundationService foundationService(FoundationSecurity security, FoundationRepository repository,
