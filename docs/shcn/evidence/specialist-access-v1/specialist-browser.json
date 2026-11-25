@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Specialist sees SHCN navigation and can open round management with real backend/global grant",
+    "Specialist can open draft creation form; no POST round submitted",
+    "Student direct backend round request receives HTTP403",
+    "Student cannot access specialist SHCN round route"
+  ],
+  "passed": 4,
+  "browser": "Chrome REAL",
+  "api": "REAL HTTPS DEV",
+  "database": "DEV2022/ctsv_dev REAL",
+  "businessWrites": 0,
+  "migrationExecuted": false
+}

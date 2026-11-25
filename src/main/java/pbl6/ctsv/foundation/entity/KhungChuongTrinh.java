@@ -68,7 +68,7 @@ public class KhungChuongTrinh {
     @Column(name="hoc_phan_id", nullable=false)
     private Long hocPhanId;
 
-    @Column(name="hoc_phan_duoc_thay_the_id", nullable=false)
+    @Column(name="hoc_phan_duoc_thay_the_id", nullable=true)
     private Long hocPhanDuocThayTheId;
 
     @Column(name="hoc_ky_trong_khung_nguon", nullable=true)

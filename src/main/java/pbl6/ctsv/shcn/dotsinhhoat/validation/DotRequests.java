@@ -31,8 +31,8 @@ public final class DotRequests {
         var keys=Set.of(allowed);for(var k:r.getParameterMap().keySet())if(!keys.contains(k)||r.getParameterValues(k).length!=1)throw invalid(k);
         try{if(r.getInputStream().read()!=-1)throw invalid("body");}catch(java.io.IOException e){throw invalid("body");}
     }
-    public CauHinh create(JsonNode n){shape(n,CONFIG,"");return config(n);}
-    public SuaDot update(JsonNode n){var fields=new HashSet<>(CONFIG);fields.add("expectedVersion");shape(n,fields,"");return new SuaDot(version(n.get("expectedVersion")),config(n));}
+    public CauHinh create(JsonNode n){configShape(n,CONFIG);var c=config(n);if(c.doiTuongApDung()==null||c.doiTuongApDung().isEmpty())throw invalid("doiTuongApDung");return c;}
+    public SuaDot update(JsonNode n){var fields=new HashSet<>(CONFIG);fields.add("expectedVersion");configShape(n,fields);return new SuaDot(version(n.get("expectedVersion")),config(n));}
     private CauHinh config(JsonNode n){
         var code=code(text(n.get("maHocKy"),"maHocKy",32),"maHocKy");var name=text(n.get("tenDot"),"tenDot",200);
         if(name.isBlank()||!name.equals(name.strip())||space(name.charAt(0))||space(name.charAt(name.length()-1)))throw invalid("tenDot");
@@ -43,7 +43,33 @@ public final class DotRequests {
             var field="khungTietChoPhep["+i+"]";var row=ranges.get(i);shape(row,Set.of("tietDau","tietCuoi"),field);
             int a=integer(row.get("tietDau"),field+".tietDau"),b=integer(row.get("tietCuoi"),field+".tietCuoi");if(a>b)throw invalid(field+".tietCuoi");items.add(new KhoangTiet(a,b));
         }
-        return new CauHinh(code,name,from,until,items,instant(n.get("hanChotDangKyLich")));
+        return new CauHinh(code,name,from,until,items,instant(n.get("hanChotDangKyLich")),audiences(n));
+    }
+    private void configShape(JsonNode n,Set<String> required){
+        var all=new HashSet<>(required);if(n!=null&&n.has("doiTuongApDung"))all.add("doiTuongApDung");shape(n,all,"");
+    }
+    private List<DoiTuong> audiences(JsonNode n){
+        if(!n.has("doiTuongApDung"))return null;
+        var rows=n.get("doiTuongApDung");if(!rows.isArray()||rows.isEmpty()||rows.size()>1000)throw invalid("doiTuongApDung");
+        var result=new ArrayList<DoiTuong>();var keys=new HashSet<String>();
+        for(int i=0;i<rows.size();i++){
+            var r=rows.get(i);String f="doiTuongApDung["+i+"]";
+            shape(r,Set.of("loaiDoiTuong","maDoiTuong","hinhThucChoPhep","khungNgayBatDau","khungNgayKetThuc","khungTietChoPhep"),f);
+            String type=text(r.get("loaiDoiTuong"),f+".loaiDoiTuong",40),code=code(text(r.get("maDoiTuong"),f+".maDoiTuong",32),f+".maDoiTuong");
+            String mode=text(r.get("hinhThucChoPhep"),f+".hinhThucChoPhep",40);
+            if(!Set.of("KHOA_HOC","LOP").contains(type)||!Set.of("OFFLINE","ONLINE").contains(mode)||!keys.add(type+":"+code))throw invalid(f);
+            LocalDate from=r.get("khungNgayBatDau").isNull()?null:date(r.get("khungNgayBatDau"),f+".khungNgayBatDau");
+            LocalDate until=r.get("khungNgayKetThuc").isNull()?null:date(r.get("khungNgayKetThuc"),f+".khungNgayKetThuc");
+            if(from==null||until==null||until.isBefore(from))throw invalid(f+".khungNgayKetThuc");
+            List<KhoangTiet> periods=null;var p=r.get("khungTietChoPhep");
+            if(!p.isNull()){
+                if(!p.isArray()||p.isEmpty()||p.size()>100)throw invalid(f+".khungTietChoPhep");
+                periods=new ArrayList<>();for(var v:p){shape(v,Set.of("tietDau","tietCuoi"),f+".khungTietChoPhep");
+                    int a=integer(v.get("tietDau"),f+".tietDau"),b=integer(v.get("tietCuoi"),f+".tietCuoi");if(a>b)throw invalid(f+".tietCuoi");periods.add(new KhoangTiet(a,b));}
+            }
+            result.add(new DoiTuong(type,code,mode,from,until,periods));
+        }
+        return result;
     }
     public static Query query(String page,String size,String sort,String q,String semester,String faculty,String state){
         int p=number(page,"page",0,Integer.MAX_VALUE,0),s=number(size,"size",1,100,25);long offset=(long)p*s;if(offset>100000)throw invalid("page");

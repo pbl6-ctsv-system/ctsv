@@ -1,5 +1,5 @@
 package pbl6.ctsv.auth;
- 
+
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.URI;
@@ -281,5 +281,3 @@ class StageHandoffHttpIT {
   assertThat(send("GET","/api/ctsv/mghp/ho-so/"+f.root,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
  }
 }
-
-

@@ -2688,7 +2688,14 @@
           "$ref": "#/$defs/Bigint"
         },
         "replaced_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "curriculum_semester": {
           "anyOf": [
@@ -2811,7 +2818,14 @@
           "$ref": "#/$defs/Bigint"
         },
         "replaced_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "curriculum_semester": {
           "anyOf": [
@@ -3077,7 +3091,14 @@
           "$ref": "#/$defs/Bigint"
         },
         "equivalent_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "grade": {
           "anyOf": [
@@ -3241,7 +3262,14 @@
           "$ref": "#/$defs/Bigint"
         },
         "equivalent_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "grade": {
           "anyOf": [
@@ -3588,7 +3616,14 @@
           ]
         },
         "equivalent_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "retake_flag_source": {
           "anyOf": [
@@ -3717,7 +3752,14 @@
           ]
         },
         "equivalent_course_source_id": {
-          "$ref": "#/$defs/Bigint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bigint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "retake_flag_source": {
           "anyOf": [

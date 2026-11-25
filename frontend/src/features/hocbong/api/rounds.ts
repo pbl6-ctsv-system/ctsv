@@ -1,5 +1,6 @@
 import type {AuthClient} from '../../../shared/types/api';
-import type {CreateRoundCommand,DefaultSemester,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,SourceSemester,SourceSemesterFilters,SourceSemesterPage,UpdateRoundCommand} from '../types/round';
+import {ApiError} from '../../../shared/auth/auth-client.mjs';
+import type {CreatedRound,CreationLookup,CreateRoundCommand,DefaultSemester,RoundContext,RoundDetail,RoundFilters,RoundPage,RoundSummary,RoundView,ScholarshipGroups,ScopeCatalogFilters,ScopeCatalogPage,ScopeCatalogSnapshot,ScopeGroup,ScopeSelection,ScopeVersion,ScopeView,SourceSemester,SourceSemesterFilters,SourceSemesterPage,UpdateRoundCommand} from '../types/round';
 
 const BASE='/api/ctsv/hoc-bong';
 const ROUNDS=BASE+'/kkht/dot-xet';
@@ -21,7 +22,7 @@ function detail(value:unknown):value is RoundDetail{
  return !!v&&!!s&&id(v.id)&&id(v.sourceSemesterId)&&id(v.createdBy)
   &&integer(v.number,1,2147483647)&&typeof v.name==='string'&&typeof v.status==='string'
   &&id(s.id)&&typeof s.academicYear==='string'&&integer(s.semesterOrder,1,2)
-  &&typeof s.startDate==='string'&&typeof s.endDate==='string'&&typeof s.status==='string'
+  &&typeof s.startDate==='string'&&nullableText(s.endDate)&&typeof s.status==='string'
   &&nullableText(v.opensAt)&&nullableText(v.closedAt)&&nullableText(v.tuitionSnapshotAt)
   &&(v.ruleVersionId===null||id(v.ruleVersionId));
 }
@@ -65,7 +66,7 @@ function sourceSemester(value:unknown):value is SourceSemester{
   ||!nullableText(v.startDate)||!nullableText(v.endDate)
   ||!(v.scholarshipSemesterId===null||id(v.scholarshipSemesterId))||typeof v.selectable!=='boolean')return false;
  return v.selectable
-  ?typeof v.academicYear==='string'&&integer(v.semesterOrder,1,2)&&typeof v.startDate==='string'&&typeof v.endDate==='string'&&v.unavailableReason===null
+  ?typeof v.academicYear==='string'&&integer(v.semesterOrder,1,2)&&typeof v.startDate==='string'&&v.unavailableReason===null
   :typeof v.unavailableReason==='string'&&v.unavailableReason.length>0;
 }
 
@@ -99,36 +100,141 @@ export async function readSourceSemester(client:AuthClient,sourceId:string,signa
  return body;
 }
 
-export async function createRound(client:AuthClient,command:CreateRoundCommand):Promise<RoundView>{
+export const isRoundEtag=(value:unknown):value is string=>typeof value==='string'&&/^"[A-Za-z0-9_-]+"$/.test(value);
+const catalogRevision=(value:unknown):value is string=>typeof value==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(value);
+const requestId=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
+const pairKey=(group:{cohortId:string;majorId:string})=>group.cohortId+':'+group.majorId;
+const uniqueGroups=(groups:{cohortId:string;majorId:string}[])=>new Set(groups.map(pairKey)).size===groups.length;
+
+function scopeGroup(value:unknown):value is ScopeGroup{
+ const v=record(value);
+ return !!v&&id(v.cohortId)&&id(v.majorId)&&nullableText(v.cohortCode)&&nullableText(v.majorCode)
+  &&nullableText(v.majorName)&&integer(v.studentCount,0,2147483647);
+}
+
+function savedScope(value:unknown):value is ScopeVersion{
+ const v=record(value);
+ return !!v&&id(v.id)&&integer(v.revision,1,2147483647)&&(v.mode==='all'||v.mode==='groups')
+  &&catalogRevision(v.catalogRevision)&&Array.isArray(v.groups)&&v.groups.length>=1&&v.groups.length<=2000
+  &&v.groups.every(scopeGroup)&&uniqueGroups(v.groups)&&id(v.createdBy)
+  &&typeof v.createdAt==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v.createdAt)&&Number.isFinite(Date.parse(v.createdAt));
+}
+
+function scopeCommand(command:UpdateRoundCommand):UpdateRoundCommand{
+ if(!catalogRevision(command.catalogRevision))throw new Error('Danh mục phạm vi không hợp lệ. Hãy tải lại danh mục.');
+ const scope=record(command.scope);
+ if(!scope)throw new Error('Hãy chọn phạm vi xét học bổng.');
+ let selection:ScopeSelection;
+ if(scope.mode==='all'&&!('groups' in scope))selection={mode:'all'};
+ else if(scope.mode==='groups'&&Array.isArray(scope.groups)&&scope.groups.length>=1&&scope.groups.length<=2000){
+  const groups=scope.groups.map(value=>{
+   const group=record(value);
+   if(!group||!id(group.cohortId)||!id(group.majorId))throw new Error('Nhóm Khóa + Ngành không hợp lệ.');
+   return{cohortId:group.cohortId,majorId:group.majorId};
+  });
+  if(!uniqueGroups(groups))throw new Error('Phạm vi có nhóm Khóa + Ngành trùng nhau.');
+  selection={mode:'groups',groups};
+ }else throw new Error('Phạm vi cần từ 1 đến 2000 nhóm hợp lệ hoặc toàn trường.');
+ return{catalogRevision:command.catalogRevision,scope:selection};
+}
+
+export async function listScopeCatalog(client:AuthClient,filters:ScopeCatalogFilters,signal?:AbortSignal):Promise<ScopeCatalogPage>{
+ const {sourceSemesterId,cohortId,majorId,page=0,size=20}=filters;
+ if(!id(sourceSemesterId)||cohortId!==undefined&&!id(cohortId)||majorId!==undefined&&!id(majorId))throw new Error('Học kỳ hoặc nhóm phạm vi không hợp lệ.');
+ const q=filters.q?.trim()??'';
+ if(Array.from(q).length>128)throw new Error('Từ khóa phạm vi tối đa 128 ký tự.');
+ if(!integer(page,0,100000)||!integer(size,1,100)||page*size>100000)throw new Error('Trang phạm vi không hợp lệ.');
+ const query=new URLSearchParams({sourceSemesterId,page:String(page),size:String(size)});
+ if(cohortId!==undefined)query.set('cohortId',cohortId);
+ if(majorId!==undefined)query.set('majorId',majorId);
+ if(q)query.set('q',q);
+ const response=await client.request(BASE+'/kkht/pham-vi-nguon?'+query,{signal:requestSignal(signal)});
+ const body=record(await response.json());
+ if(response.status!==200||!body||!catalogRevision(body.catalogRevision)||!Array.isArray(body.items)
+  ||!body.items.every(scopeGroup)||!uniqueGroups(body.items)||body.page!==page||body.size!==size
+  ||!integer(body.totalElements,0,2147483647)
+  ||body.items.length!==Math.min(size,Math.max(0,body.totalElements-page*size)))throw invalid();
+ return body as ScopeCatalogPage;
+}
+
+export async function loadScopeCatalog(client:AuthClient,sourceSemesterId:string,signal?:AbortSignal):Promise<ScopeCatalogSnapshot>{
+ const groups:ScopeGroup[]=[],seen=new Set<string>();
+ let revision:string|undefined,total:number|undefined;
+ for(let page=0;page*100<=100000;page++){
+  const result=await listScopeCatalog(client,{sourceSemesterId,page,size:100},signal);
+  if(revision===undefined){revision=result.catalogRevision;total=result.totalElements;}
+  if(result.catalogRevision!==revision||result.totalElements!==total)throw new Error('Danh mục phạm vi đã thay đổi. Hãy tải lại danh mục.');
+  if(result.totalElements>100100)throw new Error('Danh mục phạm vi vượt giới hạn có thể tải đầy đủ.');
+  for(const group of result.items){
+   const key=pairKey(group);
+   if(seen.has(key))throw invalid();
+   seen.add(key);groups.push(group);
+  }
+  if(groups.length===total)return{catalogRevision:revision,groups};
+ }
+ throw new Error('Chưa tải được đầy đủ danh mục phạm vi.');
+}
+
+export async function readRoundScope(client:AuthClient,roundId:string,signal?:AbortSignal):Promise<ScopeView>{
+ if(!id(roundId))throw new Error('Đường dẫn đợt xét không hợp lệ.');
+ const response=await client.request(ROUNDS+'/'+roundId+'/pham-vi',{signal:requestSignal(signal)});
+ const body=record(await response.json());
+ if(response.status!==200||!body||body.roundId!==roundId||!isRoundEtag(body.roundEtag)
+  ||!(body.scope===null||savedScope(body.scope)))throw invalid();
+ return body as ScopeView;
+}
+
+export async function readRoundContext(client:AuthClient,roundId:string,signal?:AbortSignal):Promise<RoundContext>{
+ for(let attempt=0;attempt<3;attempt++){
+  const view=await readRound(client,roundId,signal);
+  if(!isRoundEtag(view.etag))throw invalid();
+  const saved=await readRoundScope(client,roundId,signal);
+  if(view.etag===saved.roundEtag)return{...view,scope:saved.scope};
+ }
+ throw new Error('Đợt xét đang thay đổi. Hãy đọc lại để lấy đúng phiên phạm vi.');
+}
+
+export async function lookupCreation(client:AuthClient,key:string,signal?:AbortSignal):Promise<CreationLookup|null>{
+ if(!requestId(key))throw new Error('Mã lệnh tạo đợt không hợp lệ.');
+ let response:Response;
+ try{response=await client.request(BASE+'/kkht/lenh-tao-dot/'+key,{signal:requestSignal(signal)});}
+ catch(error){if(error instanceof ApiError&&error.status===404)return null;throw error;}
+ if(response.status===404)return null;
+ const body=record(await response.json());
+ if(response.status!==200||!body||body.requestId!==key||!id(body.roundId))throw invalid();
+ return{requestId:key,roundId:body.roundId};
+}
+
+export async function createRound(client:AuthClient,command:CreateRoundCommand,key:string):Promise<CreatedRound>{
  if(!id(command.sourceSemesterId))throw new Error('Học kỳ nguồn không hợp lệ.');
- if(!integer(command.number,1,2147483647))throw new Error('Số đợt phải là số nguyên từ 1 đến 2147483647.');
- if(typeof command.name!=='string'||!command.name.trim()||command.name.trim().length>512)throw new Error('Tên đợt cần từ 1 đến 512 ký tự.');
+ if(!requestId(key))throw new Error('Mã lệnh tạo đợt không hợp lệ.');
+ const payload={sourceSemesterId:command.sourceSemesterId,...scopeCommand(command)};
  const response=await client.request(ROUNDS,{
-  method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({sourceSemesterId:command.sourceSemesterId,number:command.number,name:command.name}),
+  method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key},
+  body:JSON.stringify(payload),
   signal:requestSignal(),
  });
  const body:unknown=await response.json();
- if(response.status!==201||!detail(body)||body.sourceSemesterId!==command.sourceSemesterId||body.number!==command.number||body.status!=='draft'){
+ const replayed=response.headers.get('Idempotency-Replayed'),etag=response.headers.get('ETag');
+ if(!(response.status===201&&replayed==='false'||response.status===200&&replayed==='true')
+  ||!detail(body)||body.sourceSemesterId!==payload.sourceSemesterId||!isRoundEtag(etag)){
   throw new Error('Chưa xác nhận được kết quả tạo đợt. Hãy kiểm tra đợt đã lưu trước khi gửi lại.');
  }
- return{round:body,etag:response.headers.get('ETag')};
+ return{round:body,etag,replayed:replayed==='true'};
 }
-
-export const isRoundEtag=(value:unknown):value is string=>typeof value==='string'&&/^"[A-Za-z0-9_-]+"$/.test(value);
 
 export async function updateRound(client:AuthClient,roundId:string,command:UpdateRoundCommand,ifMatch:string|null):Promise<RoundView>{
  if(!id(roundId))throw new Error('Đường dẫn đợt xét không hợp lệ.');
  if(!isRoundEtag(ifMatch))throw new Error('Chưa có phiên dữ liệu hợp lệ. Hãy đọc bản mới trước khi lưu.');
- if(!integer(command.number,1,2147483647))throw new Error('Số đợt phải là số nguyên từ 1 đến 2147483647.');
- if(typeof command.name!=='string'||!command.name.trim()||command.name.trim().length>512)throw new Error('Tên đợt cần từ 1 đến 512 ký tự.');
+ const payload=scopeCommand(command);
  const response=await client.request(ROUNDS+'/'+roundId,{
   method:'PUT',headers:{'Content-Type':'application/json','If-Match':ifMatch},
-  body:JSON.stringify({number:command.number,name:command.name}),signal:requestSignal(),
+  body:JSON.stringify(payload),signal:requestSignal(),
  });
  const body:unknown=await response.json();
- if(response.status!==200||!detail(body)||body.id!==roundId||body.number!==command.number||body.status!=='draft'){
+ const etag=response.headers.get('ETag');
+ if(response.status!==200||!detail(body)||body.id!==roundId||body.status!=='draft'||!isRoundEtag(etag)){
   throw new Error('Chưa xác nhận được kết quả sửa đợt. Hãy kiểm tra bản đang lưu trước khi gửi lại.');
  }
- return{round:body,etag:response.headers.get('ETag')};
+ return{round:body,etag};
 }

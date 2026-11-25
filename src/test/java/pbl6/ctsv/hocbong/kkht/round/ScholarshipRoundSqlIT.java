@@ -59,6 +59,24 @@ class ScholarshipRoundSqlIT {
             assertFailure(()->service.create(command,UUID.randomUUID(),f.actor()),409,"ROUND_SEQUENCE_NOT_READY");
         });
     }
+    @Test void semesterWithStartOnlyCreatesReadsAndEditsScopeOnRealSql() {
+        fixture(f->{
+            jdbc.update("UPDATE dbo.hoc_ky SET ngay_ket_thuc=NULL,trang_thai_xac_minh_moc=N'unverified' WHERE id=?",f.source());
+            var service=writer(repo,List.of());
+            assertThat(rounds.sourceById(f.source()).selectable()).isTrue();
+            var created=service.create(command(f),UUID.randomUUID(),f.actor()).view();
+            long id=Long.parseLong(created.body().id());
+            assertThat(created.body().semester().endDate()).isNull();
+            assertThat(jdbc.queryForObject("SELECT is_nullable FROM sys.columns WHERE object_id=OBJECT_ID(N'dbo.hb_hoc_ky') AND name=N'ngay_ket_thuc'",Integer.class)).isOne();
+            assertThat(jdbc.queryForObject("SELECT ngay_ket_thuc FROM dbo.hb_hoc_ky WHERE id=?",java.sql.Date.class,Long.parseLong(created.body().semester().id()))).isNull();
+            var scope=service.scope(id).scope();var group=scope.groups().getFirst();
+            var changed=service.update(id,new ScopeRules.Update(scope.catalogRevision(),new ScopeRules.Selection("groups",List.of(
+                new ScopeRules.Pair(Long.parseLong(group.cohortId()),Long.parseLong(group.majorId()))))),created.etag(),f.actor());
+            assertThat(changed.body().semester().endDate()).isNull();
+            assertThat(changed.etag()).isNotEqualTo(created.etag());
+            assertThat(rounds.detail(id).body().semester().startDate()).isEqualTo("2094-08-01");
+        });
+    }
     @Test void revisionSeesSourceMembershipChangesAndNewStudentsAfterCutoffAreExcluded() {
         fixture(f->{
             var command=command(f);var before=source.catalog(f.source());assertThat(before.groups().getFirst().studentCount()).isEqualTo(2);

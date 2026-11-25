@@ -17,12 +17,15 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pbl6.ctsv.auth.AuthAccess;
+import pbl6.ctsv.drl.reference.DrlReferenceData;
 import pbl6.ctsv.foundation.api.AcademicSemesterSource;
 import pbl6.ctsv.foundation.api.AcademicSemesterSource.Page;
 import pbl6.ctsv.foundation.api.AcademicSemesterSource.Semester;
 import pbl6.ctsv.foundation.api.FoundationRoleAccess;
 import pbl6.ctsv.foundation.api.FoundationRoleAccess.ActiveRole;
 import pbl6.ctsv.foundation.api.FoundationUsage;
+import pbl6.ctsv.foundation.api.StaffReferenceSource;
+import pbl6.ctsv.foundation.api.StudentReferenceSource;
 import pbl6.ctsv.foundation.entity.HocKy;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,10 +58,13 @@ class FoundationReadPortsTest {
     }
 
     @Test
-    void publishesBothReadPorts() {
-        context.run(application -> assertThat(application)
+    void publishesReadPortsAndWiresDrlReferenceData() {
+        context.withUserConfiguration(DrlReferenceData.class).run(application -> assertThat(application)
             .hasSingleBean(FoundationRoleAccess.class)
-            .hasSingleBean(AcademicSemesterSource.class));
+            .hasSingleBean(AcademicSemesterSource.class)
+            .hasSingleBean(StaffReferenceSource.class)
+            .hasSingleBean(StudentReferenceSource.class)
+            .hasSingleBean(DrlReferenceData.class));
     }
 
     @Test

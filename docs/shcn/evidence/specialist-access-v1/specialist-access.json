@@ -1,0 +1,16 @@
+{
+  "semesterHttp": 200,
+  "semesterCount": 0,
+  "package": "shcn-dev-specialist-access",
+  "account": "dev.chuyenvien",
+  "globalScope": "SHCN",
+  "version": 1,
+  "migrationExecuted": false,
+  "canPrepare": true,
+  "authFunctions": [
+    "shcn.dot.read",
+    "shcn.dot.prepare",
+    "shcn.reference.read"
+  ],
+  "roundsHttp": 200
+}

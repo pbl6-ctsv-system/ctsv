@@ -59,7 +59,8 @@ class ScopeService {
         if(semester==null) {
             semester=new ScholarshipSemester();semester.setAcademicYear(sourceSemester.academicYear());
             semester.setSemesterOrder(sourceSemester.semesterOrder());semester.setStartDate(LocalDate.parse(sourceSemester.startDate()));
-            semester.setEndDate(LocalDate.parse(sourceSemester.endDate()));semester.setStatus("draft");repo.persist(semester);
+            semester.setEndDate(sourceSemester.endDate()==null?null:LocalDate.parse(sourceSemester.endDate()));
+            semester.setStatus("draft");repo.persist(semester);
             audit(actor,"semester.initialized","hb_hoc_ky",semester.getId(),semester.getId(),null,RoundMapper.semester(semester),correlation,now);
         }
         var mapping=repo.mappingBySource(command.sourceSemesterId()).orElse(null);

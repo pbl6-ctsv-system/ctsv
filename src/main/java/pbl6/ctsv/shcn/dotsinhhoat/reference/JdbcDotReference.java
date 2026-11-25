@@ -35,10 +35,21 @@ public final class JdbcDotReference implements DotReference {
         var sources=jdbc.query("SELECT id FROM dbo.he_thong_ngoai WITH(HOLDLOCK) WHERE ma=? AND dang_hoat_dong=1",(r,n)->r.getLong(1),sourceCode);
         if(sources.size()!=1)throw DotFailure.unavailable();return sources.getFirst();
     }
-    private void validCode(String code){
-        try{DotRequests.code(code,"maHocKy");}catch(DotFailure e){throw DotFailure.unavailable();}
-        boolean roundTrip=Boolean.TRUE.equals(jdbc.queryForObject("SELECT CASE WHEN CONVERT(nvarchar(128),CONVERT(varchar(32),?)) COLLATE Latin1_General_100_BIN2=CONVERT(nvarchar(128),?) COLLATE Latin1_General_100_BIN2 THEN 1 ELSE 0 END",Boolean.class,code,code));
-        if(!roundTrip)throw DotFailure.unavailable();
+    private void validCode(String code){validCodes(Collections.singletonList(code));}
+    private void validCodes(Collection<String> codes){
+        var unique=new LinkedHashSet<>(codes);if(unique.isEmpty())return;
+        for(String code:unique){if(code==null)throw DotFailure.unavailable();try{DotRequests.code(code,"maHocKy");}catch(DotFailure e){throw DotFailure.unavailable();}}
+        final String payload;
+        try{payload=new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(unique);}catch(java.io.IOException e){throw DotFailure.unavailable();}
+        // Preserve the DB varchar round-trip guard without one query per class/cohort.
+        boolean safe=Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT CASE WHEN EXISTS(
+                SELECT 1 FROM OPENJSON(?) j
+                WHERE CONVERT(nvarchar(128),CONVERT(varchar(32),j.[value])) COLLATE Latin1_General_100_BIN2
+                    <> CONVERT(nvarchar(128),j.[value]) COLLATE Latin1_General_100_BIN2
+            ) THEN 0 ELSE 1 END
+            """,Boolean.class,payload));
+        if(!safe)throw DotFailure.unavailable();
     }
     @Override public void requireSemester(String code){
         long src=source();var ids=jdbc.query("SELECT id FROM dbo.hoc_ky WITH(UPDLOCK,HOLDLOCK) WHERE he_thong_nguon_id=? AND dang_hien_dien_nguon=1 AND ma=?",(r,n)->r.getLong(1),src,code);
@@ -46,6 +57,12 @@ public final class JdbcDotReference implements DotReference {
         var semester=semesters.findById(ids.getFirst()).orElseThrow(DotFailure::unavailable);
         if(!semester.present()||!Objects.equals(code,semester.code()))throw DotFailure.invalid("maHocKy");
         // SHCN drafts need no verified start/end milestones from MGHP.
+    }
+    @Override public NhomLopDTO groups(String code){return projection(code).groups();}
+    @Override public void requireAudiences(String code,List<DoiTuong> values){
+        if(values.isEmpty())return;var catalog=groups(code);var allowed=new HashSet<String>();
+        catalog.khoaHoc().forEach(v->allowed.add("KHOA_HOC:"+v.ma()));catalog.lopTreTienDo().forEach(v->allowed.add("LOP:"+v.ma()));
+        for(int i=0;i<values.size();i++){var v=values.get(i);if(!allowed.contains(v.loaiDoiTuong()+":"+v.maDoiTuong()))throw DotFailure.invalid("doiTuongApDung["+i+"].maDoiTuong");}
     }
     @Override public Page<HocKyDTO> semesters(Query q){
         long src=source();
@@ -56,4 +73,12 @@ public final class JdbcDotReference implements DotReference {
         var items=jdbc.query("SELECT ma,ten,nam_hoc_nguon"+where+" ORDER BY id "+(q.descending()?"DESC":"ASC")+" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",(r,n)->new HocKyDTO(r.getString(1),r.getString(2),r.getString(3)),args.toArray());
         items.forEach(s->validCode(s.ma()));return new Page<>(items,q.page(),q.size(),total);
     }
+
+    @Override public SemesterAudienceResolver.Projection projection(String code){
+        requireSemester(code);long src=source();long semester=Objects.requireNonNull(jdbc.queryForObject("SELECT id FROM dbo.hoc_ky WITH(HOLDLOCK) WHERE he_thong_nguon_id=? AND ma=? AND dang_hien_dien_nguon=1",Long.class,src,code));
+        var projection=new JdbcSemesterAudienceSource(jdbc).load(src,semester);
+        var codes=new LinkedHashSet<String>();projection.groups().khoaHoc().forEach(v->codes.add(v.ma()));projection.groups().lopTreTienDo().forEach(v->codes.add(v.ma()));projection.members().forEach(r->codes.add(r.member().classCode()));validCodes(codes);return projection;
+    }
+    @Override public Page<LopTheoKyDTO> classes(String semester,String type,String selector,Query q){return SemesterAudienceResolver.classes(projection(semester),type,selector,q);}
+    @Override public Page<SinhVienTheoKyDTO> students(String semester,String classroom,Query q){return SemesterAudienceResolver.students(projection(semester),classroom,q);}
 }

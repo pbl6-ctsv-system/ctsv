@@ -83,7 +83,7 @@ Kế thừa màu hiện tại. Khi triển khai theme, đặt biến tại `shar
 
 | Token đề xuất | Giá trị | Công dụng |
 |---|---|---|
-| --color-primary | #176b55 | CTA, mục navigation đang chọn |
+| --color-primary | #086ca8 | CTA, nền Navbar, mục navigation đang chọn |
 | --color-text | #18322f | Nội dung chính |
 | --color-text-muted | #657773 | Chú thích, nội dung phụ |
 | --color-background | #f1f5f3 | Nền ứng dụng |
@@ -95,10 +95,12 @@ Kế thừa màu hiện tại. Khi triển khai theme, đặt biến tại `shar
 | --color-secondary-text | #285446 | Chữ nút phụ |
 | --color-danger | #9e3d39 | Hành động hủy/xóa có hậu quả |
 | --color-error-text / --color-error-bg | #8d392a / #fff0ed | Thông báo lỗi |
-| --color-success | #176b55 | Trạng thái thành công |
+| --color-success | #086ca8 | Trạng thái thành công |
 | --color-warning | #8a5700 | Cần chú ý, chờ xử lý |
 | --color-info | #1d4ed8 | Thông tin trung tính |
-| --color-focus | #176b55 | Focus bàn phím rõ trên nền sáng |
+| --color-focus | var(--color-primary), hiện là #086ca8 | Focus bàn phím rõ trên nền sáng |
+
+Cập nhật owner 25/11/2026: đổi màu #176b55 sang #086ca8 cho primary, focus và success; Navbar dùng token chung để giữ đồng nhất với nút chính và vùng chọn.
 
 Mỗi module dùng cùng palette; phân biệt bằng tên/menu/icon nếu cần, không đổi toàn bộ theme. Success/error/warning phải có chữ hoặc biểu tượng kèm theo, không chỉ dựa vào màu. Kiểm contrast trên tổ hợp màu thực tế; bảng màu này không phải bằng chứng đã đạt accessibility cho mọi trường hợp. Chưa triển khai dark mode hoặc công tắc theme trong task này.
 

@@ -5,8 +5,8 @@ import {AppShell} from './layouts/AppShell';
 import {navigationSections,normalizePath,resolveRoute} from './navigation/modules.mjs';
 import {Navbar} from './navigation/Navbar';
 import {ApiError} from '../shared/auth/auth-client.mjs';
-import {LoginPage,readCurrentAccount} from '../features/auth';
-import {probeRoundAccess} from '../features/shcn';
+import {LoginLayout,LoginPage,readCurrentAccount} from '../features/auth';
+import {probeRoundAccess,probeFacultyScope} from '../features/shcn';
 import {featurePages} from './navigation/featureRegistry';
 import {Alert} from '../shared/ui/Alert';
 import {FeedbackProvider} from '../shared/ui/Feedback';
@@ -38,7 +38,7 @@ function Workspace(){
 
  if(auth.me)return <AccountWorkspace key={String(auth.me.accountId)} auth={auth} me={auth.me} path={path} onNavigate={go}/>;
 
- return <AppShell busy={auth.busy} onLogout={auth.logout}>
+ return <LoginLayout>
   {restoring?<p role="status">Đang khôi phục đăng nhập…</p>:<>
    {auth.error&&<Alert>{auth.error}</Alert>}
    <LoginPage onLogin={(username,password)=>{
@@ -47,7 +47,7 @@ function Workspace(){
    }}
     onRestore={auth.restore} busy={auth.busy}/>
   </>}
- </AppShell>;
+ </LoginLayout>;
 }
 
 type Auth=ReturnType<typeof useAuth>;
@@ -79,16 +79,19 @@ function AccountWorkspace({auth,me,path,onNavigate}:{auth:Auth;me:NonNullable<Au
    const abort=new AbortController();
    pending=abort;
 
+   const accountCheck=readCurrentAccount(client);
    const [account,menu,shcn,scholarship]=await Promise.allSettled([
-    readCurrentAccount(client),
+    accountCheck,
 
     client.request('/api/ctsv/nen-tang/toi/quyen-giao-dien',{
      signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)]),
     }).then(response=>response.json()),
 
-    client.request('/api/shcn/khoa/pham-vi',{
-     signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)])
-    }).then(response=>response.json()),
+    accountCheck.then(current=>probeFacultyScope(
+     client,
+     current?.accountId===accountId&&Array.isArray(current.functions)?current.functions:[],
+     AbortSignal.any([abort.signal,AbortSignal.timeout(20000)])
+    )),
 
     readScholarshipGroups(client,abort.signal),
    ]);

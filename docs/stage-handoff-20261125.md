@@ -35,6 +35,10 @@ Gate: G0/G1/G2/G4/G5/G7 và regression P05–P08/P10 liên quan; G8 WAIVED BY OW
 
 STAGE01 unresolved một hồ sơ chặn toàn đợt; STAGE02 supplemental unresolved chặn; STAGE03 close open+seal atomic; STAGE04 wrong/missing scope/ETag/security; STAGE05 chưa seal không vào list/không XET; STAGE06 seal khóa HS/BS nhưng cho bản cứng; STAGE07 đủ bản cứng→Hội đồng, sau chốt immutable; STAGE08 stale nguồn/race/retry; STAGE09 audit fault rollback; STAGE10 legacy closed history và kỳ/đợt khác không bị khóa; STAGE11 filter/count/paging; STAGE12 excluded/unknown giữ nguyên; STAGE13 draft/future/completed; STAGE14 regression P10. UI01–UI12 kiểm desktop/mobile/error/direct URL.
 
+## Đồng bộ migration với main — 25/11/2026
+
+Tên source hiện hành là `V31__mghp_online_stage_handoff.sql`, giữ nguyên SQL/checksum của V26 MGHP trong evidence triển khai dưới đây. Main sử dụng V26–V30 cho DRL/SHCN/Học bổng/Foundation. Không chạy lại SQL handoff trên DB đã có V26 MGHP; cần backup, kiểm bản sao và reconciliation history có guard theo phạm vi owner đã duyệt. Kết quả nâng DB ghi riêng trong báo cáo đồng bộ main, không đổi số version của evidence lịch sử thành kết quả chưa chạy.
+
 ## Ledger
 
 Đang triển khai. Các thay đổi chưa commit của token/PDF/tuần tự đợt và bộ lọc tiếp nhận được giữ nguyên, không tính là sản phẩm của task này. Chỉ chạy test liên quan; chưa có kết quả PASS cho delta mới.

@@ -22,7 +22,7 @@ import pbl6.ctsv.shcn.dotsinhhoat.service.DotService;
 class DotHttpTest {
  final DotServiceTest fixture=new DotServiceTest();final AuthAccess auth=mock(AuthAccess.class);MockMvc mvc;
  final String body="""
- {"maHocKy":"0010","tenDot":"Synthetic round","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":[{"tietDau":5,"tietCuoi":6}],"hanChotDangKyLich":"2026-12-02T00:00:00Z"}
+ {"maHocKy":"0010","tenDot":"Synthetic round","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":[{"tietDau":5,"tietCuoi":6}],"hanChotDangKyLich":"2026-12-02T00:00:00Z","doiTuongApDung":[{"loaiDoiTuong":"KHOA_HOC","maDoiTuong":"2023","hinhThucChoPhep":"OFFLINE","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":null}]}
  """;
  @BeforeEach void setup(){fixture.setup();when(auth.verifyAccessToken("fixture")).thenReturn(fixture.principal);mvc=MockMvcBuilders.standaloneSetup(new DotController(auth,fixture.service,new DotRequests(new ObjectMapper()))).setControllerAdvice(new DotErrors()).build();}
  @Test void rejectsUnauthenticatedBeforeAnyLookup()throws Exception{mvc.perform(get("/api/shcn/dot-sinh-hoat")).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));verifyNoInteractions(fixture.reference,fixture.repository);}
@@ -41,4 +41,18 @@ class DotHttpTest {
  @Test void foundationIdentityFailurePreserves401()throws Exception{when(fixture.access.identify(fixture.principal,true)).thenThrow(new FoundationAccess.Failure(401,"UNAUTHENTICATED",null));mvc.perform(get("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture")).andExpect(status().isUnauthorized());verifyNoInteractions(fixture.repository);}
  @Test void unknownSemesterReturns400FieldAndNeverInserts()throws Exception{doThrow(DotFailure.invalid("maHocKy")).when(fixture.reference).requireSemester("0010");mvc.perform(post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(body)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors[0].field").value("maHocKy"));verifyNoInteractions(fixture.repository);}
  @Test void ambiguousOrUnavailableSourceReturns503()throws Exception{doThrow(DotFailure.unavailable()).when(fixture.reference).requireSemester("0010");mvc.perform(post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(body)).andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("DEPENDENCY_UNAVAILABLE"));verifyNoInteractions(fixture.repository);}
+
+ @Test void groupsLookupRequiresSemesterAndUsesReferencePermission()throws Exception{
+  mvc.perform(get("/api/shcn/tra-cuu/nhom-lop").header("Authorization","Bearer fixture")).andExpect(status().isBadRequest());
+  when(fixture.reference.groups("0010")).thenReturn(new NhomLopDTO(List.of(new KhoaHocDTO("2023","Kh?a 2023",2)),List.of(),0,"CHUA_CO_DU_LIEU"));
+  mvc.perform(get("/api/shcn/tra-cuu/nhom-lop?maHocKy=0010").header("Authorization","Bearer fixture")).andExpect(status().isOk()).andExpect(jsonPath("$.khoaHoc[0].ma").value("2023")).andExpect(jsonPath("$.trangThaiLopTreTienDo").value("CHUA_CO_DU_LIEU"));
+  when(fixture.reference.permissions(fixture.identity)).thenReturn(new Quyen(true,true,false));
+  mvc.perform(get("/api/shcn/tra-cuu/nhom-lop?maHocKy=0010").header("Authorization","Bearer fixture")).andExpect(status().isForbidden());
+ }
+ @Test void createAcceptsGroupsAndReturnsThemWithVersion()throws Exception{
+  when(fixture.repository.create(any(),any(),any())).thenReturn(fixture.root());
+  var groups=List.of(new DoiTuong("KHOA_HOC","2023","ONLINE",java.time.LocalDate.of(2026,12,1),java.time.LocalDate.of(2026,12,7),null));when(fixture.repository.audiences(7)).thenReturn(groups);
+  var n=(com.fasterxml.jackson.databind.node.ObjectNode)new ObjectMapper().readTree(body);((com.fasterxml.jackson.databind.node.ObjectNode)n.withArray("doiTuongApDung").get(0)).put("hinhThucChoPhep","ONLINE");
+  mvc.perform(post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(n.toString())).andExpect(status().isCreated()).andExpect(jsonPath("$.doiTuongApDung[0].hinhThucChoPhep").value("ONLINE")).andExpect(jsonPath("$.version").value("AAAAAAAAAAE="));
+ }
 }
