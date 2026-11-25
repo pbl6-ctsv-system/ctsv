@@ -4,7 +4,7 @@ export type RoundSummary={
  semesterOrder:number;number:number;name:string;status:string;
 };
 export type ScholarshipSemester={
- id:string;academicYear:string;semesterOrder:number;startDate:string;endDate:string;status:string;
+ id:string;academicYear:string;semesterOrder:number;startDate:string;endDate:string|null;status:string;
 };
 export type RoundDetail={
  id:string;sourceSemesterId:string;number:number;name:string;status:string;createdBy:string;

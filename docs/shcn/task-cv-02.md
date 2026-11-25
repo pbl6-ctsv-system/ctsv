@@ -1,3 +1,5 @@
+> **Giao diện ngày 23/11/2026 — owner đã chốt:** không nhập ngày bắt đầu/kết thúc chung. Người dùng chọn ít nhất một khóa/nhóm lớp, nhập đủ hai ngày và hình thức cho mỗi nhóm. Frontend tự tính `khungNgayBatDau = min(từ ngày)` và `khungNgayKetThuc = max(đến ngày)` của các đối tượng đang chọn rồi gửi theo API hiện hành; không đổi cấu trúc DB/contract. Khi sửa bản cũ có ngày nhóm null, form thể hiện lại khoảng ngày chung đã lưu cho nhóm đó. Bộ chọn học kỳ chỉ hiện tên; mã vẫn được giữ nguyên trong request. Không seed, migrate hoặc ghi DB trong lượt sửa UI này. Kiểm 23 ca Node và 21 ca Chrome với API fixtures (SQL NONE); build TypeScript/Vite đạt.
+
 # Bàn giao TASK-CV-02 — backend và frontend
 
 > **Cập nhật22/11/2026:** owner đã áp dụng V18. Đã cấp role Auth và global grant SHCN cho `dev.chuyenvien`, kiểm API200/prepare=true và menu Chrome qua HTTPS DEV. Công cụ cấp quyền có version/guard/audit được lưu trong repo; xem [bàn giao quyền DEV](dev-readiness.md). Danh mục học kỳ của nguồn hiện còn0dòng, nên chưa nghiệm thu toàn luồng tạo đợt với dữ liệu thật. Các bằng chứng unit/fixture bên dưới là snapshot của lượt triển khai21/11, không thay cho kết quả DEV mới.

@@ -1,3 +1,37 @@
+# DEV local: sửa nguồn học kỳ và lời gọi API khoa — 23/11/2026
+
+- DB hiện tại đã khởi tạo lại: nguồn `DEV-SIS-SYNC` bị thiếu; danh mục chỉ có một học kỳ fixture MGHP không gắn nguồn. Launcher thường không nạp `shcn.settings.json`, vì vậy SHCN thiếu cả cấu hình nguồn khi gọi tra cứu.
+- Đã khôi phục registry theo địa chỉ provider đã lưu `https://127.0.0.1:9443`, nhập 20 học kỳ từ `KeHoach.csv` đã mapping của owner. Đây là **nhập reference thủ công cho DEV**, không phải đã chạy đồng bộ API Đào tạo. Không sửa dữ liệu SIS, fixture MGHP, schema hay Entity chung.
+- Công cụ version 1: `tools/dev/shcn/restore-semester-reference.ps1`. Mặc định chỉ kiểm; `-Apply` mới ghi. Guard instance/DB/owner/marker/collation, chống trùng ID/mã, transaction, ledger SHA256 và audit. Khi dữ liệu đã có hoặc đã bị thay đổi, không tự ghi đè. Chạy lại cùng file đã xác nhận: 0 dòng chèn thêm.
+- Mapping: `ID → ma_dinh_danh_ben_ngoai`, `MaKH → ma`, `TenKH → ten`, `NgayDay → ngay_day_nguon`, `TuanDau → tuan_dau_nguon`, `SoTuan → so_tuan_nguon`, `NamHoc → nam_hoc_nguon`. ID local của `hoc_ky` do DB cấp. Không gán mốc bắt đầu/kết thúc đã xác minh cho MGHP.
+- Frontend chỉ gọi `/api/shcn/khoa/pham-vi` sau khi Auth hiện hành trả capability `shcn.phanCongKhoa.read` hoặc `shcn.phanCongKhoa.prepare` đang hoạt động, đúng account. Đáp ứng scope vẫn do backend quyết định; không nới RBAC hoặc gán role Trưởng khoa cho chuyên viên.
+
+## Lệnh dùng lại
+
+Tại root CTSV, nhập file `KeHoach.csv` **đã mapping** (các cột như trên), không phải CSV gốc có `IDCode`:
+
+```powershell
+pwsh -File .\tools\dev\shcn\restore-semester-reference.ps1 -InputCsv 'DUONG_DAN\KeHoach.csv'
+pwsh -File .\tools\dev\shcn\restore-semester-reference.ps1 -InputCsv 'DUONG_DAN\KeHoach.csv' -Apply
+
+# Khi backend đã dừng:
+pwsh -File .\tools\dev\shcn\start-specialist.ps1
+# Khi cần khởi động lại tiến trình DEV hiện tại:
+pwsh -File .\tools\dev\shcn\start-specialist.ps1 -Restart
+```
+
+Launcher chuyên viên chỉ nạp nguồn học kỳ SHCN từ cấu hình local đã duyệt, rồi gọi launcher DEV chung. Không migration/seed ngầm; không sửa cấu hình MGHP. Dùng launcher này thay cho `dev.ps1 start` khi thao tác SHCN chuyên viên để tránh mất cấu hình nguồn sau lần khởi động tiếp theo.
+
+## Kiểm chứng lượt sửa này
+
+- 17 ca Node SHCN: đạt; build TypeScript/Vite: đạt.
+- 6 kiểm tra Chrome + API thật: menu chuyên viên, form tạo, API học kỳ 200 với 20 dòng, chọn học kỳ, **0 lời gọi tự động tới phạm vi khoa**, backend từ chối tài khoản thiếu quyền và route chuyên viên vẫn chặn sinh viên. Không submit tạo đợt.
+- Bộ `module-navigation.test.mjs` có 4 ca lỗi riêng ở các dòng 124, 152, 174, 187 (expectation MGHP/Học bổng); test và các module import của bộ đó không bị thay đổi trong task này. Không báo toàn bộ suite đạt và không sửa module khác để che lỗi.
+- Bằng chứng thực tế: `%LOCALAPPDATA%/CTSV/dev/<checkout-hash>/shcn/evidence/2026-11-23-reference-fix/result.json`, `specialist-semester.png`.
+- Danh mục khóa/lớp/phân lớp RenLuyen chưa được khôi phục trong task sửa lookup này. Việc chọn học kỳ thành công không chứng minh danh sách sinh viên trễ tiến độ đã đầy đủ.
+
+---
+
 # Cấp quyền chuyên viên SHCN trên DEV
 
 Owner đã yêu cầu cấp quyền cho `dev.chuyenvien` và hoàn thiện bước chuẩn bị quyền khi bàn giao các task sau. Ngày22/11/2026.

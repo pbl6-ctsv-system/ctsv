@@ -26,14 +26,15 @@ class DotAudienceServiceTest {
         assertThrows(DotFailure.class,()->f.service.execute(f.principal,Action.PREPARE,a->f.service.create(a,input(groups))));verifyNoInteractions(f.repository);assertEquals(1,f.manager.rollbacks);
     }
     @Test void omittedArrayPreservesExistingGroups(){
-        when(f.repository.find(7,true)).thenReturn(f.root());when(f.repository.audiences(7)).thenReturn(groups);when(f.repository.update(eq(7L),any(),eq(f.input),eq(false),any())).thenReturn(f.root());
-        var saved=f.service.execute(f.principal,Action.PREPARE,a->f.service.update(a,7,new SuaDot(f.token,f.input)));
-        assertEquals(groups,saved.value().doiTuongApDung());verify(f.repository,never()).replaceAudiences(anyLong(),any(),any());verify(f.reference,never()).requireAudiences(any(),any());
+        var omitted=input(null);
+        when(f.repository.find(7,true)).thenReturn(f.root());when(f.repository.audiences(7)).thenReturn(groups);when(f.repository.update(eq(7L),any(),eq(omitted),eq(false),any())).thenReturn(f.root());
+        var saved=f.service.execute(f.principal,Action.PREPARE,a->f.service.update(a,7,new SuaDot(f.token,omitted)));
+        assertEquals(groups,saved.value().doiTuongApDung());verify(f.repository,never()).replaceAudiences(anyLong(),any(),any());verify(f.reference).requireAudiences("0010",groups);
     }
-    @Test void explicitEmptyArrayClearsGroupsAndInvalidatesDraftAssignment(){
-        var c=input(List.of());when(f.repository.find(7,true)).thenReturn(f.root());when(f.repository.audiences(7)).thenReturn(groups,List.of());when(f.repository.update(eq(7L),any(),eq(c),eq(true),any())).thenReturn(f.root());
-        var saved=f.service.execute(f.principal,Action.PREPARE,a->f.service.update(a,7,new SuaDot(f.token,c)));
-        assertTrue(saved.value().doiTuongApDung().isEmpty());verify(f.repository).replaceAudiences(eq(7L),eq(List.of()),any());verify(f.repository).update(eq(7L),any(),eq(c),eq(true),any());
+    @Test void explicitEmptyArrayIsRejectedWithoutErasingGroups(){
+        var c=input(List.of());when(f.repository.find(7,true)).thenReturn(f.root());when(f.repository.audiences(7)).thenReturn(groups);
+        assertThrows(DotFailure.class,()->f.service.execute(f.principal,Action.PREPARE,a->f.service.update(a,7,new SuaDot(f.token,c))));
+        verify(f.repository,never()).replaceAudiences(anyLong(),any(),any());verify(f.repository,never()).update(anyLong(),any(),any(),anyBoolean(),any());
     }
     @Test void semesterChangeRevalidatesPreservedGroupsInsteadOfReusingPreviousRoster(){
         var c=new CauHinh("0020",f.input.tenDot(),f.input.khungNgayBatDau(),f.input.khungNgayKetThuc(),f.input.khungTietChoPhep(),f.input.hanChotDangKyLich());

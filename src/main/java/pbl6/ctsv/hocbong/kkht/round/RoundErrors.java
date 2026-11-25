@@ -25,10 +25,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import pbl6.ctsv.auth.AuthFailure;
 import pbl6.ctsv.foundation.api.FoundationAccess;
+import pbl6.ctsv.hocbong.kkht.configuration.combination.CombinationController;
 
-@RestControllerAdvice(assignableTypes = RoundController.class)
+@RestControllerAdvice(assignableTypes = {RoundController.class, CombinationController.class})
 @ConditionalOnProperty(name = "ctsv.foundation.enabled", havingValue = "true")
-class RoundErrors {
+public class RoundErrors {
     @ExceptionHandler(RoundFailure.class)
     ResponseEntity<ProblemDetail> round(RoundFailure failure, HttpServletRequest request) {
         return problem(failure.status, failure.code, failure.field, request, HttpHeaders.EMPTY);
@@ -55,6 +56,9 @@ class RoundErrors {
                 if (conflict != null) {
                     return problem(409, conflict, "request", request, HttpHeaders.EMPTY);
                 }
+            }
+            if (cause instanceof SQLException sql && sql.getErrorCode() == 51940) {
+                return problem(409, "COMBINATION_OVERLAP", "effectiveFrom", request, HttpHeaders.EMPTY);
             }
         }
         return problem(500, "INTERNAL_ERROR", "request", request, HttpHeaders.EMPTY);
@@ -84,6 +88,9 @@ class RoundErrors {
             return null;
         }
         String constraint = message.toLowerCase(Locale.ROOT);
+        if (constraint.contains("uq_hb_to_hop_key")) {
+            return "COMBINATION_OVERLAP";
+        }
         if (constraint.contains("uq_kkht_dot_xet_hoc_ky_so_dot")) {
             return "ROUND_EXISTS";
         }
@@ -114,7 +121,7 @@ class RoundErrors {
     // Dispatcher method mismatches have no selected controller, so scope this advice by path.
     @RestControllerAdvice
     @ConditionalOnProperty(name = "ctsv.foundation.enabled", havingValue = "true")
-    static class MethodErrors {
+    public static class MethodErrors {
         @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
         ResponseEntity<ProblemDetail> methodNotAllowed(HttpRequestMethodNotSupportedException failure,
                 HttpServletRequest request) throws HttpRequestMethodNotSupportedException {

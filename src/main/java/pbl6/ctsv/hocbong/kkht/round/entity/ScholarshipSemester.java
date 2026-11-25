@@ -31,7 +31,7 @@ public class ScholarshipSemester {
     @Column(name = "ngay_bat_dau", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "ngay_ket_thuc", nullable = false)
+    @Column(name = "ngay_ket_thuc", nullable = true)
     private LocalDate endDate;
 
     @Nationalized

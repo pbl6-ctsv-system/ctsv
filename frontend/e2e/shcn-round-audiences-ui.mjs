@@ -45,33 +45,40 @@ async function run(name,fn,options={}){
  finally{await context.close();}
 }
 async function open(page){await page.getByRole('button',{name:'Mở',exact:true}).click();await expect(page.getByRole('heading',{name:'Đợt sinh hoạt thực hành',exact:true})).toBeVisible();}
-async function fill(page){await page.getByLabel('Tên đợt *',{exact:true}).fill('Đợt mới thực hành');const s=page.getByRole('combobox',{name:'Học kỳ *',exact:true});await s.click();await s.press('ArrowDown');await expect(page.getByRole('option',{name:'Học kỳ thực hành · 0010',exact:true})).toBeVisible();await s.press('ArrowDown');await s.press('Enter');await page.getByLabel('Ngày bắt đầu *',{exact:true}).fill('2026-12-01');await page.getByLabel('Ngày kết thúc *',{exact:true}).fill('2026-12-07');await page.getByLabel('Tiết đầu 1',{exact:true}).fill('5');await page.getByLabel('Tiết cuối 1',{exact:true}).fill('6');await page.getByLabel('Hạn chốt lịch (giờ Việt Nam) *',{exact:true}).fill('2026-12-09T17:00');}
+async function fill(page){await page.getByLabel('Tên đợt *',{exact:true}).fill('Đợt mới thực hành');const s=page.getByRole('combobox',{name:'Học kỳ *',exact:true});await s.click();await s.press('ArrowDown');await expect(page.getByRole('option',{name:'Học kỳ thực hành',exact:true})).toBeVisible();await s.press('ArrowDown');await s.press('Enter');await expect(page.getByLabel('Ngày bắt đầu *',{exact:true})).toHaveCount(0);await expect(page.getByLabel('Ngày kết thúc *',{exact:true})).toHaveCount(0);await page.getByLabel('Chọn Khóa 2023',{exact:true}).check();await page.getByLabel('Từ ngày – Khóa 2023',{exact:true}).fill('2026-12-01');await page.getByLabel('Đến ngày – Khóa 2023',{exact:true}).fill('2026-12-07');await page.getByLabel('Hình thức – Khóa 2023',{exact:true}).selectOption('OFFLINE');await page.getByLabel('Tiết đầu 1',{exact:true}).fill('5');await page.getByLabel('Tiết cuối 1',{exact:true}).fill('6');await page.getByLabel('Hạn chốt lịch (giờ Việt Nam) *',{exact:true}).fill('2026-12-09T17:00');}
 try{
+ await run('Audience dates are disabled until selected and semester picker hides business codes',async({page,writes})=>{
+  await page.getByRole('button',{name:'Tạo đợt SHCN',exact:true}).click();
+  const picker=page.getByRole('combobox',{name:'Học kỳ *',exact:true});await picker.click();const option=page.getByRole('option',{name:'Học kỳ thực hành',exact:true});await expect(option).toBeVisible();await expect(page.getByRole('option').filter({hasText:'0010'})).toHaveCount(0);await option.click();
+  await expect(page.getByLabel('Ngày bắt đầu *',{exact:true})).toHaveCount(0);await expect(page.getByLabel('Từ ngày – Khóa 2023',{exact:true})).toBeDisabled();await expect(page.getByLabel('Đến ngày – Khóa 2023',{exact:true})).toBeDisabled();
+  await page.getByLabel('Chọn Khóa 2023',{exact:true}).check();await expect(page.getByLabel('Từ ngày – Khóa 2023',{exact:true})).toBeEnabled();await expect(page.getByLabel('Từ ngày – Khóa 2023',{exact:true})).toHaveValue('');await expect(page.getByLabel('Hình thức – Khóa 2023',{exact:true})).toBeEnabled();assert.equal(writes.length,0);
+  await page.screenshot({path:evidence+'/audience-controls-desktop.png',fullPage:true});
+ });
  await run('Save independent cohort windows and expand delayed group into receiving classes',async({page,writes})=>{
   await page.getByRole('button',{name:'Tạo đợt SHCN',exact:true}).click();await fill(page);
   await page.getByLabel('Chọn Khóa 2023',{exact:true}).check();await page.getByLabel('Hình thức – Khóa 2023',{exact:true}).selectOption('OFFLINE');
   await page.getByLabel('Chọn Khóa 2025',{exact:true}).check();await page.getByLabel('Từ ngày – Khóa 2025',{exact:true}).fill('2027-03-02');await page.getByLabel('Đến ngày – Khóa 2025',{exact:true}).fill('2027-03-04');await page.getByLabel('Hình thức – Khóa 2025',{exact:true}).selectOption('ONLINE');
-  await page.getByLabel('Chọn Lớp trễ tiến độ',{exact:true}).check();await page.getByLabel('Hình thức – Lớp trễ tiến độ',{exact:true}).selectOption('ONLINE');
+  await page.getByLabel('Chọn Lớp trễ tiến độ',{exact:true}).check();await page.getByLabel('Từ ngày – Lớp trễ tiến độ',{exact:true}).fill('2026-12-02');await page.getByLabel('Đến ngày – Lớp trễ tiến độ',{exact:true}).fill('2026-12-06');await page.getByLabel('Hình thức – Lớp trễ tiến độ',{exact:true}).selectOption('ONLINE');
   await page.screenshot({path:evidence+'/groups-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await expect(page.getByRole('heading',{name:'Đợt mới thực hành',exact:true})).toBeVisible();
-  assert.equal(writes.length,1);const groups=writes[0].body.doiTuongApDung;assert.equal(groups.length,4);assert.deepEqual(groups.filter(g=>g.loaiDoiTuong==='LOP').map(g=>g.maDoiTuong),['RL-T','RL-C']);
+  assert.equal(writes.length,1);assert.equal(writes[0].body.khungNgayBatDau,'2026-12-01');assert.equal(writes[0].body.khungNgayKetThuc,'2027-03-04');const groups=writes[0].body.doiTuongApDung;assert.equal(groups.length,4);assert.deepEqual(groups.filter(g=>g.loaiDoiTuong==='LOP').map(g=>g.maDoiTuong),['RL-T','RL-C']);
   assert.equal(groups.find(g=>g.maDoiTuong==='2025').khungNgayBatDau,'2027-03-02');assert.equal(groups.find(g=>g.maDoiTuong==='2023').hinhThucChoPhep,'OFFLINE');
   await expect(page.getByRole('cell',{name:'Lớp RL-T',exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('cell',{name:'Lớp RL-C',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'← Danh sách đợt'}).click();await expect(page.getByRole('cell',{name:'Đợt mới thực hành',exact:true})).toBeVisible();
  });
- await run('Removing saved cohort sends explicit empty group list',async({page,writes})=>{
+ await run('Removing last saved cohort blocks save until at least one group is selected',async({page,writes})=>{
   await open(page);await page.getByRole('button',{name:'Sửa thông tin'}).click();await page.getByLabel('Chọn Khóa 2023',{exact:true}).uncheck();await page.getByRole('button',{name:'Lưu thay đổi',exact:true}).click();
-  await expect(page.getByText('Chưa chọn đối tượng. Bạn có thể bổ sung khi sửa đợt nháp.',{exact:true})).toBeVisible();assert.deepEqual(writes[0].body.doiTuongApDung,[]);
+  await expect(page.getByRole('alert').filter({hasText:'Hãy chọn ít nhất một khóa hoặc nhóm lớp trước khi lưu nháp.'})).toBeVisible();assert.equal(writes.length,0);
  },{withAudiences:true});
  await run('Missing current semester roster disables delayed selection without borrowing previous semester',async({page,writes})=>{
-  await page.getByRole('button',{name:'Tạo đợt SHCN',exact:true}).click();await fill(page);await expect(page.getByText('Chưa có danh sách phân lớp rèn luyện cho học kỳ này. Không dùng danh sách kỳ trước thay thế.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Tạo đợt SHCN',exact:true}).click();await fill(page);await expect(page.getByText('Chưa có lớp trễ tiến độ trong học kỳ này.',{exact:true})).toBeVisible();
   await expect(page.getByLabel('Chọn Lớp trễ tiến độ',{exact:true})).toBeDisabled();await page.getByLabel('Chọn Khóa 2023',{exact:true}).check();await page.getByLabel('Hình thức – Khóa 2023',{exact:true}).selectOption('OFFLINE');await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();assert.equal(writes[0].body.doiTuongApDung.length,1);assert.equal(writes[0].body.doiTuongApDung[0].loaiDoiTuong,'KHOA_HOC');
  },{noRoster:true});
  await run('Changing semester confirms before clearing selected groups',async({page})=>{
   await open(page);await page.getByRole('button',{name:'Sửa thông tin'}).click();await expect(page.getByLabel('Chọn Khóa 2023',{exact:true})).toBeChecked();
-  const choose=page.getByRole('combobox',{name:'Học kỳ *',exact:true});await choose.click();await choose.fill('');await expect(page.getByRole('option',{name:'Học kỳ tiếp theo · 0020',exact:true})).toBeVisible();
-  page.once('dialog',d=>d.dismiss());await page.getByRole('option',{name:'Học kỳ tiếp theo · 0020',exact:true}).click();await expect(page.getByLabel('Chọn Khóa 2023',{exact:true})).toBeChecked();
-  await choose.click();await choose.fill('');await expect(page.getByRole('option',{name:'Học kỳ tiếp theo · 0020',exact:true})).toBeVisible();page.once('dialog',d=>d.accept());await page.getByRole('option',{name:'Học kỳ tiếp theo · 0020',exact:true}).click();await expect(page.getByLabel('Chọn Khóa 2023',{exact:true})).not.toBeChecked();
+  const choose=page.getByRole('combobox',{name:'Học kỳ *',exact:true});await choose.click();await choose.fill('');await expect(page.getByRole('option',{name:'Học kỳ tiếp theo',exact:true})).toBeVisible();
+  page.once('dialog',d=>d.dismiss());await page.getByRole('option',{name:'Học kỳ tiếp theo',exact:true}).click();await expect(page.getByLabel('Chọn Khóa 2023',{exact:true})).toBeChecked();
+  await choose.click();await choose.fill('');await expect(page.getByRole('option',{name:'Học kỳ tiếp theo',exact:true})).toBeVisible();page.once('dialog',d=>d.accept());await page.getByRole('option',{name:'Học kỳ tiếp theo',exact:true}).click();await expect(page.getByLabel('Chọn Khóa 2023',{exact:true})).not.toBeChecked();
  },{withAudiences:true,twoSemesters:true});
  await run('Lookup failure preserves saved audience and prevents unverified group write',async({page,writes})=>{
   await open(page);await page.getByRole('button',{name:'Sửa thông tin'}).click();await page.getByLabel('Tên đợt *',{exact:true}).fill('Nội dung đang soạn');await expect(page.getByRole('button',{name:'Tải lại nhóm lớp',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Lưu thay đổi',exact:true})).toBeDisabled();assert.equal(writes.length,0);await expect(page.getByLabel('Tên đợt *',{exact:true})).toHaveValue('Nội dung đang soạn');

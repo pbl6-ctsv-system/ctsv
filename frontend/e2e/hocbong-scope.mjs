@@ -10,7 +10,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});let passed
 async function check(name,run){
  if(process.env.CTSV_HB_CASE&&!name.includes(process.env.CTSV_HB_CASE))return;
  const context=await browser.newContext({viewport:{width:1280,height:900}}),page=await context.newPage();page.setDefaultTimeout(7000);
- const state={sv:false,row:null,scope:null,etag:'"one"',post:[],puts:[],key:null,lost:false,lookup404:false,reject:null,catalogRevision:revision,catalogStatus:200,nullLabels:false,legacy:false,readbackFail:false,errors:[]};
+ const state={sv:false,row:null,scope:null,etag:'"one"',post:[],puts:[],key:null,lost:false,lookup404:false,reject:null,catalogRevision:revision,catalogStatus:200,nullLabels:false,legacy:false,readbackFail:false,openEnd:false,errors:[]};
  page.on('pageerror',e=>state.errors.push(e.message));
  await page.route(u=>u.pathname.startsWith('/api/'),async route=>{
   const request=route.request(),u=new URL(request.url()),p=u.pathname,method=request.method();
@@ -20,8 +20,8 @@ async function check(name,run){
   if(p==='/api/ctsv/nen-tang/toi/quyen-giao-dien')return send({student:state.sv,mghpSpecialist:false,ctsvRoleAdmin:false});
   if(p===api+'/toi/nhom-chuc-nang')return send({student:state.sv,specialist:!state.sv});
   if(state.sv)return send({code:'FORBIDDEN'},403);
-  if(p===api+'/hoc-ky-nguon/mac-dinh')return send({semester:term,reason:null});
-  if(p===api+'/hoc-ky-nguon/21')return send(term);
+  if(p===api+'/hoc-ky-nguon/mac-dinh')return send({semester:state.openEnd?{...term,endDate:null}:term,reason:null});
+  if(p===api+'/hoc-ky-nguon/21')return send(state.openEnd?{...term,endDate:null}:term);
   if(p===api+'/hoc-ky-nguon')return send({items:[term],page:0,size:20,totalElements:1});
   if(p===api+'/kkht/pham-vi-nguon'){
    if(state.catalogStatus!==200)return send({code:'SCOPE_SOURCE_UNAVAILABLE'},state.catalogStatus);
@@ -35,7 +35,8 @@ async function check(name,run){
    assert.deepEqual(Object.keys(body).sort(),['catalogRevision','scope','sourceSemesterId']);assert.match(state.key,/^[0-9a-f-]{36}$/);
    if(state.reject)return send({code:state.reject},409);
    if(replayed&&!state.lost)return send(state.row,200,{ETag:state.etag,'Idempotency-Replayed':'true',Location:api+'/kkht/dot-xet/1001'});
-   state.row=structuredClone(initial);state.scope={id:'601',revision:1,mode:body.scope.mode,catalogRevision:state.catalogRevision,groups:body.scope.mode==='all'?groups:groups.filter(g=>body.scope.groups.some(v=>v.cohortId===g.cohortId&&v.majorId===g.majorId)),createdAt:'2026-11-23T00:00:00Z',createdBy:'301'};
+   state.row=structuredClone(initial);if(state.openEnd)state.row.semester.endDate=null;
+   state.scope={id:'601',revision:1,mode:body.scope.mode,catalogRevision:state.catalogRevision,groups:body.scope.mode==='all'?groups:groups.filter(g=>body.scope.groups.some(v=>v.cohortId===g.cohortId&&v.majorId===g.majorId)),createdAt:'2026-11-23T00:00:00Z',createdBy:'301'};
    if(state.lost)return route.abort('failed');
    return send(state.row,201,{ETag:state.etag,'Idempotency-Replayed':'false',Location:api+'/kkht/dot-xet/1001'});
   }
@@ -54,6 +55,17 @@ async function check(name,run){
  catch(e){console.error(name+' FAIL: '+e.message);console.error(await page.locator('body').innerText());console.error(state.errors);throw e;} // Keep failed context until investigation ends.
 }
 try{
+ await check('HB-start-only-create-readback',async({page,state,open})=>{
+  state.openEnd=true;await open();
+  await page.getByLabel('Toàn bộ nhóm trong học kỳ').check();
+  await page.getByRole('button',{name:'Tạo đợt xét',exact:true}).click();
+  await expect(page.getByRole('heading',{name:initial.name,exact:true})).toBeVisible();
+  const end=page.locator('dt').filter({hasText:/^Ngày kết thúc$/}).locator('..').locator('dd');
+  await expect(end).toHaveText('Chưa có');
+  assert.equal(state.post.length,1);assert.equal(state.row.semester.endDate,null);
+  await page.setViewportSize({width:360,height:800});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ });
  await check('T028-create-groups-pages',async({page,state,open})=>{
   await open();await expect(page.getByRole('group',{name:'Phạm vi sinh viên'})).toBeVisible();
   await expect(page.getByLabel('Tên đợt',{exact:true})).toHaveCount(0);await page.getByLabel('Chọn nhóm Khóa + Ngành').check();

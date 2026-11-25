@@ -23,6 +23,27 @@ class SemesterSourceServiceTest {
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-20T03:00:00Z"), ZoneOffset.UTC);
     private final RoundService service = new RoundService(repo, source, new ObjectMapper(), clock);
 
+    @Test void startDateAloneAllowsSelectingAndDefaultingAnUnverifiedSemester() {
+        var term = new Semester(21,"2610",null,null,today,null,"unverified",true,new byte[8]);
+        when(source.findById(21)).thenReturn(Optional.of(term));
+        candidates(0,List.of(term),1);
+        assertThat(service.sourceById(21).selectable()).isTrue();
+        assertThat(service.sourceById(21).endDate()).isNull();
+        assertThat(service.defaultSemester().semester().sourceSemesterId()).isEqualTo("21");
+    }
+
+    @Test void optionalEndDateDoesNotChangeAnExistingSemesterMapping() {
+        var persisted = new ScholarshipSemester();
+        ReflectionTestUtils.setField(persisted,"id",501L);
+        persisted.setAcademicYear("2026-2027"); persisted.setSemesterOrder(1);
+        persisted.setStartDate(today); persisted.setEndDate(today.plusMonths(4));
+        when(repo.semesterByPeriod("2026-2027",1)).thenReturn(Optional.of(persisted));
+        when(source.findById(21)).thenReturn(Optional.of(new Semester(21,"2610",null,null,today,null,null,true,new byte[8])));
+        assertThat(service.sourceById(21).selectable()).isTrue();
+        assertThat(service.sourceById(21).scholarshipSemesterId()).isEqualTo("501");
+        assertThat(persisted.getEndDate()).isEqualTo(today.plusMonths(4));
+    }
+
     @AfterEach void readsNeverCreateBusinessFacts() {
         verify(repo, never()).persist(any());
         verify(repo, never()).persistAudit(any());
@@ -30,7 +51,7 @@ class SemesterSourceServiceTest {
         verify(repo, never()).changeScope(anyLong(), any(), anyLong());
     }
 
-    @Test void nearestUsesVerifiedStartDateRatherThanHighestCodeOrId() {
+    @Test void nearestUsesStartDateRatherThanHighestCodeOrId() {
         candidates(0, List.of(term(2, "2610", "2026-09-01"), term(900, "9910", "2025-09-01")), 2);
         var result = service.defaultSemester();
         assertThat(result.semester()).isNotNull();
@@ -60,13 +81,12 @@ class SemesterSourceServiceTest {
             .extracting(RoundDtos.SourceSemesterDto::sourceSemesterId).isEqualTo("2");
     }
 
-    @Test void skipsAbsentUnverifiedUnknownCodeAndInvalidDates() {
+    @Test void skipsAbsentUnknownCodeMissingStartAndInvalidRanges() {
         var absent = new Semester(1,"2610",null,null,today,today.plusMonths(1),"verified",false,new byte[8]);
-        var unverified = new Semester(2,"2610",null,null,today,today.plusMonths(1),null,true,new byte[8]);
-        var missingEnd = new Semester(3,"2610",null,null,today,null,"verified",true,new byte[8]);
+        var missingStart = new Semester(2,"2610",null,null,null,null,null,true,new byte[8]);
         var reversed = new Semester(4,"2610",null,null,today,today.minusDays(1),"verified",true,new byte[8]);
-        candidates(0,List.of(absent,unverified,missingEnd,reversed,term(5,"unknown","2026-11-20"),
-            term(6,"2610","2026-09-01")),6);
+        candidates(0,List.of(absent,missingStart,reversed,term(5,"unknown","2026-11-20"),
+            term(6,"2610","2026-09-01")),5);
         assertThat(service.defaultSemester().semester()).isNotNull()
             .extracting(RoundDtos.SourceSemesterDto::sourceSemesterId).isEqualTo("6");
     }

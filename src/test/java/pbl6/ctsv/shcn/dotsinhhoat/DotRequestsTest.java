@@ -15,7 +15,7 @@ class DotRequestsTest {
     final DotRequests parser=new DotRequests(json);
     ObjectNode body()throws Exception{return (ObjectNode)json.readTree("""
       {"maHocKy":"0010","tenDot":"Sinh hoạt đầu kỳ","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07",
-       "khungTietChoPhep":[{"tietDau":5,"tietCuoi":6},{"tietDau":11,"tietCuoi":12}],"hanChotDangKyLich":"2026-12-02T17:00:00+07:00"}
+       "khungTietChoPhep":[{"tietDau":5,"tietCuoi":6},{"tietDau":11,"tietCuoi":12}],"hanChotDangKyLich":"2026-12-02T17:00:00+07:00","doiTuongApDung":[{"loaiDoiTuong":"KHOA_HOC","maDoiTuong":"2023","hinhThucChoPhep":"OFFLINE","khungNgayBatDau":"2026-12-01","khungNgayKetThuc":"2026-12-07","khungTietChoPhep":null}]}
       """);}
     @Test void keepsCodeIntervalsAndAllowsDeadlineAfterStart()throws Exception{
         var value=parser.create(body());assertThat(value.maHocKy()).isEqualTo("0010");assertThat(value.khungTietChoPhep()).hasSize(2);

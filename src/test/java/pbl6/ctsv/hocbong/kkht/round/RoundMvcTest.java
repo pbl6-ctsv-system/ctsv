@@ -110,6 +110,20 @@ class RoundMvcTest {
         verifyNoInteractions(auth, manager, identities, roles, service);
     }
 
+    @Test
+    void combinationDeletePreflightIsLimitedToItsOwnNamespace() throws Exception {
+        mvc.perform(options(BASE + "/kkht/to-hop-dao-tao/7")
+                        .header("Origin", ORIGIN)
+                        .header("Access-Control-Request-Method", "DELETE")
+                        .header("Access-Control-Request-Headers", "Authorization,If-Match"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Methods", containsString("DELETE")));
+        mvc.perform(options(BASE + "/kkht/dot-xet/7")
+                        .header("Origin", ORIGIN).header("Access-Control-Request-Method", "DELETE"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(auth, manager, identities, roles, service);
+    }
+
     @ParameterizedTest
     @CsvSource({"GET, /hoc-ky-nguon", "GET, /hoc-ky-nguon/mac-dinh", "GET, /hoc-ky-nguon/bad-id",
             "GET, /kkht/dot-xet", "POST, /kkht/dot-xet",

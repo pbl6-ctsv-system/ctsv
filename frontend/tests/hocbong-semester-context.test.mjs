@@ -7,6 +7,12 @@ const source={sourceSemesterId:'9007199254740993',code:'2510',name:null,academic
 function fixture(body){const calls=[];return{calls,client:{request:async(path,options)=>{calls.push({path,options});return Response.json(body);}}};}
 const requireReader=name=>{assert.equal(typeof api[name],'function',name+' must implement the T02.5 read contract');return api[name];};
 
+test('HB-START-ONLY: selectable source and default accept a null semester end',async()=>{
+ const term={...source,endDate:null};
+ assert.deepEqual(await api.readDefaultSemester(fixture({semester:term,reason:null}).client),{semester:term,reason:null});
+ assert.deepEqual(await api.readSourceSemester(fixture(term).client,term.sourceSemesterId),term);
+});
+
 test('HB-T024-006: default uses its exact GET and preserves nullable fields/bigint',async()=>{
  const read=requireReader('readDefaultSemester'),{client,calls}=fixture({semester:source,reason:null});
  assert.deepEqual(await read(client),{semester:source,reason:null});
