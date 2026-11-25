@@ -51,7 +51,9 @@ class ApplicationController {
     @GetMapping("/mghp/ho-so")
     ResponseEntity<?> list(HttpServletRequest request) {
         var principal=principal(request);
-        query(request,"roundId","semesterId","status","page","size");
+        query(request,"roundId","semesterId","status","page","size","stage");
+        String stage=request.getParameter("stage");
+        if(stage!=null&&!"hard-copy".equals(stage))throw invalid("stage");
         String raw=request.getParameter("roundId");
         Long round=raw==null?null:id(raw,"roundId");
         String term=request.getParameter("semesterId");
@@ -60,7 +62,8 @@ class ApplicationController {
         int page=page(request.getParameter("page"),"page",0,0,Integer.MAX_VALUE);
         int size=page(request.getParameter("size"),"size",20,1,100);
         boolean staff=tx.execute(s -> access.authorize(principal,false,null).studentId()==null);
-        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,semester,state,page,size)));
+        if(stage!=null&&!staff)throw new IntakeProblem(403,"FORBIDDEN","stage");
+        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,semester,state,page,size,stage!=null)));
     }
 
     @GetMapping("/mghp/ho-so/{idHoSo}")

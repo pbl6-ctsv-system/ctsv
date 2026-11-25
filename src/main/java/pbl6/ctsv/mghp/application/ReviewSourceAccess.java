@@ -20,6 +20,37 @@ public final class ReviewSourceAccess {
     ReviewSourceAccess(IntakeRepository r,EvaluationRepository evaluations,EvaluationService service,ObjectMapper json) {
         this.r=r;this.evaluations=evaluations;this.service=service;this.json=json;
     }
+    /** Intake handoff is independent of hard-copy assessment: do not require XET to finish online review. */
+    public Snapshot readIntake(long roundId) {
+        evaluations.flush();
+        var facts=new ArrayList<Object>();var blockers=new ArrayList<Blocker>();int eligible=0,excluded=0;
+        var heads=r.rows("""
+            SELECT h.id,h.trang_thai status,CONVERT(varchar(18),h.phien_ban_ky_thuat,1) fence,v.id submissionId
+            FROM dbo.mghp_ho_so h OUTER APPLY(SELECT TOP(1) s.id FROM dbo.mghp_phien_ban_ho_so s
+             WHERE s.ho_so_id=h.id AND COALESCE(s.dot_tiep_nhan_id,h.dot_xet_id)=? ORDER BY s.lan_sua_doi DESC,s.id DESC) v
+            WHERE h.dot_xet_id=? OR v.id IS NOT NULL ORDER BY h.id
+            """,roundId,roundId);
+        facts.add(heads);
+        for(var head:heads) {
+            String state=Objects.toString(head.get("status"),"");
+            if(Set.of("rejected","withdrawn").contains(state)){excluded++;continue;}
+            if("approved".equals(state)&&head.get("submissionId")!=null){eligible++;continue;}
+            blockers.add(new Blocker(head.get("id").toString(),Objects.toString(head.get("submissionId"),null),"INTAKE_UNRESOLVED"));
+        }
+        var supplements=r.rows("""
+            SELECT y.id,y.ho_so_id root,y.trang_thai status,y.han_xu_ly deadline
+            FROM dbo.mghp_yeu_cau_bo_sung y JOIN dbo.mghp_ho_so h ON h.id=y.ho_so_id
+            WHERE COALESCE(y.dot_tiep_nhan_id,h.dot_xet_id)=? ORDER BY y.id
+            """,roundId);
+        facts.add(supplements);
+        for(var s:supplements) {
+            var items=r.rows("SELECT id,ket_qua_xu_ly result FROM dbo.mghp_noi_dung_bo_sung WHERE yeu_cau_bo_sung_id=? ORDER BY id",s.get("id"));facts.add(items);
+            String state=Objects.toString(s.get("status"),"");
+            if(!Set.of("completed","cancelled").contains(state)||"completed".equals(state)&&items.stream().anyMatch(i->!Set.of("satisfied","unsatisfied","not_applicable").contains(Objects.toString(i.get("result"),""))))
+                blockers.add(new Blocker(s.get("root").toString(),null,"SUPPLEMENT_UNRESOLVED"));
+        }
+        return snapshot(facts,eligible,excluded,blockers);
+    }
     public Snapshot read(long roundId) {
         evaluations.flush();
         var facts=new ArrayList<Object>();var blockers=new ArrayList<Blocker>();int eligible=0,excluded=0;
@@ -84,6 +115,9 @@ public final class ReviewSourceAccess {
             if(!Set.of("completed","cancelled").contains(Objects.toString(s.get("status"),"")) || "completed".equals(s.get("status"))&&items.stream().anyMatch(i->!Set.of("satisfied","unsatisfied","not_applicable").contains(Objects.toString(i.get("result"),""))))
                 blockers.add(new Blocker(s.get("root").toString(),null,"SUPPLEMENT_UNRESOLVED"));
         }
+        return snapshot(facts,eligible,excluded,blockers);
+    }
+    private Snapshot snapshot(Object facts,int eligible,int excluded,List<Blocker> blockers) {
         try { return new Snapshot(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(json.writeValueAsBytes(IntakeMapping.wire(facts)))),eligible,excluded,List.copyOf(blockers)); }
         catch(java.security.NoSuchAlgorithmException|com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException(e);}
     }

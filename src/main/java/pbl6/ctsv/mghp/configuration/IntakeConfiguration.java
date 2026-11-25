@@ -32,6 +32,21 @@ public final class IntakeConfiguration {
             throw new pbl6.ctsv.foundation.api.FoundationAccess.Failure(409,"ROUND_STATE_CONFLICT","receivingRoundId");
     }
 
+    /** Intake and supplement writers freeze earlier than hard-copy evaluation. Caller holds lockWrites(). */
+    public void requireIntakeOpen(long receivingRoundId) {
+        requireReviewOpen(receivingRoundId);
+        var round=repository.find(pbl6.ctsv.mghp.configuration.entity.MghpDotXet.class,receivingRoundId);
+        if(round.getThoiDiemChotOnline()!=null||"completed".equals(round.getTrangThai()))
+            throw new pbl6.ctsv.foundation.api.FoundationAccess.Failure(409,"INTAKE_STAGE_CLOSED","receivingRoundId");
+    }
+
+    public void requireHardCopyOpen(long receivingRoundId) {
+        requireReviewOpen(receivingRoundId);
+        var round=repository.find(pbl6.ctsv.mghp.configuration.entity.MghpDotXet.class,receivingRoundId);
+        if(round.getThoiDiemChotOnline()==null||!"closed".equals(round.getTrangThai()))
+            throw new pbl6.ctsv.foundation.api.FoundationAccess.Failure(409,"ONLINE_NOT_SEALED","receivingRoundId");
+    }
+
     public Map<String,Object> publicRound(long roundId) { return repository.roundView(roundId,false); }
 
     public Map<String,Object> policy(long id) { return repository.policyView(id); }

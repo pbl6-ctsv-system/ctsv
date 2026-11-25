@@ -33,7 +33,7 @@ class CaDutClientTest {
                 return CaHttpStub.Reply.json(200,"{\"success\":true,\"data\":[]}");};
             var c=s.client();assertEquals(ID,c.categories().getFirst().id());assertTrue(c.templates("e@example.test").items().isEmpty());
             assertEquals(1,s.requests.stream().filter(r->r.path().endsWith("token/")).count());
-            assertTrue(s.requests.stream().filter(r->r.method().equals("GET")).allMatch(r->"Bearer access-1".equals(r.authorization())));
+            assertTrue(s.requests.stream().filter(r->r.method().equals("GET")).allMatch(r->("Bearer "+CaHttpStub.ACCESS).equals(r.authorization())));
         }
     }
     @Test void rejectsForeignOriginAndWrongResourcePaginationWithoutSendingToken() throws Exception {
@@ -54,10 +54,10 @@ class CaDutClientTest {
         try(var s=new CaHttpStub()) {
             var gets=new AtomicInteger();s.handler=r->{
                 if(r.path().endsWith("token/"))return CaHttpStub.token();
-                if(r.path().endsWith("refresh/")) {assertTrue(new String(r.body()).contains("refresh-1"));return CaHttpStub.Reply.json(200,"{\"access\":\"access-2\",\"refresh\":\"refresh-2\"}");}
+                if(r.path().endsWith("refresh/")) {assertTrue(new String(r.body()).contains("refresh-1"));return CaHttpStub.Reply.json(200,"{\"access\":\""+CaHttpStub.ACCESS_2+"\",\"refresh\":\"refresh-2\"}");}
                 return gets.incrementAndGet()==1?CaHttpStub.Reply.json(401,"{}"):CaHttpStub.Reply.json(200,"{\"count\":0,\"next\":null,\"results\":[]}");};
             assertTrue(s.client().categories().isEmpty());assertEquals(2,gets.get());
-            assertEquals("Bearer access-2",s.requests.getLast().authorization());
+            assertEquals("Bearer "+CaHttpStub.ACCESS_2,s.requests.getLast().authorization());
         }
     }
     @Test void doesNotLogProviderBodyOrFollowRedirects() throws Exception {

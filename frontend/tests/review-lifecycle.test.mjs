@@ -4,7 +4,7 @@ import {canStartApplicationReview,canReviseApplicationReview,reviewComparisonVal
 import {applicationStates,applicationStatusLabel} from '../src/features/mghp/presentation.mjs';
 test('only approved online sources with fresh server permission offer review',()=>{
  for(const status of ['submitted','processing','supplementing','supplement_responded','reopened','rejected','withdrawn'])assert.equal(canStartApplicationReview({status,evaluationAllowed:true}),false);
- assert.equal(canStartApplicationReview({status:'approved',evaluationAllowed:true}),true);
+ assert.equal(canStartApplicationReview({status:'approved',intakeSealed:true,evaluationAllowed:true}),true);
  assert.equal(canStartApplicationReview({status:'approved',evaluationAllowed:false}),false);
  assert.equal(canStartApplicationReview({status:'approved',workflowStatus:'hard_copy_failed',evaluationAllowed:true}),false);
 });

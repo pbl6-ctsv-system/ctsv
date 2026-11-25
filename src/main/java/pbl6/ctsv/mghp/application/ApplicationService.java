@@ -61,7 +61,7 @@ class ApplicationService {
                 ||!Objects.equals(scope.get("phien_ban_chinh_sach_id"),policyVersion))
                 throw IntakeProblem.conflict("APPLICATION_IDENTITY_CONFLICT");
         }
-        cfg.lock(round);cfg.requireReviewOpen(round);
+        cfg.lock(round);cfg.requireIntakeOpen(round);
         var currentRound=availableRound(round);
         if(!cfg.receives(currentRound,received)) throw IntakeProblem.conflict("SUBMISSION_NOT_ALLOWED");
         if(IntakeConfiguration.list(currentRound,"policyVersions").stream()
@@ -179,7 +179,7 @@ class ApplicationService {
         cfg.lockWrites();
         if(reopen)cfg.lock((Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",id).get("dot_xet_id"));
         var root=reopen?repo.root(id):reads.scoped(actor,id);
-        cfg.requireReviewOpen(root.roundId);
+        cfg.requireIntakeOpen(root.roundId);
         reads.match(root,tag);
         var now=received.atOffset(ZoneOffset.UTC);
         String prior=root.status;
@@ -211,7 +211,7 @@ class ApplicationService {
         long round=(Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",id).get("dot_xet_id");
         cfg.lock(round);
         var root=repo.root(id);
-        cfg.requireReviewOpen(round);
+        cfg.requireIntakeOpen(round);
         reads.match(root,tag);
         if(result.equals(root.status))return summary(root);
         if(!ApplicationDispositionRules.accepts(root.status)||repo.confirmed(root))

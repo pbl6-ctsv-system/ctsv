@@ -1,7 +1,8 @@
-export function applicationListUrl(page=0,status='',semesterId='') {
+export function applicationListUrl(page=0,status='',semesterId='',roundId='') {
  const query=new URLSearchParams({page:String(page)});
  if(status)query.set('status',status);
  if(semesterId)query.set('semesterId',semesterId);
+ if(roundId)query.set('roundId',roundId);
  return '/api/ctsv/mghp/ho-so?'+query;
 }
 export function noticeAction(url){

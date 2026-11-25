@@ -3,7 +3,8 @@ import type {PointerEvent as ReactPointerEvent} from 'react';
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import {errorMessage} from '../../api/error-message';
-import {readPdfBytes} from './pdf-source.mjs';
+import {readPdfBytes,pdfErrorText} from './pdf-source.mjs';
+import {pdfDocumentOptions} from './pdf-options.mjs';
 import {geometryFromPixels,pixelsFromGeometry,keyboardSelectionRect} from './geometry.mjs';
 import type {PdfViewerProps} from './types';
 import styles from './PdfViewer.module.css';
@@ -40,10 +41,12 @@ export default function PdfDocumentView({client,fileId,title,fileName,selectable
   void (async()=>{
    const data=await readPdfBytes(client,fileId,abort.signal);if(!live)return;
    // PDF.js transfers its input buffer to the worker; retain a separate copy for download.
-   bytes.current={id:fileId,data:data.slice()};task=pdfjs.getDocument({data});const loaded=await task.promise;
+   bytes.current={id:fileId,data:data.slice()};
+   const resources=new URL(import.meta.env.BASE_URL+'pdfjs/'+pdfjs.version+'/',window.location.origin).href;
+   task=pdfjs.getDocument(pdfDocumentOptions(data,resources));const loaded=await task.promise;
    if(!live)return;
    setPage(previous=>Math.max(1,Math.min(previous,loaded.numPages)));setDocument({id:fileId,pdf:loaded});
-  })().catch(e=>{if(live){bytes.current=null;setError({id:fileId,message:errorMessage(e)});}});
+  })().catch(e=>{if(live){bytes.current=null;setError({id:fileId,message:pdfErrorText(e)??errorMessage(e)});}});
   return()=>{live=false;abort.abort();renderTask.current?.cancel();void task?.destroy().catch(()=>{});};
  },[client,fileId,retry]);
  useEffect(()=>{

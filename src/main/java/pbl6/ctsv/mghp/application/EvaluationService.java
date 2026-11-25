@@ -58,7 +58,7 @@ class EvaluationService {
     sourceSubmission=update.id;e.roundId=update.roundId;
    }
   }
-  if(e.roundId!=null)config.requireReviewOpen(e.roundId);
+  if(e.roundId!=null){if(e.applicationId!=null)config.requireHardCopyOpen(e.roundId);else config.requireReviewOpen(e.roundId);}
   var process=repo.row("SELECT sinh_vien_id student FROM dbo.qua_trinh_theo_hoc WHERE id=?",e.processId);
   if(!Objects.equals(process.get("student"),e.studentId))throw conflict("EVALUATION_SOURCE_CONFLICT");
   repo.row("SELECT id FROM dbo.hoc_ky WHERE id=?",e.semesterId);
@@ -91,7 +91,7 @@ class EvaluationService {
    if(repo.terminalReview(root))throw conflict("EVALUATION_IMMUTABLE");
    if(!ReviewLifecycleRules.canEvaluate(application.status,false))throw conflict("EVALUATION_SOURCE_CONFLICT");
   }else store.benefit((Long)fields.get("benefit"));
-  var e=store.evaluation(id);if(e.roundId!=null)config.requireReviewOpen(e.roundId);lockChain(e);return e;
+  var e=store.evaluation(id);if(e.roundId!=null){if(e.applicationId!=null)config.requireHardCopyOpen(e.roundId);else config.requireReviewOpen(e.roundId);}lockChain(e);return e;
  }
  private void touchParent(Evaluation e){
   if(e.applicationId!=null){var root=repo.root(e.applicationId);repo.change(root,root.status,clock.instant().atOffset(ZoneOffset.UTC),null);}

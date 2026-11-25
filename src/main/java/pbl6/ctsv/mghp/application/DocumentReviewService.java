@@ -77,7 +77,9 @@ class DocumentReviewService {
         if(hardCopy&&!"approved".equals(root.status))throw conflict("DOCUMENT_VERSION_CONFLICT");
         var document=repo.find(Document.class,id);
         var current=repo.versions(rootId).stream().findFirst().orElseThrow(IntakeProblem::missing);
-        configuration.requireReviewOpen(current.roundId==null?root.roundId:current.roundId);
+        long receiving=current.roundId==null?root.roundId:current.roundId;
+        if(hardCopy||"approved".equals(root.status))configuration.requireHardCopyOpen(receiving);
+        else configuration.requireIntakeOpen(receiving);
         if(!document.versionId.equals(current.id) || Set.of("withdrawn","rejected").contains(root.status==null?"":root.status))
             throw conflict("DOCUMENT_VERSION_CONFLICT");
         if("not_applicable".equals(row.result) && !notApplicable(row.kind,document))

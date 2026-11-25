@@ -43,11 +43,44 @@ final class RoundTimelineService {
         r.cas("mghp_dot_xet",id,fence,values);history.changed(id,actor,"EXTEND_SUBMISSION",reason,now());return rounds.detail(id,true);
     }
     Object history(long id,int[] page){return history.history(id,page);}
+    void scope(long id,long semesterId) {
+        if(!Objects.equals(r.find(MghpDotXet.class,id).getHocKyId(),semesterId))throw ConfigFailure.invalid("semesterId");
+    }
+    PolicyService.View onlinePreflight(long id,long semesterId) {
+        scope(id,semesterId);var round=r.find(MghpDotXet.class,id);
+        var source=sources.getIfAvailable();if(source==null)throw new ConfigFailure(503,"DEPENDENCY_UNAVAILABLE");
+        var snapshot=source.readIntake(id);var blockers=new ArrayList<>(snapshot.blockers());
+        boolean sealed=round.getThoiDiemChotOnline()!=null||round.getThoiDiemDongXet()!=null;
+        boolean active=Set.of("open","closed").contains(Objects.toString(round.getTrangThai(),""))&&round.getThoiDiemMo()!=null&&!clock.instant().isBefore(round.getThoiDiemMo().toInstant());
+        if(!active&&!sealed)blockers.add(new ReviewSourceAccess.Blocker(null,null,"ROUND_NOT_ACTIVE"));
+        var body=new LinkedHashMap<String,Object>();body.put("roundId",Long.toString(id));body.put("semesterId",Long.toString(semesterId));body.put("status",round.getTrangThai());
+        body.put("onlineClosedAt",TimelineModels.string(RoundTimelineRepository.instant(round.getThoiDiemChotOnline())));
+        body.put("reviewClosedAt",TimelineModels.string(RoundTimelineRepository.instant(round.getThoiDiemDongXet())));body.put("intakeSealed",sealed);
+        body.put("sourceSha256",snapshot.sha256());body.put("eligibleCount",snapshot.eligibleCount());body.put("excludedCount",snapshot.excludedCount());
+        var counts=new TreeMap<String,Integer>();for(var b:blockers)counts.merge(b.code(),1,Integer::sum);
+        body.put("blockerCount",blockers.size());body.put("counts",counts);body.put("blockers",blockers.stream().limit(20).toList());body.put("hasMore",blockers.size()>20);
+        body.put("canSeal",active&&!sealed&&blockers.isEmpty());
+        return new PolicyService.View(body,ConfigRules.tag("close-online:"+id,r.fence("mghp_dot_xet",id),body,json));
+    }
+    PolicyService.View closeOnline(long id,long semesterId,String reason,String tag,long actor) {
+        var before=onlinePreflight(id,semesterId);ConfigRules.match(before.tag(),tag);var context=(Map<?,?>)before.body();
+        var round=r.find(MghpDotXet.class,id);
+        if("completed".equals(round.getTrangThai()))throw state();
+        if(Boolean.TRUE.equals(context.get("intakeSealed")))return before;
+        if(!Boolean.TRUE.equals(context.get("canSeal")))throw state();
+        history.baseline(id,actor,now());
+        if("open".equals(round.getTrangThai()))rounds.transition(id,"close",rounds.detail(id,true).tag(),reason,actor);
+        var values=new LinkedHashMap<String,Object>();values.put("nguoi_chot_online_id",actor);values.put("thoi_diem_chot_online",now());
+        values.put("sha256_nguon_chot_online",context.get("sourceSha256"));values.put("thoi_diem_cap_nhat",now());
+        r.cas("mghp_dot_xet",id,r.fence("mghp_dot_xet",id),values);history.changed(id,actor,"CLOSE_ONLINE",reason,now());
+        return onlinePreflight(id,semesterId);
+    }
     PolicyService.View preflight(long id) {
         var round=r.find(MghpDotXet.class,id);
         var source=sources.getIfAvailable();if(source==null)throw new ConfigFailure(503,"DEPENDENCY_UNAVAILABLE");
         var snapshot=source.read(id);var blockers=new ArrayList<>(snapshot.blockers());
         if(!"closed".equals(round.getTrangThai()))blockers.add(new ReviewSourceAccess.Blocker(null,null,"INTAKE_NOT_CLOSED"));
+        if(round.getThoiDiemChotOnline()==null&&round.getThoiDiemDongXet()==null)blockers.add(new ReviewSourceAccess.Blocker(null,null,"ONLINE_NOT_SEALED"));
         if(r.pending(id)&&blockers.stream().noneMatch(b->b.code().equals("SUPPLEMENT_UNRESOLVED")))
             blockers.add(new ReviewSourceAccess.Blocker(null,null,"MANDATORY_WORK_UNRESOLVED"));
         var counts=new TreeMap<String,Integer>();for(var b:blockers)counts.merge(b.code(),1,Integer::sum);
@@ -55,13 +88,17 @@ final class RoundTimelineService {
         body.put("reviewClosedAt",TimelineModels.string(RoundTimelineRepository.instant(round.getThoiDiemDongXet())));
         body.put("sourceSha256",snapshot.sha256());body.put("eligibleCount",snapshot.eligibleCount());body.put("excludedCount",snapshot.excludedCount());
         body.put("blockerCount",blockers.size());body.put("counts",counts);body.put("blockers",blockers.stream().limit(20).toList());body.put("hasMore",blockers.size()>20);
+        body.put("semesterId",round.getHocKyId().toString());body.put("onlineClosedAt",TimelineModels.string(RoundTimelineRepository.instant(round.getThoiDiemChotOnline())));
+        body.put("intakeSealed",round.getThoiDiemChotOnline()!=null||round.getThoiDiemDongXet()!=null);
+        body.put("canSeal","closed".equals(round.getTrangThai())&&round.getThoiDiemDongXet()==null&&blockers.isEmpty());
         // Planned dates and the clock cannot stale a source context. State/actual marker and every source fact can.
         return new PolicyService.View(body,ConfigRules.tag("close-review:"+id,new byte[0],body,json));
     }
     PolicyService.View close(long id,String reason,String tag,long actor) {
         var before=preflight(id);ConfigRules.match(before.tag(),tag);var context=(Map<?,?>)before.body();
+        var round=r.find(MghpDotXet.class,id);if("completed".equals(round.getTrangThai()))throw state();
+        if(round.getThoiDiemDongXet()!=null)return before;
         if(((Number)context.get("blockerCount")).intValue()!=0)throw state();
-        var round=r.find(MghpDotXet.class,id);if(round.getThoiDiemDongXet()!=null)return before;
         var fence=r.fence("mghp_dot_xet",id);history.baseline(id,actor,now());
         var values=new LinkedHashMap<String,Object>();values.put("nguoi_dong_xet_id",actor);values.put("thoi_diem_dong_xet",now());
         values.put("sha256_nguon_dong_xet",context.get("sourceSha256"));values.put("thoi_diem_cap_nhat",now());

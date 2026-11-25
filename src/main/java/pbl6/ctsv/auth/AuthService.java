@@ -139,10 +139,18 @@ final class AuthService implements AuthAccess {
     }
 
     @Override public State requireCtsvAccess(Principal principal,UUID mappedAccountId){
+        return requireAccountAccess(principal,mappedAccountId,true);
+    }
+
+    @Override public State requireAcceptedWorkAccess(Principal accepted,UUID mappedAccountId){
+        return requireAccountAccess(accepted,mappedAccountId,false);
+    }
+
+    private State requireAccountAccess(Principal principal,UUID mappedAccountId,boolean requireSessionVersion){
         if(!principal.accountId().equals(mappedAccountId)) throw AuthFailure.unavailable();
         try {
             State state=state(mappedAccountId);
-            if(!state.active() || !state.tokenVersion().equals(Long.toString(principal.tokenVersion())))
+            if(!state.active() || requireSessionVersion&&!state.tokenVersion().equals(Long.toString(principal.tokenVersion())))
                 throw new AuthFailure(401,"TOKEN_REVOKED");
             if(!state.ctsvAccess()) throw new AuthFailure(403,"FORBIDDEN");
             return state;

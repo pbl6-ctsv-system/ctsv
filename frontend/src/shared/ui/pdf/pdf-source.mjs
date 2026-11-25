@@ -1,4 +1,7 @@
 // All consumers use the existing authenticated transport. No tokens, provider URLs or cache here.
+export function pdfErrorText(error){
+ if(error?.code==='FILE_INTEGRITY_FAILED')return 'Hệ thống chưa xác minh được tính toàn vẹn của tệp. Vui lòng thử mở lại hoặc báo CTSV kiểm tra tài liệu.';
+}
 export async function readPdfBytes(client,fileId,signal){
  signal.throwIfAborted();
  const response=await client.request('/api/ctsv/tep/'+encodeURIComponent(fileId)+'/noi-dung',{signal});

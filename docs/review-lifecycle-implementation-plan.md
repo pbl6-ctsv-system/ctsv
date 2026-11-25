@@ -126,3 +126,7 @@ Không chạy toàn bộ P00–P10 hoặc full frontend suite. Bốn FAIL naviga
 - [ ] Browser ghi kết luận trên DEV: NOT VERIFIED. Duyệt tự động chặn thao tác dự kiến tạo revision/xác nhận trên fixture10035 vì ghi thêm lịch sử bất biến trong DEV; script chưa chạy và không retry qua đường khác. Thay bằng browser DEV read-only và HTTP/SQL thật trên DB test được phép. Không thay kết luận hồ sơ người dùng.
 
 Source delta: ReviewWorkspace.tsx/module.css, review/model.mjs, presentation.mjs, EvaluationController/Service; test DecisionHttpIT, review-lifecycle.test.mjs; cập nhật script review-lifecycle-dev và thêm review-actions-dev.mcp.js. API Catalog/review contract/test cases được đồng bộ. [Evidence](../target/review-actions-20261122/manifest.json). Không commit/push, không chạy toàn bộ phase/backend/frontend suites. Các kết quả trước đoạn này giữ đúng phạm vi lượt cũ.
+
+## Superseding delta owner25/11/2026
+
+Quy tắc approved V1 là đủ để vào inbox bản cứng ở các mô tả22/11 phía trên là lịch sử, đã thay bởi approved V1 **và receiving round đã chốt online**. Bước chốt bản cứng dùng lại Đóng xét, không thay evaluation/source history hoặc trạng thái approved_v2/awaiting_council. [Kế hoạch/evidence delta](stage-handoff-20261125.md). Không coi evidence22/11 là bằng chứng delta25/11.

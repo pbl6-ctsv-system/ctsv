@@ -110,6 +110,10 @@ V18 bỏ huong_dan_ke_khai/huong_dan_can_cu_nop_muon tại mghp_dot_xet; MghpDot
 
 Attempt/receipt/artifact/certificate observation dùng JDBC chuyên biệt trong SigningRepository để giữ fencing/CAS/short transaction; storage bytes ở Cloudinary authenticated, metadata/ledger Shared Files. Dùng public ManagedFiles/FileReadPolicy, không import repository/entity Shared Files xuyên module. Thêm role PHT vào registry và danh mục role Foundation, không tự grant account. SQL/JPA mapping được validate trên DB P11 riêng; DEV nâng sau gate UI.
 
+## Delta V31 — chốt hồ sơ online (25/11/2026)
+
+Không thêm Entity/table. MghpDotXet và MghpLichSuLichTrinh thêm nguoi_chot_online_id bigint FK NguoiDung, thoi_diem_chot_online datetimeoffset(7), sha256_nguon_chot_online varchar(64). Tất cả nullable cho lịch sử cũ. Root tuple đủ3/không có3, bất biến sau chốt; history append-only hiện có tiếp tục bảo vệ. Migration hiện hành V31 giữ nguyên SQL/checksum của V26 MGHP cũ để nhường V26–V30 cho main; không chạy lại SQL đã áp dụng. Entity/JPA validation và CAS rowversion hiện hành giữ nguyên. Plan/evidence lịch sử: [stage handoff](stage-handoff-20261125.md).
+
 ## ĐRL — DRL-02.3
 
 Module ĐRL sở hữu 11 bảng ghi trong schema `dbo`, ánh xạ tại `pbl6.ctsv.drl.entity`. [V17](../src/main/resources/db/migration/V17__drl_schema.sql) tạo các bảng và view. [V26](../src/main/resources/db/migration/V26__drl_dossier_freeze.sql) bổ sung `dbo.RLLopDot.NgayLapHoSo` kiểu `datetimeoffset(7) NULL`, ánh xạ thành `OffsetDateTime` với `@TimeZoneStorage(NATIVE)`. 11 bảng có tổng cộng 75 cột và dùng PK `ID bigint IDENTITY(1,1)` qua `DrlEntity`.

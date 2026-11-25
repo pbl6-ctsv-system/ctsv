@@ -20,7 +20,7 @@ public class SigningWorker {
  record Context(Request request,Step step,DocumentVersion document){}
  Context context(Work work){return new Context(r.find(Request.class,work.request()),r.find(Step.class,work.step()),r.find(DocumentVersion.class,r.find(Request.class,work.request()).versionId));}
  void scope(long request){r.beginSqlScope();config.lockWrites();r.lock(request);}
- void dispatchPermission(Work w){var i=access.actor(w.principal());var c=context(w);if(i.userId()!=c.step.userId)throw new IntakeProblem(403,"FORBIDDEN","request");access.require(i.userId(),c.step.role);if(!r.authorized(c.step)||!"current".equals(r.link(c.document.id).state)||!r.minutesCompleted(r.link(c.document.id))||r.input(c.request)!=w.input()||!files.describe(w.input()).sha256().equals(w.hash()))throw IntakeProblem.conflict("SIGNING_NOT_READY");}
+ void dispatchPermission(Work w){var i=access.acceptedActor(w.principal());var c=context(w);if(i.userId()!=c.step.userId)throw new IntakeProblem(403,"FORBIDDEN","request");access.require(i.userId(),c.step.role);if(!r.authorized(c.step)||!"current".equals(r.link(c.document.id).state)||!r.minutesCompleted(r.link(c.document.id))||r.input(c.request)!=w.input()||!files.describe(w.input()).sha256().equals(w.hash()))throw IntakeProblem.conflict("SIGNING_NOT_READY");}
  public boolean runRequest(long request){
   Work pending=r.work(request);if(pending==null||!Set.of("queued","uploaded","download","storage","upload_intent","sign_intent").contains(pending.phase()))return false;
   UUID lease=UUID.randomUUID();

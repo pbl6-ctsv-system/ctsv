@@ -1,6 +1,11 @@
 export const evaluationFields=['applicationId','submissionId','benefitId','updateSubmissionId','processId','semesterId','policyVersionId','scopeCode','result','reason','timeEvidence','ageReferenceDate','birthDateUsed','statusHistoryId','criteria','evidence','eligiblePeriods'];
 export const resultLabels={dat:'Đạt',khong_dat:'Không đạt',can_xac_minh:'Cần xác minh',chua_xet:'Chưa xét',khong_ap_dung:'Không áp dụng'};
-export function canStartApplicationReview(source){return source?.status==='approved'&&source.evaluationAllowed===true&&source.workflowStatus!=='hard_copy_failed';}
+export function canStartApplicationReview(source){return source?.status==='approved'&&source.intakeSealed===true&&source.evaluationAllowed===true&&source.workflowStatus!=='hard_copy_failed';}
+export function hardCopyListUrl(page=0,semester='',round=''){
+ const query=new URLSearchParams({stage:'hard-copy',page:String(page)});
+ if(semester)query.set('semesterId',semester);if(round)query.set('roundId',round);
+ return '/api/ctsv/mghp/ho-so?'+query;
+}
 export function canReviseApplicationReview(record){return !(record?.applicationId&&record.result==='khong_dat'&&record.status==='confirmed');}
 export function reviewComparisonValue(field,value,names){return value?(names[field]?.[value]??(['ethnicityId','classId','cohortId','managementUnitId'].includes(field)?'Chưa xác minh tên danh mục':value)):'Chưa có nguồn';}
 export function evaluationContent(source={}){

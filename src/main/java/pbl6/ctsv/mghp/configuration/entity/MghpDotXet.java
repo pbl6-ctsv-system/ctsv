@@ -115,6 +115,13 @@ public class MghpDotXet {
     @TimeZoneStorage(TimeZoneStorageType.NATIVE)
     @Column(name="thoi_diem_dong_xet",columnDefinition="datetimeoffset(7)") private OffsetDateTime thoiDiemDongXet;
     @Column(name="sha256_nguon_dong_xet",length=64) private String sha256NguonDongXet;
+    @Column(name="nguoi_chot_online_id") private Long nguoiChotOnlineId;
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    @Column(name="thoi_diem_chot_online",columnDefinition="datetimeoffset(7)") private OffsetDateTime thoiDiemChotOnline;
+    @Column(name="sha256_nguon_chot_online",length=64) private String sha256NguonChotOnline;
+    public Long getNguoiChotOnlineId(){return nguoiChotOnlineId;}
+    public OffsetDateTime getThoiDiemChotOnline(){return thoiDiemChotOnline;}
+    public String getSha256NguonChotOnline(){return sha256NguonChotOnline;}
     public RoundSchedule getLichTrinh(){return lichTrinh==null?new RoundSchedule():lichTrinh;}
     public void setLichTrinh(RoundSchedule value){lichTrinh=value;}
     public Long getNguoiDongXetId(){return nguoiDongXetId;}

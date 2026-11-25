@@ -91,6 +91,8 @@ final class ConfigurationMapper {
             m.put("schedule",RoundTimelineRepository.plan(e.getLichTrinh()).view());
             m.put("reviewClosedAt",value(e.getThoiDiemDongXet()));m.put("reviewClosedByUserId",value(e.getNguoiDongXetId()));
             m.put("reviewSourceSha256",e.getSha256NguonDongXet());}
+        if(manager){m.put("onlineClosedAt",value(e.getThoiDiemChotOnline()));m.put("onlineClosedByUserId",value(e.getNguoiChotOnlineId()));
+            m.put("intakeSealed",e.getThoiDiemChotOnline()!=null||e.getThoiDiemDongXet()!=null);}
         return m;
     }
     static Object value(Object v) {

@@ -25,7 +25,7 @@ function useActions(){
  const active=useRef(false);const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  async function run(task:()=>Promise<void>,format=errorMessage){
   if(active.current)return;active.current=true;setBusy(true);setError('');setMessage('');
-  try{await task();}catch(e){setError(e instanceof ApiError&&e.status===412?'Hồ sơ đã thay đổi. Hãy đọc lại hồ sơ trước khi gửi.':format(e));}
+  try{await task();}catch(e){setError(e instanceof ApiError&&e.code==='INTAKE_STAGE_CLOSED'?'Đợt đã chốt hồ sơ online; không thể thay đổi yêu cầu bổ sung.':e instanceof ApiError&&e.status===412?'Hồ sơ đã thay đổi. Hãy đọc lại hồ sơ trước khi gửi.':format(e));}
   finally{active.current=false;setBusy(false);}
  }
  return {busy,error,message,setMessage,run};

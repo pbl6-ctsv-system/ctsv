@@ -5,9 +5,10 @@ import {errorMessage} from '../../../shared/api/error-message';
 import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {PdfViewer} from '../../../shared/ui/pdf';
 import {applicationStatusLabel} from '../presentation.mjs';
+import {RoundStagePanel} from '../RoundStagePanel';
 import {ReviewComparisons} from './ReviewComparisons';
 import {currentCheck} from '../intake/review-model.mjs';
-import {evaluationContent,resultLabels,reviewDocumentLabel,reviewFormErrors,canStartApplicationReview,canReviseApplicationReview,applicationReviewHead,applicationReviewDecision} from './model.mjs';
+import {evaluationContent,resultLabels,reviewDocumentLabel,reviewFormErrors,canStartApplicationReview,canReviseApplicationReview,hardCopyListUrl,applicationReviewHead,applicationReviewDecision} from './model.mjs';
 import {applicationTitle,dateTime,displayName} from '../presentation.mjs';
 import styles from './ReviewWorkspace.module.css';
 type Row=Record<string,any>;
@@ -36,7 +37,9 @@ export function ReviewWorkspace({client,view}:{client:AuthClient;view:string}){
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');
  const inFlight=useRef(false);
  const [declining,setDeclining]=useState(false);
- const [rows,setRows]=useState<Row[]>([]),[semesters,setSemesters]=useState<Row[]>([]),[semester,setSemester]=useState('');
+ const [rows,setRows]=useState<Row[]>([]),[semesters,setSemesters]=useState<Row[]>([]),[semester,setSemester]=useState(()=>evaluating?new URLSearchParams(location.search).get('hoc-ky')??'':'');
+ const [stageBusy,setStageBusy]=useState(false);
+ const [roundFilter,setRoundFilter]=useState(()=>evaluating?new URLSearchParams(location.search).get('dot-xet')??'':''),[rounds,setRounds]=useState<Row[]>([]),[roundsLoading,setRoundsLoading]=useState(false);
  const [record,setRecord]=useState<Row|null>(null),[tag,setTag]=useState(''),[form,setForm]=useState<Row|null>(null),[policy,setPolicy]=useState<Row|null>(null);
  const [benefitDossier,setBenefitDossier]=useState<Row|null>(null),[updates,setUpdates]=useState<Row[]>([]),[processHistory,setProcessHistory]=useState<Row|null>(null),[selectedUpdate,setSelectedUpdate]=useState('');
  const [preview,setPreview]=useState<Row|null>(null);
@@ -46,17 +49,30 @@ export function ReviewWorkspace({client,view}:{client:AuthClient;view:string}){
  const [request,setRequest]=useState<Row>({sourceVersionId:'',receivingRoundId:'',benefitId:'',updateType:'periodic_update',reason:'',deadline:'',items:[]});
  const [itemReason,setItemReason]=useState('');
  const [newBenefitEvaluation,setNewBenefitEvaluation]=useState(false),[benefitSource,setBenefitSource]=useState<Row|null>(null),[selectedPolicy,setSelectedPolicy]=useState(''),[policyVersions,setPolicyVersions]=useState<Row[]>([]);
- async function run(action:()=>Promise<void>){if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setSuccess('');try{await action();}catch(e){setError(e instanceof ApiError?({EVALUATION_SOURCE_CONFLICT:'Hồ sơ cần được duyệt V1 và chưa có kết luận kết thúc mới được đối chiếu bản cứng. Hãy đọc lại hồ sơ.',EVALUATION_IMMUTABLE:'Kết quả đã được xác nhận hoặc hồ sơ đã kết thúc; không thể sửa hay đối chiếu lại.',EVALUATION_NOT_READY:'Chưa đủ điều kiện xác nhận. Kiểm tra tiêu chí, bản cứng bắt buộc, giấy làm căn cứ và thời gian hưởng.'} as Record<string,string>)[e.code]??errorMessage(e):errorMessage(e));}finally{inFlight.current=false;setBusy(false);}}
+ async function run(action:()=>Promise<void>){if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setSuccess('');try{await action();}catch(e){setError(e instanceof ApiError?({ONLINE_NOT_SEALED:'Đợt chưa chốt hồ sơ online. Hoàn tất tiếp nhận và chốt đợt trước khi đối chiếu bản cứng.',INTAKE_STAGE_CLOSED:'Hồ sơ online đã chốt; chỉ được xem ở bước tiếp nhận.',EVALUATION_SOURCE_CONFLICT:'Hồ sơ cần được duyệt V1 và chưa có kết luận kết thúc mới được đối chiếu bản cứng. Hãy đọc lại hồ sơ.',EVALUATION_IMMUTABLE:'Kết quả đã được xác nhận hoặc hồ sơ đã kết thúc; không thể sửa hay đối chiếu lại.',EVALUATION_NOT_READY:'Chưa đủ điều kiện xác nhận. Kiểm tra tiêu chí, bản cứng bắt buộc, giấy làm căn cứ và thời gian hưởng.'} as Record<string,string>)[e.code]??errorMessage(e):errorMessage(e));}finally{inFlight.current=false;setBusy(false);}}
  async function get(url:string){const r=await client.request(url);return {data:await r.json(),tag:r.headers.get('ETag')??''};}
- async function load(p=page){
-  const r=await get(evaluating?base+'/ho-so?status=approved&page='+p:base+'/quyen-huong/can-ra-soat?semesterId='+semester+'&page='+p+(policyCode?'&policyCode='+policyCode:''));
+ async function load(p=page,term=semester,round=roundFilter){
+  const r=await get(evaluating?hardCopyListUrl(p,term,round):base+'/quyen-huong/can-ra-soat?semesterId='+semester+'&page='+p+(policyCode?'&policyCode='+policyCode:''));
   setRows(r.data.items);setTotal(r.data.totalElements);setPage(p);
  }
  useEffect(()=>{
   if(!staff){void run(async()=>{const r=await get(base+'/toi/quyen-huong?page=0');setRows(r.data.items);setTotal(r.data.totalElements);setPage(0);});return;}let live=true;
-  void client.request('/api/ctsv/nen-tang/danh-muc?kind=semesters&size=100').then(r=>r.json()).then(r=>{if(live)setSemesters(r.items);}).catch(e=>{if(live)setError(e instanceof ApiError?({EVALUATION_SOURCE_CONFLICT:'Hồ sơ cần được duyệt V1 và chưa có kết luận kết thúc mới được đối chiếu bản cứng. Hãy đọc lại hồ sơ.',EVALUATION_IMMUTABLE:'Kết quả đã được xác nhận hoặc hồ sơ đã kết thúc; không thể sửa hay đối chiếu lại.',EVALUATION_NOT_READY:'Chưa đủ điều kiện xác nhận. Kiểm tra tiêu chí, bản cứng bắt buộc, giấy làm căn cứ và thời gian hưởng.'} as Record<string,string>)[e.code]??errorMessage(e):errorMessage(e));});
+  void client.request('/api/ctsv/nen-tang/danh-muc?kind=semesters&size=100').then(r=>r.json()).then(r=>{if(live)setSemesters(r.items);}).catch(e=>{if(live)setError(e instanceof ApiError?({ONLINE_NOT_SEALED:'Đợt chưa chốt hồ sơ online. Hoàn tất tiếp nhận và chốt đợt trước khi đối chiếu bản cứng.',INTAKE_STAGE_CLOSED:'Hồ sơ online đã chốt; chỉ được xem ở bước tiếp nhận.',EVALUATION_SOURCE_CONFLICT:'Hồ sơ cần được duyệt V1 và chưa có kết luận kết thúc mới được đối chiếu bản cứng. Hãy đọc lại hồ sơ.',EVALUATION_IMMUTABLE:'Kết quả đã được xác nhận hoặc hồ sơ đã kết thúc; không thể sửa hay đối chiếu lại.',EVALUATION_NOT_READY:'Chưa đủ điều kiện xác nhận. Kiểm tra tiêu chí, bản cứng bắt buộc, giấy làm căn cứ và thời gian hưởng.'} as Record<string,string>)[e.code]??errorMessage(e):errorMessage(e));});
   if(evaluating){const requested=new URLSearchParams(location.search).get('ho-so');const benefit=new URLSearchParams(location.search).get('quyen-huong');if(requested&&/^[1-9]\d*$/.test(requested))void run(()=>openApplication({id:requested}));else if(benefit&&/^[1-9]\d*$/.test(benefit))void run(()=>openBenefitSource(benefit));else void run(()=>load(0));}return()=>{live=false;};
  },[client,view]);
+ useEffect(()=>{
+  if(!evaluating)return;let live=true;setRounds([]);setRoundsLoading(true);
+  void (async()=>{
+   const items:Row[]=[];
+   for(let page=0;;page++){
+    const query=new URLSearchParams({page:String(page),size:'100'});if(semester)query.set('semesterId',semester);
+    const value=await get(base+'/dot-xet?'+query);if(!live)return;items.push(...value.data.items);
+    if(items.length>=value.data.totalElements||value.data.items.length===0)break;
+   }
+   if(live)setRounds(items);
+  })().catch(e=>{if(live)setError(errorMessage(e));}).finally(()=>{if(live)setRoundsLoading(false);});
+  return()=>{live=false;};
+ },[client,view,semester]);
  async function readEvaluation(id:string){
   const r=await get(base+'/danh-gia/'+id),p=await get(base+'/phien-ban-chinh-sach/'+r.data.policyVersionId);
   if(r.data.applicationId)await openApplication({id:r.data.applicationId});else if(r.data.benefitId)await openBenefitSource(r.data.benefitId);
@@ -64,6 +80,7 @@ export function ReviewWorkspace({client,view}:{client:AuthClient;view:string}){
  }
  async function openApplication(row:Row){
   const [root,context]=await Promise.all([get(base+'/ho-so/'+row.id),get(base+'/ho-so/'+row.id+'/ngu-canh-xet-duyet')]);
+  if(!root.data.intakeSealed)throw new Error('Đợt chưa chốt hồ sơ online. Hồ sơ chưa được chuyển sang bước đối chiếu bản cứng.');
   setProcessHistory((await get('/api/ctsv/nen-tang/qua-trinh-hoc/'+root.data.studyProcessId+'/lich-su')).data);setNewBenefitEvaluation(false);setBenefitDossier(null);setPreview(null);setSource({...root.data,comparisons:context.data.comparisons,fullName:row.fullName??context.data.comparisons.find((c:Row)=>c.field==='fullName')?.declaredValue,studentCode:row.studentCode??context.data.comparisons.find((c:Row)=>c.field==='studentCode')?.declaredValue});setDocuments(context.data.documents);setEvaluations(context.data.evaluations);setRecord(null);setForm(null);setPolicy(null);
  }
  async function openBenefitSource(id:string){
@@ -76,10 +93,11 @@ export function ReviewWorkspace({client,view}:{client:AuthClient;view:string}){
   const path=base+'/ho-so/'+source.id;
   const [root,context]=await Promise.all([get(path),get(path+'/ngu-canh-xet-duyet')]);
   const fresh={...source,...root.data};setSource(fresh);setEvaluations(context.data.evaluations);setDocuments(context.data.documents);
-  if(!canStartApplicationReview(fresh))throw new Error('Chỉ hồ sơ đã duyệt V1 và còn trong thời gian xử lý mới được đối chiếu bản cứng.');const version=fresh.submittedVersions[0];
+  const version=fresh.submittedVersions[0];
   const declaration=await get(path+'/phien-ban/'+version.id),term=declaration.data.requestedSemesters[0]?.semesterId??'';
   const head=applicationReviewHead(context.data.evaluations,fresh.policyVersionId,term);
   if(head){await readEvaluation(head.id);return;}
+  if(!canStartApplicationReview(fresh))throw new Error('Chỉ hồ sơ đã duyệt V1 trong đợt đã chốt online, chưa đóng xét mới được bắt đầu đối chiếu bản cứng.');
   const p=await get(base+'/phien-ban-chinh-sach/'+fresh.policyVersionId);
   setPolicy(p.data);setRecord(null);setTag('');setDeclining(false);setReason('');
   setForm({...evaluationContent(),applicationId:fresh.id,submissionId:version.id,processId:fresh.studyProcessId,semesterId:term,policyVersionId:p.data.id,scopeCode:p.data.scopeCode,
@@ -123,17 +141,24 @@ export function ReviewWorkspace({client,view}:{client:AuthClient;view:string}){
  }
  const editable=!!form&&(!record||record.status==='draft')&&(!form.applicationId||canStartApplicationReview(source));
  return <section className={styles.workspace} aria-busy={busy}>
-  <header className={styles.header}><div><h1>{evaluating?'Đối chiếu bản cứng hồ sơ MGHP':staff?'Rà soát quyền hưởng MGHP':'Quyền hưởng của tôi'}</h1><p className={styles.hint}>{evaluating?'Chỉ xử lý hồ sơ đã duyệt V1. Đối chiếu bản cứng, xác nhận tiêu chí và thời gian hưởng; chưa phải kết quả công bố.':'Theo dõi quyền đã được công nhận và lịch sử. Thông tin còn thiếu cần được xác minh.'}</p></div></header>
+  <header className={styles.header}><div><h1>{evaluating?'Đối chiếu bản cứng hồ sơ MGHP':staff?'Rà soát quyền hưởng MGHP':'Quyền hưởng của tôi'}</h1><p className={styles.hint}>{evaluating?'Chỉ xử lý hồ sơ đã duyệt V1 trong đợt đã chốt online. Đối chiếu bản cứng, xác nhận tiêu chí và thời gian hưởng; chưa phải kết quả công bố.':'Theo dõi quyền đã được công nhận và lịch sử. Thông tin còn thiếu cần được xác minh.'}</p></div></header>
   {error&&<Alert>{error}</Alert>}{success&&<p role="status" className={styles.success}>{success}</p>}{busy&&<p role="status">Đang xử lý…</p>}
   {evaluating?<>
-   {!source&&!form&&<><div className={styles.toolbar}><button type="button" disabled={busy} onClick={()=>void run(()=>load(0))}>Tải lại hồ sơ đã duyệt V1</button><a href="/mghp/quyen-huong">Chọn quyền hưởng cần đánh giá</a></div>
+   {!source&&!form&&!newBenefitEvaluation&&<>
+    <div className={styles.toolbar}>
+     <label>Học kỳ<select aria-label="Học kỳ" value={semester} disabled={busy||stageBusy} onChange={e=>{const term=e.target.value;setSemester(term);setRoundFilter('');void run(()=>load(0,term,''));}}><option value="">Tất cả học kỳ</option>{semesters.map(s=><option key={s.id} value={s.id}>{s.name??s.code}</option>)}</select></label>
+     <label>Đợt xét<select aria-label="Đợt xét" value={roundFilter} disabled={busy||stageBusy||roundsLoading} onChange={e=>{const id=e.target.value;setRoundFilter(id);void run(()=>load(0,semester,id));}}><option value="">{roundsLoading?'Đang tải đợt…':'Tất cả đợt xét'}</option>{rounds.map(r=><option key={r.id} value={r.id}>{displayName(r.name,r.code)} · {r.code}</option>)}</select></label>
+    </div>
+    <RoundStagePanel client={client} stage="hard-copy" onBusyChange={setStageBusy} semesterId={semester} round={rounds.find(r=>r.id===roundFilter) as any} revision={rows} onChanged={()=>load(0)} onOpen={id=>openApplication({id})}/>
+    {!busy&&!rows.length&&<p className={styles.hint}>Chưa có hồ sơ được chuyển sang đối chiếu bản cứng trong bộ lọc này. Đợt phải được chốt hồ sơ online trước.</p>}
+   </>}
+   {!source&&!form&&<><div className={styles.toolbar}><button type="button" disabled={busy} onClick={()=>void run(()=>load(0))}>Tải lại danh sách</button></div>
     {!newBenefitEvaluation&&<div className={styles.table}><table><thead><tr><th>MSSV</th><th>Họ tên</th><th>Lớp</th><th>Diện</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.studentCode??'Chưa có MSSV'}</td><td>{r.fullName??'Chưa có tên'}</td><td>{r.classCode??'Chưa có thông tin'}</td><td>{r.policyCode??'Chưa có diện'}</td><td>{applicationStatusLabel(r)}</td><td><button type="button" disabled={busy} onClick={()=>void run(()=>openApplication(r))}>Xem đối chiếu</button></td></tr>)}</tbody></table></div>}
     {newBenefitEvaluation&&<div className={styles.card}><h2>Đánh giá từ quyền hưởng đã chọn</h2><a href="/mghp/quyen-huong">Chọn quyền hưởng khác</a><h3>Lịch sử đối chiếu</h3>{evaluations.map(e=><button type="button" key={e.id} onClick={()=>void run(()=>readEvaluation(e.id))}>Lần đối chiếu {e.revision} · {labels[e.result]??'Chưa kết luận'}</button>)}
      {benefitSource&&<><p>{benefitSource.code}</p><label>Học kỳ xét<select aria-label="Học kỳ xét" required value={semester} onChange={e=>setSemester(e.currentTarget.value)}><option value="">Chọn học kỳ</option>{semesters.map(s=><option key={s.id} value={s.id}>{s.name??s.code}</option>)}</select></label><label>Phiên bản chính sách đúng kỳ<select aria-label="Phiên bản chính sách đúng kỳ" value={selectedPolicy} onChange={e=>setSelectedPolicy(e.currentTarget.value)}><option value="">Chọn phiên bản đã xác nhận</option>{policyVersions.filter(p=>p.status==='locked').map(p=><option key={p.id} value={p.id}>Bản {p.version} · {p.name}</option>)}</select></label><label>Bản cập nhật minh chứng<select aria-label="Bản cập nhật minh chứng" value={selectedUpdate} onChange={e=>setSelectedUpdate(e.currentTarget.value)}><option value="">Dùng nguồn quyền hưởng hiện có</option>{updates.filter(row=>row.policyVersionId===selectedPolicy).map(row=><option key={row.id} value={row.id}>Bản nộp {row.revision} · {dateTime(row.submittedAt)}</option>)}</select></label><button type="button" className="primary" disabled={busy||!selectedPolicy||!semester} onClick={()=>void run(async()=>{const p=await get(base+'/phien-ban-chinh-sach/'+selectedPolicy);setPolicy(p.data);setRecord(null);setForm({...evaluationContent(),updateSubmissionId:selectedUpdate||null,benefitId:benefitSource.id,processId:benefitSource.processId,semesterId:semester,policyVersionId:p.data.id,scopeCode:p.data.scopeCode,criteria:p.data.criteria.map((c:Row)=>({criterionId:c.id,result:'chua_xet',reasonCode:null,note:null}))});})}>Chuẩn bị đánh giá từ quyền</button></>}
     </div>}
-    <details><summary>Tra cứu lịch sử nâng cao</summary><form className={styles.toolbar} onSubmit={e=>{e.preventDefault();void run(()=>readEvaluation(lookup));}}><label>Mã đánh giá cần đọc<input required value={lookup} onChange={e=>setLookup(e.currentTarget.value)}/></label><button disabled={busy} type="submit">Đọc đánh giá</button></form></details>
    </>}
-   {source&&!form&&<div className={styles.card}><h2>{source.fullName??applicationTitle(source.id,source.code)}</h2><p>{source.studentCode??''} · {source.policyCode??''} · {source.semesterName??'Học kỳ của hồ sơ'}</p><div className={styles.actions}><button type="button" onClick={()=>setSource(null)}>Về danh sách</button><button type="button" className="primary" disabled={busy||!canStartApplicationReview(source)} onClick={()=>void run(draft)}>{evaluations.some(e=>e.status==='draft')?'Tiếp tục đối chiếu':evaluations.length?'Xem kết quả đối chiếu':'Bắt đầu đối chiếu'}</button></div>{evaluations.some(e=>e.status==='draft')&&<p className={styles.hint}>Bản đang làm sẽ được mở tiếp, không tạo thêm lần đối chiếu.</p>}{evaluations.some(e=>e.status!=='draft')&&<details><summary>Lịch sử đối chiếu đã xác nhận</summary>{evaluations.filter(e=>e.status!=='draft').map(e=><button type="button" key={e.id} onClick={()=>void run(()=>readEvaluation(e.id))}>Lần đối chiếu {e.revision} · {labels[e.result]??'Chưa kết luận'}</button>)}</details>}</div>}
+   {source&&!form&&<div className={styles.card}><h2>{source.fullName??applicationTitle(source.id,source.code)}</h2><p>{source.studentCode??''} · {source.policyCode??''} · {source.semesterName??'Học kỳ của hồ sơ'}</p><div className={styles.actions}><button type="button" onClick={()=>setSource(null)}>Về danh sách</button><button type="button" className="primary" disabled={busy||(!canStartApplicationReview(source)&&!evaluations.length)} onClick={()=>void run(draft)}>{evaluations.some(e=>e.status==='draft')?'Tiếp tục đối chiếu':evaluations.length?'Xem kết quả đối chiếu':'Bắt đầu đối chiếu'}</button></div>{evaluations.some(e=>e.status==='draft')&&<p className={styles.hint}>Bản đang làm sẽ được mở tiếp, không tạo thêm lần đối chiếu.</p>}{evaluations.some(e=>e.status!=='draft')&&<details><summary>Lịch sử đối chiếu đã xác nhận</summary>{evaluations.filter(e=>e.status!=='draft').map(e=><button type="button" key={e.id} onClick={()=>void run(()=>readEvaluation(e.id))}>Lần đối chiếu {e.revision} · {labels[e.result]??'Chưa kết luận'}</button>)}</details>}</div>}
    {source&&<><p className={styles.hint}>{applicationStatusLabel(source)}</p>{!canStartApplicationReview(source)&&<p role="status">{source.workflowStatus==='hard_copy_failed'?'Bản cứng không đáp ứng. Hồ sơ đã kết thúc, không cho đối chiếu lại.':source.status!=='approved'?'Hồ sơ chưa được duyệt V1. Hãy hoàn tất bước tiếp nhận và duyệt hồ sơ online trước.':'Nguồn đã đóng xét hoặc đợt đã hoàn tất. Chỉ được xem thông tin và lịch sử.'}</p>}<ReviewComparisons client={client} rows={source.comparisons??[]}/></>}
    {form&&<><div className={styles.header}><div><h2>Đối chiếu {source?.fullName??benefitSource?.code??'hồ sơ MGHP'}</h2><p className={styles.hint}>{source?.studentCode??''} · {semesters.find(s=>s.id===form.semesterId)?.name??'Học kỳ đã chọn'}{record?' · Bản '+record.revision:''}</p></div><div className={styles.actions}><button type="button" disabled={busy} onClick={()=>{setForm(null);setRecord(null);}}>Về hồ sơ</button>{record&&<button type="button" disabled={busy} onClick={()=>void run(()=>readEvaluation(record.id))}>Đọc lại kết quả</button>}</div></div>
     {record&&<p><span className={styles.badge}>{record.status==='draft'?'Bản nháp':record.status==='confirmed'?'Đã xác nhận':'Đã có bản thay thế'}</span> · {dateTime(record.assessedAt)}</p>}
