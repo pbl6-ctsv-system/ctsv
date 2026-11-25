@@ -11,6 +11,7 @@ import {DeclarationSummary} from './DeclarationSummary';
 import {PdfViewer} from '../../../shared/ui/pdf';
 import {StaffDossierReview} from './StaffDossierReview';
 import {SupplementHistory} from './SupplementHistory';
+import {RoundStagePanel} from '../RoundStagePanel';
 import type {Dossier,Declaration} from './dossier-types';
 
 const base='/api/ctsv/mghp';
@@ -44,6 +45,8 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
  const [creating,setCreating]=useState(false);
  const [declaration,setDeclaration]=useState<Declaration|null>(null),[preview,setPreview]=useState<StudentDocument|null>(null);
  const [status,setStatus]=useState(''),[semester,setSemester]=useState(''),[semesters,setSemesters]=useState<{id:string;name:string;code:string}[]>([]);
+ const [stageBusy,setStageBusy]=useState(false);
+ const [roundFilter,setRoundFilter]=useState(''),[staffRounds,setStaffRounds]=useState<Round[]>([]),[roundsLoading,setRoundsLoading]=useState(false);
  const [tab,setTab]=useState(new URLSearchParams(location.search).has('bo-sung')?'supplement':'overview');
  const availableRounds=rounds.filter(round=>submissionWindow(round).canStart);
  function clearStartQuery(){const url=new URL(location.href);url.searchParams.delete('dot_xet_id');window.history.replaceState(null,'',url.pathname+url.search+url.hash);}
@@ -55,16 +58,35 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
   finally{active.current=false;setBusy(false);}
  }
 
- async function list(page=offset,onlyUnread=unread,filterStatus=status,filterSemester=semester) {
+ async function list(page=offset,onlyUnread=unread,filterStatus=status,filterSemester=semester,filterRound=roundFilter) {
   if(mode==='inbox'){
    const result=await read<Page<Notice>>(client,inbox+'?page='+page+'&unreadOnly='+onlyUnread);
    setMessages(result.items);setCount(result.totalElements);
   }else{
-   const result=await read<Page<Summary>>(client,applicationListUrl(page,filterStatus,filterSemester));
+   const result=await read<Page<Summary>>(client,applicationListUrl(page,filterStatus,filterSemester,filterRound));
    setRows(result.items);setCount(result.totalElements);
   }
   setOffset(page);
  }
+
+ useEffect(()=>{
+  if(mode!=='staff-applications')return;
+  let cancelled=false;
+  setStaffRounds([]);setRoundsLoading(true);
+  void (async()=>{
+   const items:Round[]=[];
+   for(let page=0;;page++){
+    const query=new URLSearchParams({page:String(page),size:'100'});
+    if(semester)query.set('semesterId',semester);
+    const result=await read<Page<Round>>(client,base+'/dot-xet?'+query);
+    if(cancelled)return;
+    items.push(...result.items);
+    if(items.length>=result.totalElements||result.items.length===0)break;
+   }
+   if(!cancelled)setStaffRounds(items);
+  })().catch(e=>{if(!cancelled)setError(errorMessage(e));}).finally(()=>{if(!cancelled)setRoundsLoading(false);});
+  return()=>{cancelled=true;};
+ },[client,mode,semester]);
 
  useEffect(()=>{
   let cancelled=false;
@@ -175,10 +197,11 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
     initial={prefill} existing={existing} target={target?detail:null} busy={busy} onUpload={attach} onSubmit={submit}
     onCancel={()=>{setContext(null);setCreating(false);clearStartQuery();setError('');}}/>}
    {!context&&!detail&&!creating&&<><div className={styles.heading}><h2>{student?'Hồ sơ đã nộp của tôi':'Danh sách hồ sơ'}</h2>{!student&&<div><button type="button" disabled title="Chức năng xuất Excel chưa được triển khai">Xuất Excel</button><small className={styles.muted}> · Sắp có</small></div>}</div>
-    {!student&&<><div className={styles.toolbar}><label>Học kỳ <select value={semester} disabled={busy} onChange={e=>{const value=e.currentTarget.value;setSemester(value);void run(()=>list(0,unread,status,value));}}><option value="">Tất cả học kỳ</option>{semesters.map(term=><option key={term.id} value={term.id}>{term.name||term.code}</option>)}</select></label><p>{count} hồ sơ phù hợp</p></div>
+    {!student&&<><div className={styles.toolbar}><label>Học kỳ <select aria-label="Học kỳ" value={semester} disabled={busy||stageBusy} onChange={e=>{const value=e.currentTarget.value;setSemester(value);setRoundFilter('');void run(()=>list(0,unread,status,value,''));}}><option value="">Tất cả học kỳ</option>{semesters.map(term=><option key={term.id} value={term.id}>{term.name||term.code}</option>)}</select></label><label>Đợt xét <select aria-label="Đợt xét" value={roundFilter} disabled={busy||stageBusy||roundsLoading} onChange={e=>{const value=e.currentTarget.value;setRoundFilter(value);void run(()=>list(0,unread,status,semester,value));}}><option value="">{roundsLoading?'Đang tải đợt xét…':'Tất cả đợt xét'}</option>{staffRounds.map(round=><option key={round.id} value={round.id}>{displayName(round.name,round.code)} · {round.code}</option>)}</select></label><p>{count} hồ sơ phù hợp</p></div>
      <div className={styles.statusFilters} aria-label="Lọc trạng thái hồ sơ">{[['','Tất cả'],...Object.entries(labels).filter(([key])=>!['approved','completed'].includes(key))].map(([value,title])=><button type="button" key={value} aria-pressed={status===value} disabled={busy} onClick={()=>{setStatus(value);void run(()=>list(0,unread,value,semester));}}>{title}</button>)}</div>
     </>}
-    {!rows.length&&!busy&&<p className={styles.empty}>{student?'Chưa có hồ sơ. Chọn “Nộp hồ sơ mới” để bắt đầu.':'Không có hồ sơ phù hợp với học kỳ và trạng thái đã chọn.'}</p>}
+    {!rows.length&&!busy&&<p className={styles.empty}>{student?'Chưa có hồ sơ. Chọn “Nộp hồ sơ mới” để bắt đầu.':'Không có hồ sơ phù hợp với học kỳ, đợt xét và trạng thái đã chọn.'}</p>}
+    {!student&&<RoundStagePanel client={client} stage="online" onBusyChange={setStageBusy} semesterId={semester} round={staffRounds.find(r=>r.id===roundFilter)} revision={rows} onChanged={()=>list(0)} onOpen={id=>select(id)}/>}
     {!student?<div className={styles.reviewTable}><table aria-label="Danh sách tiếp nhận hồ sơ"><thead><tr><th>MSSV</th><th>Họ và tên</th><th>Lớp</th><th>Diện M</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{row.studentCode||'Chưa ghi nhận'}</td><td>{row.fullName||'Chưa ghi nhận'}</td><td>{row.classCode||'Chưa ghi nhận lớp'}</td><td>{row.policyCode||'Chưa ghi nhận'}</td><td><span className={styles.badge}>{applicationStatusLabel(row)}</span></td><td><button data-application-id={row.id} disabled={busy} onClick={()=>void run(async()=>{await select(row.id);setTab('overview');})}>Xem hồ sơ</button></td></tr>)}</tbody></table></div>:
     <ul className={styles.list}>{rows.map(row=><li className={styles.listItem} key={row.id}>
      <div><strong>{student?displayName(rounds.find(r=>r.id===row.roundId)?.name,applicationTitle(row.id,row.code)):applicationTitle(row.id,row.code)}</strong><p>{student?applicationTitle(row.id,row.code)+' · ':''}{row.fullName?row.fullName+' · ':''}{row.studentCode?row.studentCode+' · ':''}{row.submittedAt?'Nộp '+dateTime(row.submittedAt):'Chưa ghi nhận thời điểm nộp'}</p></div>
@@ -210,7 +233,7 @@ export function IntakeWorkspace({client,mode}:{client:AuthClient;mode:'applicati
        <button className="danger" disabled={busy||!reason.trim()} onClick={()=>void run(withdraw)}>Rút hồ sơ</button>
       </details>}
      </section>
-     {!student&&detail.status==='approved'&&<p><a href={'/mghp/danh-gia?ho-so='+detail.id}>Đến bước đối chiếu bản cứng</a></p>}
+     {!student&&detail.status==='approved'&&(detail.intakeSealed?<p><a href={'/mghp/danh-gia?ho-so='+detail.id}>Đến bước đối chiếu bản cứng</a></p>:<p>Đã duyệt V1. Chờ chốt hồ sơ online của cả đợt để chuyển sang đối chiếu bản cứng.</p>)}
      {!student&&<StaffDossierReview declaredNames={declaration?.claimDisplayNames} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} onSupplement={()=>setTab('supplement')}/>}
     </div>}
     {tab==='supplement'&&!student&&<StaffSupplement key={detail.id} client={client} application={detail} rootTag={tag} refresh={async()=>{await Promise.all([list(),select(detail.id)]);}} download={download} onOverview={()=>setTab('overview')}/>}

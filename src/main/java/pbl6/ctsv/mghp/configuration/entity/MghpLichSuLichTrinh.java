@@ -22,4 +22,7 @@ public class MghpLichSuLichTrinh {
     @Column(name="nguoi_dong_xet_id") public Long reviewClosedBy;
     @TimeZoneStorage(TimeZoneStorageType.NATIVE) @Column(name="thoi_diem_dong_xet",columnDefinition="datetimeoffset(7)") public OffsetDateTime reviewClosedAt;
     @Column(name="sha256_nguon_dong_xet",length=64) public String sourceSha256;
+    @Column(name="nguoi_chot_online_id") public Long onlineClosedBy;
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE) @Column(name="thoi_diem_chot_online",columnDefinition="datetimeoffset(7)") public OffsetDateTime onlineClosedAt;
+    @Column(name="sha256_nguon_chot_online",length=64) public String onlineSourceSha256;
 }

@@ -258,7 +258,7 @@ class SigningHttpIT {
   var choices=call("GET","/api/ctsv/nen-tang/vai-tro-mghp",null,manager[1],null).expect(200);assertThat(choices.body.toString()).contains("mghp_pho_hieu_truong");
   assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.phan_quyen_nguoi_dung p JOIN dbo.vai_tro r ON r.id=p.vai_tro_id WHERE p.nguoi_dung_id=? AND r.ma=N'mghp_pho_hieu_truong'",Integer.class,Long.parseLong(manager[0]))).isZero();
  }
- @Test void workerRechecksAuth11TokenVersionBeforeAnyExternalSideEffect()throws Exception{
+ @Test void workerKeepsAcceptedConsentAfterSessionVersionChanges()throws Exception{
   var own=identity("mghp_chuyen_vien");String old=System.getProperty("ctsv.mghp.signing.minutes-first.user-id");
   System.setProperty("ctsv.mghp.signing.minutes-first.user-id",own[0]);try{
    var q=prepare(document(bundle(true),true));String path="/api/ctsv/yeu-cau-ky/"+q.body.path("id").asText();queue(path,own[1],false);var p=(ProviderStub)provider;
@@ -266,7 +266,7 @@ class SigningHttpIT {
    jdbc.update("UPDATE dbo.yeu_cau_ky SET van_ban_ben_ngoai_id=?,trang_thai=N'signing' WHERE id=?",uploaded.id().toString(),q.body.path("id").asLong());jdbc.update("UPDATE dbo.lan_goi_dich_vu_ky SET giai_doan_xu_ly=N'uploaded',lease_den=NULL WHERE yeu_cau_ky_id=?",q.body.path("id").asLong());
    int signs=p.signs,uploads=p.uploads;
    jdbc.update("UPDATE dbo.TaiKhoan SET PhienBanToken=PhienBanToken+1 WHERE ID=(SELECT ma_chu_the_dang_nhap FROM dbo.dinh_danh_dang_nhap WHERE nguoi_dung_id=?)",Long.parseLong(own[0]));
-   worker.runRequest(q.body.path("id").asLong());assertThat(p.signs).isEqualTo(signs);assertThat(p.uploads).isEqualTo(uploads);assertThat(call("GET",path,null,cv,null).expect(200).body.path("lastErrorCode").asText()).isEqualTo("SIGNING_AUTHORIZATION_REVOKED");
+   worker.runRequest(q.body.path("id").asLong());assertThat(p.signs).isEqualTo(signs+1);assertThat(p.uploads).isEqualTo(uploads);assertThat(call("GET",path,null,cv,null).expect(200).body.path("status").asText()).isEqualTo("waiting_next");
   }finally{System.setProperty("ctsv.mghp.signing.minutes-first.user-id",old);}
  }
  @Test void browserPreflightAllowsOnlyConfiguredOriginAndExposesEtag()throws Exception{

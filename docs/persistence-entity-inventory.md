@@ -109,3 +109,7 @@ V18 bỏ huong_dan_ke_khai/huong_dan_can_cu_nop_muon tại mghp_dot_xet; MghpDot
 `mghp.application.SigningEntities` thêm5 Entity nghiệp vụ trên bảng đã có: Document→van_ban; DocumentVersion→phien_ban_van_ban; Link→mghp_lien_ket_phien_ban_van_ban; Request→yeu_cau_ky; Step→buoc_ky. FK scalar, không cascade, không trả Entity ra API. V24 bổ sung request rowversion read-only byte[8], checkpoint/lease/principal/output ở lan_goi_dich_vu_ky; không sửa V1–V23.
 
 Attempt/receipt/artifact/certificate observation dùng JDBC chuyên biệt trong SigningRepository để giữ fencing/CAS/short transaction; storage bytes ở Cloudinary authenticated, metadata/ledger Shared Files. Dùng public ManagedFiles/FileReadPolicy, không import repository/entity Shared Files xuyên module. Thêm role PHT vào registry và danh mục role Foundation, không tự grant account. SQL/JPA mapping được validate trên DB P11 riêng; DEV nâng sau gate UI.
+
+## Delta V26 — chốt hồ sơ online (25/11/2026)
+
+Không thêm Entity/table. MghpDotXet và MghpLichSuLichTrinh thêm nguoi_chot_online_id bigint FK NguoiDung, thoi_diem_chot_online datetimeoffset(7), sha256_nguon_chot_online varchar(64). Tất cả nullable cho lịch sử cũ. Root tuple đủ3/không có3, bất biến sau chốt; history append-only hiện có tiếp tục bảo vệ. Migration V26 additive, không sửa V1–V25 hoặc backfill actual giả. Entity/JPA validation và CAS rowversion hiện hành giữ nguyên. Plan: [stage handoff](stage-handoff-20261125.md).

@@ -4,7 +4,7 @@ import {ApiError} from '../../../shared/auth/auth-client.mjs';
 import {Alert} from '../../../shared/ui/Alert';
 import {dateTime,displayName} from '../presentation.mjs';
 import {createDecisionApi} from './api.mjs';
-import {decisionContent,meetingContent,meetingErrors,meetingForm,decisionActions,decisionLabel,shortDate,rateLabel,sameGroup,DecisionInputError,requiresDecisionRead,roundState} from './model.mjs';
+import {decisionContent,meetingContent,meetingErrors,meetingForm,decisionActions,decisionLabel,shortDate,rateLabel,sameGroup,DecisionInputError,requiresDecisionRead,roundState,decisionErrorMessage,decisionWorkspaceUrl} from './model.mjs';
 import {DecisionDialog,MeetingFields,BasisDialog,DialogForm} from './DecisionDialogs';
 import type {Round,SourceContext,Header,Version,Root,History,Page,Line,Candidate,MeetingForm} from './types';
 import styles from './DecisionWorkspace.module.css';
@@ -12,17 +12,6 @@ import styles from './DecisionWorkspace.module.css';
 type Tab='list'|'meeting'|'history';
 type Modal='create'|'meeting'|'confirm'|null;
 const emptyPage=<T,>():Page<T>=>({items:[],page:0,size:20,totalElements:0,hasMore:false});
-function message(e:unknown){
- if(e instanceof ApiError){
-  const errors:Record<string,string>={VERSION_CONFLICT:'Dữ liệu đã thay đổi. Nội dung đang nhập được giữ; đọc lại và đối chiếu trước khi gửi lại.',PRECONDITION_REQUIRED:'Chưa đọc được phiên bản mới nhất. Hãy đọc lại trước khi thao tác.',
-   DECISION_NOT_READY:'Chưa đủ điều kiện lập hoặc chốt bộ xét. Kiểm tra Đóng xét, nguồn đánh giá đã xác nhận và nhóm đã được công bố ở đợt khác.',
-   DECISION_ALREADY_EXISTS:'Đợt đã có bộ quyết định. Đọc lại để xem bộ hiện hành.',DECISION_CODE_CONFLICT:'Mã bộ quyết định đã tồn tại. Chọn mã khác.',MINUTES_CODE_CONFLICT:'Mã biên bản đã được sử dụng. Kiểm tra lịch sử hoặc nhập mã mới.',
-   IMMUTABLE:'Phiên bản này đã khóa hoặc là bản lịch sử. Chỉ được xem, không sửa trực tiếp.',VALIDATION_ERROR:'Thông tin chưa hợp lệ. Kiểm tra các trường và thời gian họp thực tế.',
-   FORBIDDEN:'Bạn không còn quyền thực hiện chức năng Hội đồng và quyết định.',UNAUTHENTICATED:'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',TOKEN_REVOKED:'Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.',NOT_FOUND:'Không tìm thấy bộ xét hoặc phiên bản trong đợt này.',DEPENDENCY_UNAVAILABLE:'Hệ thống tạm chưa sẵn sàng. Đọc lại dữ liệu trước khi thử tiếp.'};
-  return errors[e.code]??'Chưa hoàn tất thao tác. Hãy đọc lại để kiểm tra kết quả trước khi gửi lại.';
- }
- return e instanceof Error&&e.message&&!/fetch|network|timeout|abort/i.test(e.message)?e.message:'Chưa nhận được xác nhận từ hệ thống. Đọc lại để kiểm tra kết quả; không gửi lại ngay.';
-}
 function Pager({page,onPage,busy,label}:{page:Page<unknown>;onPage:(p:number)=>void;busy:boolean;label:string}){
  if(page.totalElements<=page.size)return null;
  return <nav className={styles.pager} aria-label={label}>
@@ -35,6 +24,7 @@ function Status({v}:{v:Header}){return <span className={styles.badge+' '+(v.stat
 
 export function DecisionWorkspace({client}:{client:AuthClient}){
  const api=useMemo(()=>createDecisionApi(client),[client]);
+ const [semester,setSemester]=useState(''),[semesters,setSemesters]=useState<{id:string;name:string|null;code:string}[]>([]);
  const [rounds,setRounds]=useState<Round[]>([]),[roundPage,setRoundPage]=useState(0),[moreRounds,setMoreRounds]=useState(false);
  const [round,setRound]=useState<Round|null>(null),[source,setSource]=useState<SourceContext|null>(null),[items,setItems]=useState<Page<Header>>(emptyPage);
  const [root,setRoot]=useState<Root|null>(null),[version,setVersion]=useState<Version|null>(null),[tag,setTag]=useState('');
@@ -44,12 +34,11 @@ export function DecisionWorkspace({client}:{client:AuthClient}){
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState(''),[needsRead,setNeedsRead]=useState(false),[denied,setDenied]=useState(false);
  const flight=useRef(false),alive=useRef(true);
  const actions=decisionActions(version,root?.head.id);
- function url(roundId?:string,versionId?:string){
-  const p=new URLSearchParams();if(roundId)p.set('dot-xet',roundId);if(versionId)p.set('phien-ban',versionId);
-  window.history.replaceState(null,'',window.location.pathname+(p.size?'?'+p:''));
+ function url(roundId?:string,versionId?:string,semesterId=semester){
+  window.history.replaceState(null,'',decisionWorkspaceUrl(semesterId,roundId,versionId));
  }
  function fail(e:unknown){
-  setError(message(e));setSuccess('');
+  setError(decisionErrorMessage(e));setSuccess('');
   if(e instanceof ApiError&&(e.status===401||e.status===403)){setDenied(true);setVersion(null);setRoot(null);setItems(emptyPage());setRounds([]);setModal(null);setBasis(null);}
   else if(requiresDecisionRead(e))setNeedsRead(true);
  }
@@ -59,35 +48,59 @@ export function DecisionWorkspace({client}:{client:AuthClient}){
  }
  async function detail(id:string,expectedRound:Round,signal?:AbortSignal){
   const v=await api.version(id,signal),rr=await api.root(v.data.decisionId,signal);
-  if(rr.data.roundId!==expectedRound.id)throw new Error('Phiên bản không thuộc đợt đang xem. Hãy chọn lại bộ xét.');
+  if(rr.data.roundId!==expectedRound.id)throw new DecisionInputError('Phiên bản không thuộc đợt đang xem. Hãy chọn lại bộ xét.');
   const h=await api.history(rr.data.id,0,signal);if(!alive.current)return;
-  setRoot(rr.data);setVersion(v.data);setTag(v.tag);setLines(v.data.lines);setHistory(h.data.versions);setQuery('');setNeedsRead(false);url(expectedRound.id,id);
+  setRoot(rr.data);setVersion(v.data);setTag(v.tag);setLines(v.data.lines);setHistory(h.data.versions);setQuery('');setNeedsRead(false);url(expectedRound.id,id,expectedRound.semesterId);
  }
- async function selectRound(id:string,selectedVersion?:string,signal?:AbortSignal){
-  setModal(null);setBasis(null);setVersion(null);setRoot(null);setSource(null);setNeedsRead(false);setQuery('');setTab('list');
+ function clearSelection(){
+  setRound(null);setItems(emptyPage());setModal(null);setBasis(null);setVersion(null);setRoot(null);setSource(null);setNeedsRead(false);setQuery('');setTab('list');setTag('');setLines(emptyPage());setHistory(emptyPage());setSuccess('');
+ }
+ async function loadRounds(semesterId:string,page=0,signal?:AbortSignal){
+  const r=await api.rounds(page,signal,semesterId);if(signal?.aborted||!alive.current)return;
+  setRounds(current=>page?[...current,...r.data.items.filter((x:Round)=>!current.some(c=>c.id===x.id))]:r.data.items);
+  setRoundPage(page);setMoreRounds(r.data.hasMore??(page+1)*100<r.data.totalElements);
+ }
+ async function selectSemester(id:string){
+  clearSelection();setSemester(id);setRounds([]);setRoundPage(0);setMoreRounds(false);url(undefined,undefined,id);
+  if(id)await loadRounds(id);
+ }
+ async function selectRound(id:string,selectedVersion?:string,signal?:AbortSignal,semesterId=semester){
+  clearSelection();
   if(!id){setRound(null);setItems(emptyPage());url();return;}
   const [r,list]=await Promise.all([api.round(id,signal),api.list(id,0,signal)]);if(!alive.current)return;
+  if(r.data.semesterId!==semesterId)throw new DecisionInputError('Đợt xét không thuộc học kỳ đang chọn. Hãy chọn lại học kỳ và đợt.');
   setRound(r.data);setItems(list.data);
-  if(r.data.reviewClosedAt){const s=await api.source(id,signal);if(alive.current)setSource(s.data);}
-  if(selectedVersion)await detail(selectedVersion,r.data,signal);else url(id);
+  url(id,undefined,semesterId);
+  if(r.data.reviewClosedAt){const s=await api.source(id,r.data.semesterId,signal);if(alive.current&&!signal?.aborted)setSource(s.data);}
+  if(selectedVersion)await detail(selectedVersion,r.data,signal);
  }
  useEffect(()=>{
   alive.current=true;const abort=new AbortController();
   void (async()=>{setBusy(true);flight.current=true;
    try{
-    const r=await api.rounds(0,abort.signal);if(abort.signal.aborted)return;
-    setRounds(r.data.items);setRoundPage(0);setMoreRounds(r.data.hasMore??r.data.totalElements>100);
+    const terms=[];for(let page=0;;page++){
+     const r=await api.semesters(page,abort.signal);if(abort.signal.aborted)return;terms.push(...r.data.items);
+     if((!r.data.hasMore&&terms.length>=r.data.totalElements)||!r.data.items.length)break;
+    }
+    setSemesters(terms);
     const params=new URLSearchParams(window.location.search),id=params.get('dot-xet'),vid=params.get('phien-ban');
-    if(id&&/^[1-9]\d*$/.test(id)){await selectRound(id,vid&&/^[1-9]\d*$/.test(vid)?vid:undefined,abort.signal);}
+    let term=params.get('hoc-ky')??'';
+    if(id&&/^[1-9]\d*$/.test(id)&&!term)term=(await api.round(id,abort.signal)).data.semesterId;
+    if(abort.signal.aborted)return;
+    if(term){
+     if(!terms.some(t=>t.id===term))throw new DecisionInputError('Không tìm thấy học kỳ đang yêu cầu. Hãy chọn lại học kỳ từ danh sách.');
+     setSemester(term);await loadRounds(term,0,abort.signal);
+     if(id&&/^[1-9]\d*$/.test(id))await selectRound(id,vid&&/^[1-9]\d*$/.test(vid)?vid:undefined,abort.signal,term);
+    }
    }catch(e){if(!abort.signal.aborted)fail(e);}finally{if(!abort.signal.aborted){flight.current=false;setBusy(false);}}
   })();
   return()=>{alive.current=false;abort.abort();};
  },[api]);
  async function readBack(){
-  if(!round)return;
+  if(!round){if(semester)await loadRounds(semester);setNeedsRead(false);return;}
   const r=await api.round(round.id),list=await api.list(round.id);
   setRound(r.data);setItems(list.data);
-  if(r.data.reviewClosedAt)setSource((await api.source(round.id)).data);
+  if(r.data.reviewClosedAt)setSource((await api.source(round.id,r.data.semesterId)).data);
   if(root){const latest=await api.root(root.id);await detail(latest.data.head.id,r.data);}
   else if(list.data.items.length)await detail(list.data.items[0].id,r.data);
   setNeedsRead(false);setError('');setSuccess('Đã đọc lại dữ liệu từ hệ thống. Nội dung đang nhập được giữ; kiểm tra trước khi gửi lại.');
@@ -130,17 +143,20 @@ export function DecisionWorkspace({client}:{client:AuthClient}){
   {needsRead&&!denied&&<div className={styles.notice+' '+styles.warn}><p>Chưa gửi lại thao tác. Hãy kiểm tra bản hiện hành trước khi tiếp tục.</p><button className={styles.outline} disabled={busy} onClick={()=>void run(readBack)}>Đọc lại để đối chiếu</button></div>}
   {denied?<p className={styles.notice}>Chức năng này cần quyền chuyên viên MGHP hiện hành. Vui lòng đăng nhập lại hoặc liên hệ người quản trị quyền.</p>:<>
    {!version&&<>
-    <section className={styles.card} aria-label="Chọn đợt xét Hội đồng"><div className={styles.toolbar}><label>Đợt xét<select aria-label="Đợt xét" disabled={busy} value={round?.id??''} onChange={e=>void run(()=>selectRound(e.target.value))}><option value="">Chọn đợt xét</option>{chosenRounds.map(r=><option key={r.id} value={r.id}>{displayName(r.name,r.code)} · {roundState(r)}</option>)}</select></label>
-     <button className={styles.outline} disabled={busy||!round} onClick={()=>void run(readBack)}>Đọc lại bộ xét</button>
-     {moreRounds&&<button className={styles.outline} disabled={busy} onClick={()=>void run(async()=>{const r=await api.rounds(roundPage+1);setRounds(current=>[...current,...r.data.items.filter((x:Round)=>!current.some(c=>c.id===x.id))]);setRoundPage(roundPage+1);setMoreRounds(r.data.hasMore??(roundPage+2)*100<r.data.totalElements);})}>Thêm đợt để chọn</button>}
+    <section className={styles.card} aria-label="Chọn đợt xét Hội đồng"><div className={styles.toolbar}>
+     <label>Học kỳ<select aria-label="Học kỳ" disabled={busy} value={semester} onChange={e=>void run(()=>selectSemester(e.target.value))}><option value="">Chọn học kỳ</option>{semesters.map(s=><option key={s.id} value={s.id}>{displayName(s.name,s.code)}</option>)}</select></label>
+     <label>Đợt xét<select aria-label="Đợt xét" disabled={busy||!semester} value={round?.id??''} onChange={e=>void run(()=>selectRound(e.target.value))}><option value="">{semester?'Chọn đợt xét':'Chọn học kỳ trước'}</option>{chosenRounds.map(r=><option key={r.id} value={r.id}>{displayName(r.name,r.code)} · {roundState(r)}</option>)}</select></label>
+     <button className={styles.outline} disabled={busy||!semester} onClick={()=>void run(readBack)}>Đọc lại dữ liệu</button>
+     {moreRounds&&<button className={styles.outline} disabled={busy} onClick={()=>void run(()=>loadRounds(semester,roundPage+1))}>Thêm đợt để chọn</button>}
     </div>
-     {round&&!round.reviewClosedAt&&<p className={styles.notice+' '+styles.warn}>Đợt này chưa Đóng xét. Hoàn tất rà soát và Đóng xét trước khi lập bộ xét Hội đồng. <a href="/mghp/dot-xet">Đến quản lý đợt xét</a></p>}
+     {semester&&!round&&!busy&&!rounds.length&&!error&&<p className={styles.notice}>Học kỳ này chưa có đợt xét. Hãy chọn học kỳ khác.</p>}
+     {round&&!round.reviewClosedAt&&<p className={styles.notice+' '+styles.warn}>Đợt này chưa chốt bản cứng chuyển Hội đồng. Hoàn tất đối chiếu và chốt đợt trước khi lập bộ xét. <a href={'/mghp/danh-gia?hoc-ky='+semester+'&dot-xet='+round.id}>Đến đối chiếu bản cứng</a></p>}
      {round?.reviewClosedAt&&<div className={styles.summary}>
-      <div><strong>{source?.eligibleCount??'Đang đọc'}</strong><span>Đánh giá đủ căn cứ trước tổng hợp</span></div><div><strong>{source?.excludedCount??'Đang đọc'}</strong><span>Loại khỏi tập đủ điều kiện</span></div><div><strong>Đã chốt nguồn</strong><span>{dateTime(round.reviewClosedAt)} · giờ Việt Nam</span></div>
+      <div><strong>{source?.eligibleCount??(busy?'Đang đọc':'Chưa đọc được')}</strong><span>Đánh giá đủ căn cứ trước tổng hợp</span></div><div><strong>{source?.excludedCount??(busy?'Đang đọc':'Chưa đọc được')}</strong><span>Loại khỏi tập đủ điều kiện</span></div><div><strong>Đã chốt nguồn</strong><span>{dateTime(round.reviewClosedAt)} · giờ Việt Nam</span></div>
      </div>}
     </section>
     <section className={styles.card} aria-label="Bộ xét của đợt">
-     {!round?<p className={styles.empty}>Chọn đợt để xem bộ xét Hội đồng và quyết định.</p>:items.totalElements===0?<><div className={styles.cardHead}><div><h2>Chuẩn bị bộ xét Hội đồng</h2><p className={styles.muted}>Lấy toàn bộ nhóm đủ căn cứ. Mỗi đợt có một bộ, các lần sửa giữ thành phiên bản.</p></div>{canCreate&&<button className={styles.primary} disabled={busy||needsRead} onClick={()=>{setCode('');setModal('create');setError('');}}>Tạo bộ xét</button>}</div>
+     {!round?<p className={styles.empty}>Chọn học kỳ và đợt xét để xem bộ xét Hội đồng và quyết định.</p>:items.totalElements===0?<><div className={styles.cardHead}><div><h2>Chuẩn bị bộ xét Hội đồng</h2><p className={styles.muted}>Lấy toàn bộ nhóm đủ căn cứ. Mỗi đợt có một bộ, các lần sửa giữ thành phiên bản.</p></div>{canCreate&&<button className={styles.primary} disabled={busy||needsRead} onClick={()=>{setCode('');setModal('create');setError('');}}>Tạo bộ xét</button>}</div>
       {!canCreate&&round.reviewClosedAt&&<p className={styles.notice+' '+styles.warn}>Chưa có tập nguồn hợp lệ để tạo bộ xét. Kiểm tra đánh giá và các vướng mắc của đợt.</p>}
       <p className={styles.notice}>Hệ thống chọn một diện có mức hưởng cao nhất cho mỗi nhóm sinh viên/quá trình học/học kỳ/phạm vi. Giữ đúng thời gian được xác minh, không cộng mức hoặc bù thời gian bằng diện thấp hơn.</p></>:
       <><h2>Bộ xét của đợt</h2><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Bộ quyết định</th><th>Phiên bản</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{items.items.map(v=><tr key={v.id}><td><strong>{v.code}</strong><small>{displayName(round.name,round.code)}</small></td><td>Bản {v.revision}</td><td><Status v={v}/></td><td><button className={styles.outline} disabled={busy} onClick={()=>void run(()=>detail(v.id,round))}>Xem bộ xét</button></td></tr>)}</tbody></table></div><Pager page={items} busy={busy} label="Phân trang bộ xét" onPage={p=>void run(async()=>setItems((await api.list(round.id,p)).data))}/></>}

@@ -48,7 +48,10 @@ class ApplicationReads {
     }
 
     Object list(Identity actor,Long round,Long semester,String status,int page,int size) {
-        var result=workflow.page(actor.studentId(),round,semester,status,page,size);
+        return list(actor,round,semester,status,page,size,false);
+    }
+    Object list(Identity actor,Long round,Long semester,String status,int page,int size,boolean hardCopy) {
+        var result=workflow.page(actor.studentId(),round,semester,status,page,size,hardCopy);
         var items=result.facts().stream().map(facts->{
             var a=repo.find(Application.class,((Number)facts.get("id")).longValue());
             var dto=summary(a);dto.putAll(workflow.fields(facts,actor.studentId()!=null));

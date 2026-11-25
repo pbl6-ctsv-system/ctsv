@@ -3,8 +3,13 @@ import assert from 'node:assert/strict';
 import {readPdfBytes} from '../src/shared/ui/pdf/pdf-source.mjs';
 import {geometryFromPixels,pixelsFromGeometry} from '../src/shared/ui/pdf/geometry.mjs';
 import * as geometry from '../src/shared/ui/pdf/geometry.mjs';
+import * as pdfSource from '../src/shared/ui/pdf/pdf-source.mjs';
 
 const sample=new TextEncoder().encode('%PDF-1.7\nsynthetic bytes');
+test('file integrity failure explains that verification failed without claiming a valid PDF',()=>{
+ assert.match(pdfSource.pdfErrorText({code:'FILE_INTEGRITY_FAILED'}),/toàn vẹn/);
+ assert.equal(pdfSource.pdfErrorText({code:'UNAUTHENTICATED'}),undefined);
+});
 test('shared PDF uses the authenticated client and exact file endpoint once',async()=>{
  const calls=[],controller=new AbortController();
  const client={request:async(...args)=>{calls.push(args);return new Response(sample,{headers:{'Content-Type':'application/pdf'}});}};

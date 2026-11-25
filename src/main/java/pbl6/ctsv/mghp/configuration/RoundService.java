@@ -24,7 +24,7 @@ final class RoundService {
  PolicyService.View transition(long id,String action,String tag,String reason,long actor){var hint=r.roundView(id,true);var calendar=semester(ConfigRules.id(hint.get("semesterId").toString()));for(var p:(List<?>)hint.get("policyVersions")){var row=(Map<?,?>)p;r.fence("mghp_phien_ban_chinh_sach",ConfigRules.id(row.get("policyVersionId").toString()));}
   var f=r.fence("mghp_dot_xet",id);var old=detail(id,true);ConfigRules.match(old.tag(),tag);var b=r.roundView(id,true);String state=(String)b.get("status"),target=switch(action){case "open"->"open";case "close"->"closed";default->"completed";};if(target.equals(state))return old;
   var v=new LinkedHashMap<String,Object>();v.put("trang_thai",target);v.put("thoi_diem_cap_nhat",now());
-  if(action.equals("open")){if(!"draft".equals(state))throw new ConfigFailure(409,"ROUND_STATE_CONFLICT");ready(b,calendar,actor);v.put("nguoi_khoa_cau_hinh_id",actor);v.put("thoi_diem_khoa_cau_hinh",now());}
+  if(action.equals("open")){if(!"draft".equals(state))throw new ConfigFailure(409,"ROUND_STATE_CONFLICT");if(r.hasUnfinishedPublishedRound(id))throw new ConfigFailure(409,"ROUND_PREVIOUS_NOT_COMPLETED");ready(b,calendar,actor);v.put("nguoi_khoa_cau_hinh_id",actor);v.put("thoi_diem_khoa_cau_hinh",now());}
   else if(action.equals("close")){if(!"open".equals(state))throw new ConfigFailure(409,"ROUND_STATE_CONFLICT");}
   else {// P12/P13 must supply publication/Portal/durable handoff evidence before new completion.
    throw new ConfigFailure(409,"ROUND_STATE_CONFLICT");}

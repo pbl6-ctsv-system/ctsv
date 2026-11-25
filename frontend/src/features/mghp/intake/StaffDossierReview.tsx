@@ -15,6 +15,7 @@ type Review={documents:Paper[];comparisons:{field:string;declaredValue:string|nu
 const checkNames:Record<string,string>={pass:'Đã đồng ý PDF',fail:'PDF chưa được đồng ý',needs_verification:'Cần xác minh PDF',not_applicable:'Không áp dụng'};
 function failure(error:unknown){
  if(error instanceof ApiError){
+  if(error.code==='INTAKE_STAGE_CLOSED')return 'Đợt đã chốt hồ sơ online. Bước tiếp nhận chỉ còn xem lại; tiếp tục xử lý tại Đối chiếu bản cứng.';
   if(error.status===412)return 'Hồ sơ đã thay đổi. Hãy đọc lại hồ sơ trước khi thao tác.';
   if(error.code==='APPLICATION_REVIEW_INCOMPLETE')return 'Chưa thể đồng ý hồ sơ. Hãy kiểm tra các PDF mới nhất và xử lý yêu cầu bổ sung đang chờ.';
   if(error.code==='APPLICATION_NOT_REVIEWABLE')return 'Hồ sơ đã kết thúc hoặc đã có đánh giá xác nhận; không thể đổi kết luận tại đây.';
@@ -53,7 +54,7 @@ export function StaffDossierReview({client,application,rootTag,refresh,onSupplem
  const pending=['submitted','processing','supplementing','supplement_responded'].includes(application.status??'');
  const locked=!!review?.evaluations.some(e=>e.status==='confirmed');
  const loadingReview=reviewTag!==rootTag;
- const editable=pending&&!locked&&!loadingReview;
+ const editable=pending&&!locked&&!application.intakeSealed&&!loadingReview;
  const blockers=approvalBlockers(papers,application.supplementRequests??[]);
  const blocked=!papers.length||blockers.pendingPdfIds.length>0||blockers.otherCheckIds.length>0||blockers.supplementIds.length>0;
  const title=(p:Paper)=>application.documentRequirements?.find(r=>r.id===p.requirementId)?.name||p.documentNumber||'Minh chứng PDF';
@@ -95,9 +96,9 @@ export function StaffDossierReview({client,application,rootTag,refresh,onSupplem
     {editable&&<div className={styles.reviewActions}><div className={styles.actions}>
      <button type="button" className="primary" disabled={busy||pdfAccepted(paper)} onClick={()=>void check()}>{pdfAccepted(paper)?'Đã đồng ý PDF':'Đồng ý PDF'}</button>
      <button type="button" disabled={busy} onClick={onSupplement}>Yêu cầu bổ sung</button></div></div>}
-    {!locked&&(pending||application.status==='approved')&&<details className={styles.disclosure} open={blockers.otherCheckIds.includes(paper.id)}><summary>Kiểm tra điều kiện giấy tờ khác</summary>
+    {!locked&&pending&&!application.intakeSealed&&<details className={styles.disclosure} open={blockers.otherCheckIds.includes(paper.id)}><summary>Kiểm tra điều kiện giấy tờ khác</summary>
      <p className={styles.muted}>Chỉ xác nhận mục đã kiểm tra thực tế. Nếu giấy tờ chưa phù hợp, gửi yêu cầu bổ sung; đồng ý nội dung không tự xác nhận các mục này.</p>
-     <div className={styles.checkOptions}>{[['form','Hình thức giấy tờ'],['validity','Thời hạn giấy tờ'],['subject','Đúng chủ thể'],['hard_copy','Đã nhận bản cứng']].map(([kind,label])=>{
+     <div className={styles.checkOptions}>{[['form','Hình thức giấy tờ'],['validity','Thời hạn giấy tờ'],['subject','Đúng chủ thể']].map(([kind,label])=>{
       const checked=['pass','not_applicable','received'].includes(currentCheck(paper,kind)?.result??'');
       return <div key={kind}><span>{label}</span><button type="button" disabled={busy||loadingReview||checked} onClick={()=>void check(kind)}>{checked?'✓ Đã xác nhận':'Xác nhận'}</button></div>;
      })}</div>

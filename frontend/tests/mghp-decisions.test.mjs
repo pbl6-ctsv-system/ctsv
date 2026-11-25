@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {decisionContent,meetingContent,meetingErrors,decisionActions,decisionLabel,sameGroup,DecisionInputError,requiresDecisionRead,roundState} from '../src/features/mghp/decisions/model.mjs';
 import {createDecisionApi} from '../src/features/mghp/decisions/api.mjs';
+import * as decisionModel from '../src/features/mghp/decisions/model.mjs';
+import {ApiError} from '../src/shared/auth/auth-client.mjs';
 import {visibleNavigation,resolveRoute,navigationSections} from '../src/app/navigation/modules.mjs';
 
 test('P10 route, dropdown and direct URL share fresh MGHP capability',()=>{
@@ -60,4 +62,47 @@ test('client validation can be corrected directly; uncertain writes and stale st
 test('round summaries without closure field never claim review is still open',()=>{
  assert.equal(roundState({status:'closed'}),'Đã đóng nhận');
  assert.equal(roundState({status:'closed',reviewClosedAt:'2026-11-22T00:00:00Z'}),'Đã đóng xét');
+});
+
+test('closed source always includes the selected round semester (DOT08-R regression)',async()=>{
+ const calls=[];const api=createDecisionApi({request:async path=>{calls.push(path);return Response.json({});}});
+ await api.source('20051','1');
+ assert.equal(calls[0],'/api/ctsv/mghp/dot-xet/20051/dong-xet?semesterId=1');
+});
+
+test('round pagination keeps the server semester filter and semesters are read from Foundation',async()=>{
+ const calls=[];const api=createDecisionApi({request:async path=>{calls.push(path);return Response.json({items:[]});}});
+ await api.rounds(2,undefined,'4');await api.semesters(1);
+ assert.equal(calls[0],'/api/ctsv/mghp/dot-xet?semesterId=4&page=2&size=100');
+ assert.equal(calls[1],'/api/ctsv/nen-tang/danh-muc?kind=semesters&page=1&size=100');
+});
+
+test('signing consumer keeps its unfiltered rounds signature and abort signal',async()=>{
+ let call;const api=createDecisionApi({request:async(path,options)=>{call={path,options};return Response.json({});}});
+ const abort=new AbortController();await api.rounds(0,abort.signal);
+ assert.equal(call.path,'/api/ctsv/mghp/dot-xet?page=0&size=100');assert.equal(call.options.signal,abort.signal);
+});
+
+test('API errors retain operation, status and safe validation fields without replay',async()=>{
+ const error=new ApiError(400,'VALIDATION_ERROR',['semesterId']);let calls=0;
+ const api=createDecisionApi({request:async()=>{calls++;throw error;}});
+ await assert.rejects(()=>api.source('20051','1'),e=>e===error&&e.decisionOperation==='source');
+ assert.equal(calls,1);assert.deepEqual(error.fields,['semesterId']);
+});
+
+test('messages separate source selection, creation, meeting fields and confirmation',()=>{
+ assert.equal(typeof decisionModel.decisionErrorMessage,'function');
+ const text=(op,fields=[])=>decisionModel.decisionErrorMessage(Object.assign(new ApiError(400,'VALIDATION_ERROR',fields),{decisionOperation:op}));
+ assert.match(text('source',['semesterId']),/học kỳ/i);assert.doesNotMatch(text('source'),/thời gian họp/i);
+ assert.match(text('create',['code']),/mã bộ quyết định/i);assert.doesNotMatch(text('create',['code']),/thời gian họp/i);
+ assert.match(text('meeting',['meetingAt']),/thời gian họp thực tế/i);
+ assert.match(text('meeting',['reason']),/kết luận/i);
+ assert.match(text('confirm'),/chốt/i);
+ assert.doesNotMatch(decisionModel.decisionErrorMessage(new Error('fetch failed')),/fetch failed/);
+});
+
+test('handoff URL carries semester and round, never reuses a previous decision version',()=>{
+ assert.equal(typeof decisionModel.decisionWorkspaceUrl,'function');
+ assert.equal(decisionModel.decisionWorkspaceUrl('1','20051'),'/mghp/hoi-dong-quyet-dinh?hoc-ky=1&dot-xet=20051');
+ assert.equal(decisionModel.decisionWorkspaceUrl('4'),'/mghp/hoi-dong-quyet-dinh?hoc-ky=4');
 });

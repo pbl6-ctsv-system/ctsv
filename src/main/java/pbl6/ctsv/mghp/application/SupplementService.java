@@ -109,7 +109,7 @@ class SupplementService {
         var reason=reason(input);
         var locked=lock(actor,true,id);
         var row=locked.round;
-        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
+        configuration.requireIntakeOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         var old=row.deadline;
         var previous=row.status;
@@ -181,7 +181,7 @@ class SupplementService {
             .get("yeu_cau_bo_sung_id");
         var locked=lock(actor,true,supplementId);
         var row=locked.round;
-        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
+        configuration.requireIntakeOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         if(!"responded".equals(row.status))throw conflict("SUPPLEMENT_STATE_CONFLICT");
         var item=repo.find(SupplementItem.class,itemId);
@@ -203,7 +203,7 @@ class SupplementService {
         configuration.lockWrites();
         var locked=lock(actor,true,id);
         var row=locked.round;
-        configuration.requireReviewOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
+        configuration.requireIntakeOpen(row.receivingRoundId==null?locked.root.roundId:row.receivingRoundId);
         matchTag(view(row,true).tag(),tag);
         String previous=row.status;
         if(!complete && "cancelled".equals(previous))return view(row,true);
@@ -229,7 +229,7 @@ class SupplementService {
 
     private Map<String,Object> receivingRound(long id,String code) {
         if(!exists("SELECT id FROM dbo.mghp_dot_xet WHERE id=?",id))throw conflict(code);
-        configuration.lock(id);configuration.requireReviewOpen(id);
+        configuration.lock(id);configuration.requireIntakeOpen(id);
         var round=configuration.publicRound(id);
         if(!"open".equals(round.get("status")) && !"closed".equals(round.get("status")))throw conflict(code);
         return round;

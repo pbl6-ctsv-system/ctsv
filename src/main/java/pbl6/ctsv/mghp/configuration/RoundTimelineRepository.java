@@ -45,6 +45,7 @@ final class RoundTimelineRepository {
         h.opensAt=round.getThoiDiemMo(); h.submissionDeadline=round.getHanNop(); h.reviewDeadline=round.getHanRaSoat();
         h.plan=entity(plan(round.getLichTrinh())); h.reviewClosedAt=round.getThoiDiemDongXet();
         h.reviewClosedBy=round.getNguoiDongXetId(); h.sourceSha256=round.getSha256NguonDongXet();
+        h.onlineClosedAt=round.getThoiDiemChotOnline();h.onlineClosedBy=round.getNguoiChotOnlineId();h.onlineSourceSha256=round.getSha256NguonChotOnline();
         h.auditId=r.jdbc.queryForObject("""
             DECLARE @ids TABLE(id bigint);
             INSERT dbo.nhat_ky_thao_tac(su_kien_id,loai_chu_the_thao_tac,nguoi_dung_id,hanh_dong,loai_doi_tuong,doi_tuong_id,ly_do,thoi_diem_tao)
@@ -60,7 +61,7 @@ final class RoundTimelineRepository {
             v.put("id",h.id.toString());v.put("revision",h.revision);v.put("action",h.action);v.put("reason",h.reason);
             v.put("actorUserId",h.actorId.toString());v.put("recordedAt",instant(h.recordedAt));
             v.put("opensAt",instant(h.opensAt));v.put("submissionDeadline",instant(h.submissionDeadline));v.put("reviewDeadline",instant(h.reviewDeadline));
-            v.put("schedule",plan(h.plan).view());v.put("reviewClosedAt",instant(h.reviewClosedAt));return v;}).toList();
+            v.put("schedule",plan(h.plan).view());v.put("reviewClosedAt",instant(h.reviewClosedAt));v.put("onlineClosedAt",instant(h.onlineClosedAt));return v;}).toList();
         long count=r.em.createQuery("select count(h) from MghpLichSuLichTrinh h where roundId=:id",Long.class).setParameter("id",id).getSingleResult();
         return Map.of("items",items,"page",page[0],"size",page[1],"totalElements",count);
     }

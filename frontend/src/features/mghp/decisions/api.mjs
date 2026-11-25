@@ -1,18 +1,19 @@
 const BASE='/api/ctsv/mghp';
 /** Thin API boundary: no client business selection, token storage or automatic write replay. */
 export function createDecisionApi(client){
- async function read(path,signal){
-  const response=await client.request(BASE+path,{signal});
-  return {data:await response.json(),tag:response.headers.get('ETag')??''};
+ async function request(operation,path,options){
+  try{
+   const response=await client.request(path,options);
+   return {data:await response.json(),tag:response.headers.get('ETag')??''};
+  }catch(error){if(error instanceof Error)error.decisionOperation=operation;throw error;}
  }
- async function write(path,body,tag){
-  const response=await client.request(BASE+path,{method:'POST',headers:{'Content-Type':'application/json',...(tag?{'If-Match':tag}:{})},body:JSON.stringify(body)});
-  return {data:await response.json(),tag:response.headers.get('ETag')??''};
- }
+ const read=(path,signal,operation='read')=>request(operation,BASE+path,{signal});
+ const write=(path,body,tag,operation)=>request(operation,BASE+path,{method:'POST',headers:{'Content-Type':'application/json',...(tag?{'If-Match':tag}:{})},body:JSON.stringify(body)});
  return {
-  rounds:(page=0,signal)=>read('/dot-xet?page='+page+'&size=100',signal),
-  round:(id,signal)=>read('/dot-xet/'+id,signal),
-  source:(id,signal)=>read('/dot-xet/'+id+'/dong-xet',signal),
+  semesters:(page=0,signal)=>request('semesters','/api/ctsv/nen-tang/danh-muc?kind=semesters&page='+page+'&size=100',{signal}),
+  rounds:(page=0,signal,semester='')=>read('/dot-xet?'+(semester?'semesterId='+semester+'&':'')+'page='+page+'&size=100',signal,'rounds'),
+  round:(id,signal)=>read('/dot-xet/'+id,signal,'round'),
+  source:(id,semester,signal)=>read('/dot-xet/'+id+'/dong-xet?semesterId='+semester,signal,'source'),
   list:(round,page=0,signal)=>read('/quyet-dinh?roundId='+round+'&page='+page+'&size=20',signal),
   root:(id,signal)=>read('/quyet-dinh/'+id,signal),
   version:(id,signal)=>read('/phien-ban-quyet-dinh/'+id,signal),
@@ -27,9 +28,9 @@ export function createDecisionApi(client){
     page++;
    }
   },
-  create:body=>write('/quyet-dinh',body),
-  meeting:(id,body,tag)=>write('/phien-ban-quyet-dinh/'+id+'/ket-luan-hop',body,tag),
-  confirm:(id,reason,tag)=>write('/phien-ban-quyet-dinh/'+id+'/xac-nhan',{reason},tag),
+  create:body=>write('/quyet-dinh',body,undefined,'create'),
+  meeting:(id,body,tag)=>write('/phien-ban-quyet-dinh/'+id+'/ket-luan-hop',body,tag,'meeting'),
+  confirm:(id,reason,tag)=>write('/phien-ban-quyet-dinh/'+id+'/xac-nhan',{reason},tag,'confirm'),
  };
 }
 

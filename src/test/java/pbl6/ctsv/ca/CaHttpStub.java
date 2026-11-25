@@ -9,6 +9,8 @@ import java.util.function.Function;
 import pbl6.ctsv.shared.ca.*;
 
 final class CaHttpStub implements AutoCloseable {
+    static final String ACCESS = CaTokenTestSupport.access(java.time.Instant.now().plusSeconds(3600), 1);
+    static final String ACCESS_2 = CaTokenTestSupport.access(java.time.Instant.now().plusSeconds(3600), 2);
     record Request(String method,String path,String query,String authorization,byte[] body) {}
     record Reply(int status,String contentType,byte[] body) {
         static Reply json(int status,String body) {return new Reply(status,"application/json",body.getBytes(StandardCharsets.UTF_8));}
@@ -27,6 +29,6 @@ final class CaHttpStub implements AutoCloseable {
     }
     URI origin(){return URI.create("http://127.0.0.1:"+server.getAddress().getPort());}
     CaDutClient client(){return CaDutClient.forLoopbackStub(origin(),"synthetic-client","synthetic-secret",java.time.Clock.systemUTC(),3000);}
-    static Reply token(){return Reply.json(200,"{\"success\":true,\"data\":{\"access\":\"access-1\",\"refresh\":\"refresh-1\"}}");}
+    static Reply token(){return Reply.json(200,"{\"success\":true,\"data\":{\"access\":\""+ACCESS+"\",\"refresh\":\"refresh-1\"}}");}
     public void close(){server.stop(0);threads.shutdownNow();}
 }

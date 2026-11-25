@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {applicationListUrl,declarationChanges} from '../src/features/mghp/intake/dossier-model.mjs';
 
+test('application query combines semester, round and status before pagination',()=>{
+ const q=new URL(applicationListUrl(3,'submitted','1','20040'),'https://localhost').searchParams;
+ assert.equal(q.get('semesterId'),'1');assert.equal(q.get('roundId'),'20040');
+ assert.equal(q.get('status'),'submitted');assert.equal(q.get('page'),'3');
+ assert(!new URL(applicationListUrl(0,'','1',''),'https://localhost').searchParams.has('roundId'));
+});
+
 test('semester and status are sent to the server before pagination',()=>{
  const url=new URL(applicationListUrl(2,'supplement_responded','31'),'https://localhost');
  assert.equal(url.pathname,'/api/ctsv/mghp/ho-so');

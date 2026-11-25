@@ -29,6 +29,18 @@ $caCredential = $null
 
 Không ghi credentials, token, raw auth response hoặc signed URL vào log/Git. Env Process đã có đủ ID/secret được ưu tiên; không ghép ID của nguồn này với secret của nguồn khác. Tài khoản DEV synthetic đăng nhập CTSV không phải credential CA.
 
+## Quản lý hạn access token — owner25/11/2026
+
+`CaTokenManager` chỉ kiểm khi backend cần gọi CA DUT, không chạy timer refresh định kỳ. Mỗi cặp token mới được giữ trong RAM backend cùng `receivedAt` (giờ server UTC khi nhận response thành công) và `expiresAt` (claim `exp` của access JWT). Áp dụng cho cả CA01 và token mới do CA02 trả về.
+
+- Chưa có token: gọi CA01. Token còn **trên 5 phút**: dùng tiếp. Còn **đúng 5 phút hoặc ít hơn**, kể cả đã hết hạn: gọi CA02; CA02 trả401 thì lấy cặp mới bằng CA01 theo cơ chế hiện có.
+- Không tính hạn thành `receivedAt + 5 phút`; không tự kéo dài hạn thành `receivedAt + 60 phút`. Thời hạn60phút trong tài liệu provider là mặc định; `exp` thực tế mới quyết định cache. Đọc `exp` để lên lịch cache không thay xác thực/authorization của CA.
+- JWT thiếu/sai `exp`, hỏng định dạng hoặc đã hết hạn ngay khi nhận: dừng trước API nghiệp vụ với lỗi đã có `CA_AUTH_SCHEMA_INVALID`, không log token/lỗi parser thô. Không thêm field vào API provider hoặc API CTSV.
+- Single-flight giữ nguyên: nhiều caller trong cùng instance dùng một lần refresh; cặp access/refresh mới và hai mốc thời gian được thay nguyên tử. Refresh timeout/schema lỗi thì bỏ cache; caller sau xác thực lại bằng CA01, không dùng refresh cũ có thể đã bị tiêu thụ. Restart backend thì cache trống và lấy mới khi cần; không lưu token vào DB/file/frontend.
+- GET401 vẫn chỉ refresh một lần trong giới hạn retry hiện có. Upload/ký POST chỉ dispatch một lần, không tự phát lại khi401/timeout/unknown. Gia hạn token thất bại thì không gửi lệnh ký/upload tiếp theo.
+
+Kiểm thử delta: `CaTokenManagerTest`, `CaTokenLifecycleHttpTest` (HTTP loopback/CA STUB, clock điều khiển), cùng regression `Ca*Test,SigningRulesTest`. Bao phủ token thiếu, còn54phút, biên5phút1giây/5phút, hết hạn, rotation, concurrency, refresh lỗi, metadata sai và không replay lệnh ký. Không cần chờ55phút hoặc ký thật để kiểm mốc thời gian. Đây là token API Client CA, không thay cơ chế phiên đăng nhập CTSV.
+
 ## Chạy từ thư mục CTSV
 
 ```powershell
@@ -76,7 +88,7 @@ Lượt19/11: CA10 tải được PDF sau ký E, không tái hiện lỗi storag
 Kiểm local/stub (không gọi CA hoặc SQL):
 
 ```powershell
-.\mvnw.cmd -o -B -ntp '-Dtest=CaPdfPreflightTest,CaPdfSignatureVerifierTest,CaDutClientTest,CaDutConfigurationTest,CaTokenManagerTest,CaSignerBindingTest,CaSigningSequenceTest' test
+.\mvnw.cmd -o -B -ntp '-Dtest=Ca*Test,SigningRulesTest' test
 ```
 
 Kết quả kỹ thuật cuối19/11: P09 56/56 PASS; regression PDF/Auth27/27 PASS. Starter contextLoads riêng ERROR vì thiếu JdbcTemplate ở default profile; không sửa/disable trong P09. CA REAL một E đạt4mức integrity, workflow còn PARTIAL vì exact DER pin/trust chưa xác minh. CA08 category/current_version không được capture ở lượt thật; kiểm parser cuối qua STUB, không POST lại. [Manifest đã lọc](../../nghiepvu/.analysis/runtime/p09/20261119/p09-manifest.json).
