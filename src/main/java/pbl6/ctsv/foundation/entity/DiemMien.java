@@ -85,7 +85,7 @@ public class DiemMien {
     @Column(name="ghi_chu_nguon", nullable=true, length=2000)
     private String ghiChuNguon;
 
-    @Column(name="hoc_phan_tuong_duong_id", nullable=false)
+    @Column(name="hoc_phan_tuong_duong_id", nullable=true)
     private Long hocPhanTuongDuongId;
 
     @Nationalized

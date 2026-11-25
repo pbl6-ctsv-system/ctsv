@@ -77,12 +77,12 @@ class RoundService {
         String reason=null;
         if(!value.present()) reason="SOURCE_NOT_PRESENT";
         else if(period!=null&&period.summer()) reason="SUMMER_MERGED_INTO_SEMESTER_2";
-        else if(!"verified".equals(value.milestoneVerificationStatus()) || value.startDate()==null || value.endDate()==null
-                || value.startDate().isAfter(value.endDate())) reason="SOURCE_DATES_UNVERIFIED";
+        else if(value.startDate()==null || value.endDate()!=null && value.startDate().isAfter(value.endDate()))
+            reason="SOURCE_DATES_UNVERIFIED";
         else if(period==null) reason="SEMESTER_MAPPING_REQUIRED";
         else if(semester!=null && (!period.academicYear().equals(semester.getAcademicYear())
                 || period.semesterOrder()!=semester.getSemesterOrder()
-                || !value.startDate().equals(semester.getStartDate()) || !value.endDate().equals(semester.getEndDate())))
+                || !value.startDate().equals(semester.getStartDate())))
             reason="SEMESTER_MAPPING_CONFLICT";
         return new Assessment(period,semester,reason);
     }

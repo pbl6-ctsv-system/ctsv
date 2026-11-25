@@ -8,18 +8,18 @@ import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 import pbl6.ctsv.foundation.api.FoundationRoleAccess;
 
-final class RoundAccess {
+public final class RoundAccess {
     private static final String MODULE = "HOC_BONG";
     private static final String SPECIALIST_ROLE = "hoc_bong_chuyen_vien";
 
-    record Actor(long userId, Long studentId, Long roleId) {}
+    public record Actor(long userId, Long studentId, Long roleId) {}
 
     private final TransactionTemplate transaction;
     private final TransactionTemplate consistentRead;
     private final FoundationAccess identities;
     private final FoundationRoleAccess roles;
 
-    RoundAccess(PlatformTransactionManager manager, FoundationAccess identities, FoundationRoleAccess roles) {
+    public RoundAccess(PlatformTransactionManager manager, FoundationAccess identities, FoundationRoleAccess roles) {
         this.transaction = new TransactionTemplate(manager);
         this.consistentRead = new TransactionTemplate(manager);
         this.consistentRead.setReadOnly(true);
@@ -28,11 +28,11 @@ final class RoundAccess {
         this.roles = roles;
     }
 
-    <T> T execute(AuthAccess.Principal principal, boolean specialistRequired, Function<Actor, T> action) {
+    public <T> T execute(AuthAccess.Principal principal, boolean specialistRequired, Function<Actor, T> action) {
         return execute(transaction, principal, specialistRequired, action);
     }
 
-    <T> T executeConsistentRead(AuthAccess.Principal principal, Function<Actor, T> action) {
+    public <T> T executeConsistentRead(AuthAccess.Principal principal, Function<Actor, T> action) {
         return execute(consistentRead, principal, true, action);
     }
 

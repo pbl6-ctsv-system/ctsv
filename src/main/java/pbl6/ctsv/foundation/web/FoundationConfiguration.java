@@ -1,4 +1,5 @@
 package pbl6.ctsv.foundation.web;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.springframework.context.annotation.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -7,7 +8,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pbl6.ctsv.auth.AuthAccess;
 import pbl6.ctsv.foundation.api.FoundationUsage;
+import pbl6.ctsv.foundation.api.ScholarshipCombinationSource;
 import pbl6.ctsv.foundation.repository.FoundationRepository;
+import pbl6.ctsv.foundation.repository.ScholarshipCombinationRepository;
 @Configuration(proxyBeanMethods=false)
 @ConditionalOnProperty(name="ctsv.foundation.enabled",havingValue="true")
 class FoundationConfiguration {
@@ -15,6 +18,9 @@ class FoundationConfiguration {
  @Bean pbl6.ctsv.foundation.repository.FoundationRepository foundationRepository(jakarta.persistence.EntityManager em,JdbcTemplate jdbc){return new pbl6.ctsv.foundation.repository.FoundationRepository(em,jdbc);}
  @Bean pbl6.ctsv.foundation.api.ScholarshipScopeSource scholarshipScopeSource(JdbcTemplate jdbc,FoundationRepository repository,ObjectMapper json) {
   return new pbl6.ctsv.foundation.repository.ScholarshipScopeRepository(jdbc,repository,json);
+ }
+ @Bean ScholarshipCombinationSource scholarshipCombinationSource(EntityManager em,JdbcTemplate jdbc) {
+  return new ScholarshipCombinationRepository(em,jdbc);
  }
  @Bean
  FoundationService foundationService(FoundationSecurity security, FoundationRepository repository,

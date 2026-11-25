@@ -52,6 +52,16 @@ class ScopeServiceTest {
         assertThat(events.getAllValues()).extracting(ScholarshipAudit::getCorrelationId).containsOnly(events.getValue().getCorrelationId());
         assertThat(events.getValue().getAfterData()).contains("catalogRevision");
     }
+    @Test void createsAndSerializesSemesterWithoutAnEndDate() {
+        when(rounds.sourceById(21)).thenReturn(new RoundDtos.SourceSemesterDto("21","2520",null,"2025-2026",2,
+            "2026-01-01",null,null,true,null));
+        var result=service.create(command(),key,actor);
+        var semester=saved.values().stream().filter(ScholarshipSemester.class::isInstance)
+            .map(ScholarshipSemester.class::cast).findFirst().orElseThrow();
+        assertThat(semester.getStartDate()).isEqualTo(LocalDate.of(2026,1,1));
+        assertThat(semester.getEndDate()).isNull();
+        assertThat(RoundMapper.semester(semester).endDate()).isNull();
+    }
     @Test void replayReturnsCurrentRepresentationBeforeSourceAndSequenceEvenAfterEdits() {
         var root=root();root.setCreationHash(ScopeRules.intentHash(command()));
         when(repo.creation(actor.userId(),key)).thenReturn(Optional.of(root));

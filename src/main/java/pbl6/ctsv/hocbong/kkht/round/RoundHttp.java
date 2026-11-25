@@ -14,19 +14,19 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import pbl6.ctsv.auth.AuthAccess;
 
-final class RoundHttp {
+public final class RoundHttp {
     private static final int BODY_LIMIT = 1_048_576;
     private static final String BEARER = "Bearer ";
 
     private final ObjectMapper json;
 
-    RoundHttp(ObjectMapper json) {
+    public RoundHttp(ObjectMapper json) {
         this.json = json.copy()
                 .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
                 .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     }
 
-    static AuthAccess.Principal principal(HttpServletRequest request, AuthAccess auth) {
+    public static AuthAccess.Principal principal(HttpServletRequest request, AuthAccess auth) {
         String authorization = singleton(request, HttpHeaders.AUTHORIZATION);
         if (authorization == null || authorization.length() <= BEARER.length()
                 || !authorization.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
@@ -35,7 +35,7 @@ final class RoundHttp {
         return auth.verifyAccessToken(authorization.substring(BEARER.length()));
     }
 
-    static Map<String, String[]> getQuery(HttpServletRequest request, String... allowed) {
+    public static Map<String, String[]> getQuery(HttpServletRequest request, String... allowed) {
         singleton(request, HttpHeaders.CONTENT_TYPE);
         ifMatch(request);
         try {
@@ -61,19 +61,19 @@ final class RoundHttp {
         return query;
     }
 
-    static String parameter(Map<String, String[]> query, String key) {
+    public static String parameter(Map<String, String[]> query, String key) {
         String[] values = query.get(key);
         return values == null ? null : values[0];
     }
 
-    static String ifMatch(HttpServletRequest request) {
+    public static String ifMatch(HttpServletRequest request) {
         return singleton(request, HttpHeaders.IF_MATCH);
     }
     static java.util.UUID requestId(HttpServletRequest request) {
         return ScopeRules.requestId(singleton(request,"Idempotency-Key"));
     }
 
-    JsonNode body(HttpServletRequest request) {
+    public JsonNode body(HttpServletRequest request) {
         if (request.getQueryString() != null) {
             throw RoundFailure.invalid("query");
         }

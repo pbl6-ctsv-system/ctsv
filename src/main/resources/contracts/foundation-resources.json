@@ -1513,7 +1513,7 @@
         "target": "hoc_phan_duoc_thay_the_id",
         "sqlType": "bigint",
         "localType": "bigint",
-        "nullable": false,
+        "nullable": true,
         "parent": "hoc_phan",
         "raw": null,
         "ref": null
@@ -1619,7 +1619,7 @@
         "target": "hoc_phan_tuong_duong_id",
         "sqlType": "bigint",
         "localType": "bigint",
-        "nullable": false,
+        "nullable": true,
         "parent": "hoc_phan",
         "raw": null,
         "ref": null
@@ -1813,7 +1813,7 @@
         "target": "hoc_phan_tuong_duong_id",
         "sqlType": "bigint",
         "localType": "bigint",
-        "nullable": false,
+        "nullable": true,
         "parent": "hoc_phan",
         "raw": null,
         "ref": null

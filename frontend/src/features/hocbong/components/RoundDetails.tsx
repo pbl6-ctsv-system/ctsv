@@ -3,7 +3,8 @@ import {Button} from '../../../shared/ui/Button';
 import styles from '../pages/KkhtRoundsPage.module.css';
 
 export const roundStatus=(status:string)=>status==='draft'?'Nháp':'Chưa xác định';
-function date(value:string){
+function date(value:string|null){
+ if(value===null)return 'Chưa có';
  const [year,month,day]=value.split('-');
  return `${day}/${month}/${year}`;
 }
