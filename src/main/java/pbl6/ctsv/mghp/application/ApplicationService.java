@@ -34,32 +34,22 @@ class ApplicationService {
     Instant received() { return clock.instant(); }
 
     Accepted submit(Identity actor,Long target,JsonNode body,String tag,Instant received) {
+        if(target!=null){reads.scoped(actor,target);throw new IntakeProblem(410,"APPLICATION_REOPEN_RETIRED","request");}
         cfg.lockWrites();
         shape(body,FIELDS);
         long round=id(body.get("roundId"),"roundId");
         long process=id(body.get("studyProcessId"),"studyProcessId");
         long policyVersion=id(body.get("policyVersionId"),"policyVersionId");
         UUID operation=operation(body.get("operationId"));
-        String hash=hash(target==null?"initial":target.toString(),body);
+        String hash=hash("initial",body);
         long student=actor.studentId();
         repo.lockOperation(operation);
-        if(target!=null) {
-            var scope=repo.row("SELECT sinh_vien_id, dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",target);
-            if(!Objects.equals(scope.get("sinh_vien_id"),student)) throw IntakeProblem.missing();
-        }
         var previous=repo.replay(operation);
         if(previous!=null) {
             var root=reads.scoped(actor,previous.applicationId);
-            boolean sameTarget=target==null?"initial".equals(previous.type):
-                target.equals(root.id)&&"resubmission".equals(previous.type);
+            boolean sameTarget="initial".equals(previous.type);
             if(!sameTarget || !hash.equals(previous.hash)) throw IntakeProblem.conflict("SUBMISSION_KEY_CONFLICT");
             return new Accepted(root,previous,true);
-        }
-        if(target!=null) {
-            var scope=repo.row("SELECT dot_xet_id,qua_trinh_hoc_id,phien_ban_chinh_sach_id FROM dbo.mghp_ho_so WHERE id=?",target);
-            if(!Objects.equals(scope.get("dot_xet_id"),round)||!Objects.equals(scope.get("qua_trinh_hoc_id"),process)
-                ||!Objects.equals(scope.get("phien_ban_chinh_sach_id"),policyVersion))
-                throw IntakeProblem.conflict("APPLICATION_IDENTITY_CONFLICT");
         }
         cfg.lock(round);cfg.requireIntakeOpen(round);
         var currentRound=availableRound(round);
@@ -72,14 +62,8 @@ class ApplicationService {
         long policyId=Long.parseLong(policy.get("policyId").toString());
         repo.processes(student).stream().filter(p -> Objects.equals(p.get("id"),process)).findFirst()
             .orElseThrow(IntakeProblem::missing);
-        var root=repo.root(target,round,process,policyId);
-        if(target==null && root!=null) throw IntakeProblem.conflict("APPLICATION_EXISTS");
-        if(target!=null) {
-            if(!root.studentId.equals(student)) throw IntakeProblem.missing();
-            reads.match(root,tag);
-            if(!root.roundId.equals(round)||!root.processId.equals(process)||!root.policyVersionId.equals(policyVersion)
-                ||!"reopened".equals(root.status)||repo.confirmed(root)) throw IntakeProblem.conflict("SUBMISSION_NOT_ALLOWED");
-        }
+        var root=repo.root(null,round,process,policyId);
+        if(root!=null) throw IntakeProblem.conflict("APPLICATION_EXISTS");
         return persistSubmission(actor,root,round,process,policyVersion,body,operation,hash,received,null);
     }
 
@@ -175,35 +159,29 @@ class ApplicationService {
         return new Accepted(root,v,false);
     }
 
-    Object transition(Identity actor,long id,String tag,String reason,boolean reopen,Instant received) {
+    Object withdraw(Identity actor,long id,String tag,String reason,Instant received) {
         cfg.lockWrites();
-        if(reopen)cfg.lock((Long)repo.row("SELECT dot_xet_id FROM dbo.mghp_ho_so WHERE id=?",id).get("dot_xet_id"));
-        var root=reopen?repo.root(id):reads.scoped(actor,id);
+        var root=reads.scoped(actor,id);
         cfg.requireIntakeOpen(root.roundId);
-        reads.match(root,tag);
+        ApplicationReads.matchTag(reads.detail(root,true).tag(),tag);
         var now=received.atOffset(ZoneOffset.UTC);
         String prior=root.status;
-        if(!reopen && "withdrawn".equals(prior)) return summary(root);
-        String rejection=reopen?"APPLICATION_NOT_REOPENABLE":"APPLICATION_NOT_WITHDRAWABLE";
+        if("withdrawn".equals(prior)) return reads.applicationSummary(root,true);
+        String rejection="APPLICATION_NOT_WITHDRAWABLE";
         if(repo.confirmed(root)) throw IntakeProblem.conflict(rejection);
-        String next=reopen?"reopened":"withdrawn";
-        if(reopen) {
-            if(!"withdrawn".equals(prior) || !cfg.receives(availableRound(root.roundId,rejection),received))
-                throw IntakeProblem.conflict(rejection);
-        } else {
-            if(prior==null || !Set.of("submitted","processing","supplementing","supplement_responded","reopened").contains(prior))
-                throw IntakeProblem.conflict(rejection);
-            for(var supplement:repo.children(Supplement.class,"applicationId",root.id,"id")) {
-                if(supplement.status!=null && Set.of("completed","cancelled").contains(supplement.status)) continue;
-                supplement.status="cancelled"; supplement.closedAt=now;
-                event(root,null,actor.userId(),"cancel_supplement",prior,next,reason,now,supplement.id);
-            }
+        String next="withdrawn";
+        if(prior==null || !Set.of("submitted","processing","supplementing","supplement_responded").contains(prior))
+            throw IntakeProblem.conflict(rejection);
+        for(var supplement:repo.children(Supplement.class,"applicationId",root.id,"id")) {
+            if(supplement.status!=null && Set.of("completed","cancelled").contains(supplement.status)) continue;
+            supplement.status="cancelled"; supplement.closedAt=now;
+            event(root,null,actor.userId(),"cancel_supplement",prior,next,reason,now,supplement.id);
         }
         repo.change(root,next,now,reason);
-        event(root,null,actor.userId(),reopen?"reopen":"withdraw",prior,next,reason,now,null);
+        event(root,null,actor.userId(),"withdraw",prior,next,reason,now,null);
         var recipient=(Long)repo.row("SELECT nguoi_dung_id FROM dbo.sinh_vien WHERE id=?",root.studentId).get("nguoi_dung_id");
-        if(recipient!=null)inbox.publish(root,actor.userId(),recipient,reopen?"Hồ sơ đã được mở lại":"Hồ sơ đã được rút",now);
-        return summary(root);
+        if(recipient!=null)inbox.publish(root,actor.userId(),recipient,"Hồ sơ đã được rút",now);
+        return reads.applicationSummary(root,actor.studentId()!=null);
     }
 
     Object conclude(Identity actor,long id,String tag,String result,String reason,Instant received) {
@@ -213,7 +191,7 @@ class ApplicationService {
         var root=repo.root(id);
         cfg.requireIntakeOpen(round);
         reads.match(root,tag);
-        if(result.equals(root.status))return summary(root);
+        if(result.equals(root.status))return reads.applicationSummary(root,false);
         if(!ApplicationDispositionRules.accepts(root.status)||repo.confirmed(root))
             throw IntakeProblem.conflict("APPLICATION_NOT_REVIEWABLE");
         var pending=repo.children(Supplement.class,"applicationId",id,"id").stream()
@@ -247,7 +225,7 @@ class ApplicationService {
         event(root,null,actor.userId(),"approved".equals(result)?"approve_application":"reject_application",previous,result,reason,now,null);
         var recipient=(Long)repo.row("SELECT nguoi_dung_id FROM dbo.sinh_vien WHERE id=?",root.studentId).get("nguoi_dung_id");
         if(recipient!=null)inbox.publish(root,actor.userId(),recipient,"approved".equals(result)?"Hồ sơ đã được đồng ý":"Hồ sơ bị từ chối",now);
-        return summary(root);
+        return reads.applicationSummary(root,false);
     }
 
     private Map<String,Object> availableRound(long id) { return availableRound(id,"SUBMISSION_NOT_ALLOWED"); }

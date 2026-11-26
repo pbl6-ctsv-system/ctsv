@@ -5,7 +5,11 @@ import {IntakeWorkspace} from './intake/IntakeWorkspace';
 import {ReviewWorkspace} from './review/ReviewWorkspace';
 const DecisionWorkspace=lazy(()=>import('./decisions/DecisionWorkspace').then(m=>({default:m.DecisionWorkspace})));
 const SigningWorkspace=lazy(()=>import('./signing/SigningWorkspace').then(m=>({default:m.SigningWorkspace})));
+const SigningAdminWorkspace=lazy(()=>import('./signing-admin/SigningAdminWorkspace').then(m=>({default:m.SigningAdminWorkspace})));
+const CertificateWorkspace=lazy(()=>import('./signing-admin/CertificateWorkspace').then(m=>({default:m.CertificateWorkspace})));
 export function ConfigurationPage({client,view}:FeaturePageProps) {
+ if(view==='signing-support')return <Suspense fallback={<p role="status">Đang mở quản trị sự cố…</p>}><SigningAdminWorkspace client={client}/></Suspense>;
+ if(view==='signing-certificates')return <Suspense fallback={<p role="status">Đang mở quản lý chứng thư…</p>}><CertificateWorkspace client={client}/></Suspense>;
  if(view==='signing')return <Suspense fallback={<p role="status">Đang mở tài liệu ký số…</p>}><SigningWorkspace client={client}/></Suspense>;
  if(view==='decisions')return <Suspense fallback={<p role="status">Đang mở Hội đồng và quyết định…</p>}><DecisionWorkspace client={client}/></Suspense>;
  if(['evaluations','benefits','own-benefits'].includes(view))return <ReviewWorkspace client={client} view={view}/>;

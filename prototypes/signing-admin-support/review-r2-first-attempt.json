@@ -1,0 +1,28 @@
+{
+  "mode": "PROTOTYPE_SIMULATION_ONLY",
+  "revision": 2,
+  "origin": "http://127.0.0.1:5182",
+  "steps": [
+    {
+      "step": 1,
+      "group": "01 · Danh sách và thông tin sự cố",
+      "title": "Danh sách sự cố giữ nguyên bố cục",
+      "action": "Giữ bảng, bộ lọc trạng thái và tìm kiếm mà owner đã duyệt.",
+      "file": "screenshots/r2-01-danh-sach-su-co-giu-nguyen-bo-cuc.png"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Danh sách giữ cột và sáu sự cố mô phỏng",
+      "result": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "failures": [
+    {
+      "phase": "inspect",
+      "message": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'Thông tin sự cố',\n    'Ghi chú xử lý',\n    'Lịch sử xử lý',\n+   'Xử lý sự cố'\n  ]\n\n    at simpleDetail (file:///D:/7rd_semester/pbl6_src/ctsv/prototypes/signing-admin-support/review-simplified-steps.mjs?run=1:4:11)\n    at async Module.inspect (file:///D:/7rd_semester/pbl6_src/ctsv/prototypes/signing-admin-support/review-simplified-steps.mjs?run=1:14:33)\n    at async run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:155)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:28:2"
+    }
+  ]
+}

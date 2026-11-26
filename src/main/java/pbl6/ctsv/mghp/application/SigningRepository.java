@@ -160,7 +160,7 @@ class SigningRepository {
  String listFilter(boolean manager,boolean pp,boolean pht,boolean mine,String status){
   String scope=manager&&!mine?"1=1":"EXISTS(SELECT 1 FROM dbo.buoc_ky s WHERE s.yeu_cau_ky_id=q.id AND s.nguoi_dung_noi_bo_id=@user AND ("+
    (manager?"s.vai_tro_nguoi_ky=N'chuyen_vien'":"1=0")+(pp?" OR s.vai_tro_nguoi_ky=N'pho_phong'":"")+(pht?" OR s.vai_tro_nguoi_ky=N'pho_hieu_truong'":"")+"))";
-  return " WHERE q.phien_ban_adapter=N'ctsv-p11-v1' AND ("+scope+")"+(status==null?"":" AND q.trang_thai=@state");
+  return " WHERE q.phien_ban_adapter=N'ctsv-p11-v1' AND ("+scope+")"+(status==null?"":" AND (q.trang_thai=@state OR (@state=N'needs_support' AND q.trang_thai IN(N'failed',N'unknown')))");
  }
  String listFilter(boolean manager,boolean pp,boolean pht,boolean mine,String status,String view){
   String filter=listFilter(manager,pp,pht,mine,status);

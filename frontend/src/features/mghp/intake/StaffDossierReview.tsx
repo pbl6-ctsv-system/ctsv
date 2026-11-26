@@ -51,7 +51,7 @@ export function StaffDossierReview({client,application,rootTag,refresh,onSupplem
  const latest=application.submittedVersions[0];
  const papers=review?.documents.filter(d=>d.submissionId===latest?.id)??[];
  const paper=papers.find(d=>d.id===selected)??papers[0];
- const pending=['submitted','processing','supplementing','supplement_responded'].includes(application.status??'');
+ const pending=['pending','supplementing','supplement_responded'].includes(application.onlineStatus??'');
  const locked=!!review?.evaluations.some(e=>e.status==='confirmed');
  const loadingReview=reviewTag!==rootTag;
  const editable=pending&&!locked&&!application.intakeSealed&&!loadingReview;

@@ -37,23 +37,29 @@ class SigningHttpIT {
  @ComponentScan(basePackages={"pbl6.ctsv.auth","pbl6.ctsv.foundation","pbl6.ctsv.mghp","pbl6.ctsv.shared"},excludeFilters={@ComponentScan.Filter(type=FilterType.CUSTOM,classes=org.springframework.boot.context.TypeExcludeFilter.class),@ComponentScan.Filter(type=FilterType.REGEX,pattern=".*(?:Test|IT)(?:\\$.*)?")})
  static class Config {
   @Bean DataSource source()throws Exception{return SigningDatabase.migrate();}
-  @Bean PrivateFileStorage privateStorage(){return new PrivateFileStorage(){
-   final Map<String,byte[]> data=new java.util.concurrent.ConcurrentHashMap<>();
-   public String cloud(){return "p11-http-stub";}
-   public Asset upload(String key,java.nio.file.Path file,long size){try{data.put(key,java.nio.file.Files.readAllBytes(file));return new Asset(key,1);}catch(Exception e){throw new IllegalStateException(e);}}
-   public void download(String id,java.nio.file.Path dest,long size){try{java.nio.file.Files.write(dest,data.get(id));}catch(Exception e){throw new IllegalStateException(e);}}
-   public Optional<Asset> find(String key){return data.containsKey(key)?Optional.of(new Asset(key,1)):Optional.empty();}
-  };}
+  @Bean PrivateFileStorage privateStorage(){return new StorageStub();}
   @Bean @Primary pbl6.ctsv.mghp.application.SigningProvider testSigningProvider(){return new ProviderStub();}
  }
+ static class StorageStub implements PrivateFileStorage {
+   boolean failUpload,failDownload;
+   final Map<String,byte[]> data=new java.util.concurrent.ConcurrentHashMap<>();
+   public String cloud(){return "p11-http-stub";}
+   public Asset upload(String key,java.nio.file.Path file,long size){if(failUpload)throw new IllegalStateException("SYNTHETIC upload failure");try{data.put(key,java.nio.file.Files.readAllBytes(file));return new Asset(key,1);}catch(Exception e){throw new IllegalStateException(e);}}
+   public void download(String id,java.nio.file.Path dest,long size){if(failDownload)throw pbl6.ctsv.shared.files.FileProblem.unavailable();try{java.nio.file.Files.write(dest,data.get(id));}catch(Exception e){throw new IllegalStateException(e);}}
+   public Optional<Asset> find(String key){return data.containsKey(key)?Optional.of(new Asset(key,1)):Optional.empty();}
+ }
  static class ProviderStub implements pbl6.ctsv.mghp.application.SigningProvider {
-  final Map<UUID,byte[]> documents=new java.util.concurrent.ConcurrentHashMap<>();int signs,uploads;boolean downloadFails,unknownSign,downloadGone,certificateUnavailable;
-  public pbl6.ctsv.shared.ca.CaProviderDtos.Certificates certificates(String email){int serial=email.startsWith("signer-a")?101:202;return new pbl6.ctsv.shared.ca.CaProviderDtos.Certificates(email,certificateUnavailable?List.of():List.of(new pbl6.ctsv.shared.ca.CaProviderDtos.Certificate(UUID.nameUUIDFromBytes(email.getBytes()),UUID.nameUUIDFromBytes((email+"user").getBytes()),"P11 Synthetic signer "+serial,""+serial,"active",Instant.now().minusSeconds(60),Instant.now().plusSeconds(3600),true,true)));}
+  final Map<UUID,byte[]> documents=new java.util.concurrent.ConcurrentHashMap<>();int signs,uploads,downloads;boolean downloadFails,unknownSign,downloadGone,certificateUnavailable,certificateCheckFails;
+  int renews;String renewalState="pending";boolean replacement;final Map<String,UUID> requests=new HashMap<>();final Instant validFrom=Instant.now().minusSeconds(60),validTo=Instant.now().plusSeconds(3600);
+  public pbl6.ctsv.shared.ca.CaProviderDtos.Certificates certificates(String email){if(certificateCheckFails)throw new pbl6.ctsv.shared.ca.CaFailure("CA_TRANSPORT_FAILURE",503,false);int serial=email.startsWith("signer-a")?101:202;return new pbl6.ctsv.shared.ca.CaProviderDtos.Certificates(email,certificateUnavailable?List.of():List.of(new pbl6.ctsv.shared.ca.CaProviderDtos.Certificate(UUID.nameUUIDFromBytes((email+(replacement?"replacement":"")).getBytes()),UUID.nameUUIDFromBytes((email+"user").getBytes()),"P11 Synthetic signer "+serial,""+serial,"active",validFrom,validTo,true,true)));}
+  public pbl6.ctsv.shared.ca.CaProviderDtos.CertificateRequest renewCertificate(String email,String reason){assertOutside();renews++;requests.put(email,UUID.randomUUID());return request(email);}
+  pbl6.ctsv.shared.ca.CaProviderDtos.CertificateRequest request(String email){return new pbl6.ctsv.shared.ca.CaProviderDtos.CertificateRequest(requests.get(email),UUID.nameUUIDFromBytes((email+"user").getBytes()),"Synthetic signer","renew",renewalState,"Synthetic",365,"Synthetic CA response",Instant.now(),"pending".equals(renewalState)?null:Instant.now());}
+  public List<pbl6.ctsv.shared.ca.CaProviderDtos.CertificateRequest> certificateRequests(String email,String status){assertOutside();return requests.containsKey(email)&&status.equals(renewalState)?List.of(request(email)):List.of();}
   public pbl6.ctsv.shared.ca.CaProviderDtos.Uploaded upload(pbl6.ctsv.shared.ca.CaPdfPreflight.Input input,String title,UUID category){assertOutside();uploads++;UUID id=UUID.randomUUID();documents.put(id,input.bytes());return new pbl6.ctsv.shared.ca.CaProviderDtos.Uploaded(id,input.sha256(),category,1,"uploaded",false);}
   public pbl6.ctsv.shared.ca.CaProviderDtos.Receipt sign(UUID doc,UUID cert,String email,String name,pbl6.ctsv.shared.ca.CaPdfPreflight.Box box){
    assertOutside();signs++;byte[] input=documents.get(doc);try{int serial=email.startsWith("signer-a")?101:202;var output=pbl6.ctsv.ca.CaPdfSignatureVerifierTest.signed(input,serial);documents.put(doc,output);if(unknownSign){unknownSign=false;throw new pbl6.ctsv.shared.ca.CaFailure("CA_TIMEOUT",0,true);}return new pbl6.ctsv.shared.ca.CaProviderDtos.Receipt(UUID.randomUUID(),doc,cert,""+serial,email,name,pbl6.ctsv.shared.ca.CaPdfPreflight.sha256(input),pbl6.ctsv.shared.ca.CaPdfPreflight.sha256(output),Instant.now(),"valid");}catch(pbl6.ctsv.shared.ca.CaFailure e){throw e;}catch(Exception e){throw new IllegalStateException(e);}
   }
-  public byte[] download(UUID doc){assertOutside();if(downloadGone)throw new pbl6.ctsv.shared.ca.CaFailure("CA_DOCUMENT_NOT_FOUND",404,false);if(downloadFails)throw new pbl6.ctsv.shared.ca.CaFailure("CA_DOWNLOAD_UNAVAILABLE",503,false);return documents.get(doc);}
+  public byte[] download(UUID doc){assertOutside();downloads++;if(downloadGone)throw new pbl6.ctsv.shared.ca.CaFailure("CA_DOCUMENT_NOT_FOUND",404,false);if(downloadFails)throw new pbl6.ctsv.shared.ca.CaFailure("CA_DOWNLOAD_UNAVAILABLE",503,false);return documents.get(doc);}
   void assertOutside(){assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()).isFalse();}
  }
  @DynamicPropertySource static void properties(DynamicPropertyRegistry r)throws Exception{AuthHttpIT.configuration(r);}

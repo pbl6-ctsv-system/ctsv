@@ -3,7 +3,30 @@ export const applicationStates={
  supplementing:'Cần bổ sung',supplement_responded:'Sinh viên đã bổ sung',approved:'Đã duyệt V1 — hồ sơ online',rejected:'Từ chối',completed:'Đã kết thúc (dữ liệu cũ)',
  approved_v1:'Đã duyệt V1 — hồ sơ online',approved_v2:'Đã duyệt V2 — bản cứng',hard_copy_failed:'Đã từ chối bản cứng',awaiting_council:'Chờ Hội đồng',selected:'Được chọn',not_selected:'Không được chọn',
 };
-export function applicationStatusLabel(value){return applicationStates[value?.workflowStatus??value?.status]??'Chưa xác định';}
+export const onlineFilters=[['','Tất cả'],['pending','Chờ xử lý'],['supplement_responded','Sinh viên đã bổ sung'],['approved','Đã duyệt'],['rejected','Từ chối'],['withdrawn','Đã rút']];
+export const hardCopyFilters=[['','Tất cả'],['pending','Cần đối chiếu'],['approved','Đã duyệt bản cứng'],['rejected','Đã từ chối bản cứng']];
+const commonLabels={submitted:'Đã nộp',processing:'Đang xử lý',supplementing:'Cần bổ sung',approved:'Đã duyệt',rejected:'Từ chối',withdrawn:'Đã rút'};
+export function onlineStatusLabel(value){
+ const status=value?.onlineStatus??value?.status;
+ return {pending:'Chờ xét online',submitted:'Chờ xét online',processing:'Chờ xét online',supplementing:'Cần bổ sung',supplement_responded:'Sinh viên đã bổ sung',approved:'Đã duyệt online — V1',rejected:'Từ chối online',withdrawn:'Đã rút'}[status]??'Chưa xác định kết quả tiếp nhận';
+}
+export function hardCopyStatusLabel(value){return {not_transferred:'Chưa chuyển đối chiếu',pending:'Chờ đối chiếu',in_progress:'Đang đối chiếu',approved:'Đã duyệt bản cứng — V2',rejected:'Đã từ chối bản cứng'}[value?.hardCopyStatus]??'Chưa xác định kết quả bản cứng';}
+export function applicationStatusLabel(value,audience='staff'){
+ const status=value?.status??value?.workflowStatus;
+ if(audience==='student'){
+  if(status==='withdrawn')return 'Đã rút hồ sơ';
+  if(status==='rejected')return 'Hồ sơ bị từ chối';
+  if(value?.councilResult==='selected')return 'Được chọn hưởng MGHP';
+  if(value?.councilResult==='not_selected')return 'Không được chọn hưởng MGHP';
+  if(status==='approved')return 'Hồ sơ đã được duyệt — chờ kết quả xét MGHP';
+  if(value?.onlineStatus==='approved')return 'Hồ sơ online đã được duyệt — chờ đối chiếu bản cứng';
+  if(value?.onlineStatus==='supplement_responded')return 'Đã gửi bổ sung — chờ CTSV kiểm tra';
+  if(status==='supplementing')return 'Cần bổ sung hồ sơ';
+  if(status==='submitted')return 'Đã nộp hồ sơ';
+  if(status==='processing')return 'CTSV đang xét hồ sơ online';
+ }
+ return commonLabels[status]??'Chưa xác định';
+}
 export const claimLabels={
  fullName:'Họ và tên',citizenId:'Số CCCD',birthDate:'Ngày sinh',birthPlace:'Nơi sinh',
  gender:'Giới tính',ethnicityId:'Dân tộc',classId:'Lớp',studentCode:'Mã sinh viên',

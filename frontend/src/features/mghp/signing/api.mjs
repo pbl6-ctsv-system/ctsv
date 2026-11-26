@@ -9,7 +9,6 @@ export function createSigningApi(client){
   document:(id,signal)=>read('/phien-ban-van-ban/'+id,signal),
   prepare:id=>write('/phien-ban-van-ban/'+id+'/yeu-cau-ky',{}),
   sign:(id,body,tag)=>write('/yeu-cau-ky/'+id+'/gui-ky',body,tag),
-  reconcile:(id,reason,tag)=>write('/yeu-cau-ky/'+id+'/doi-soat',{reason},tag),
   bind:(minutes,id,body,tag)=>write(minutes?'/mghp/bien-ban/'+id+'/van-ban':'/mghp/phien-ban-quyet-dinh/'+id+'/van-ban',body,tag),
   async upload(file){const body=new FormData();body.set('file',file);const r=await client.request(BASE+'/tep/van-ban',{method:'POST',body});return r.json();},
   async bytes(id,signal){const r=await client.request(BASE+'/tep/'+id+'/noi-dung',{signal});return new Uint8Array(await r.arrayBuffer());},

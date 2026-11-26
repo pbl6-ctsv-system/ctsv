@@ -1,0 +1,11 @@
+{
+  "mode": "PROTOTYPE_SIMULATION_ONLY",
+  "revision": 2,
+  "images": 23,
+  "passedCases": 13,
+  "pageErrors": 0,
+  "externalRequests": 0,
+  "openFailures": 0,
+  "productionIntegration": false,
+  "historicalScriptFailures": 6
+}

@@ -13,7 +13,7 @@ import java.util.concurrent.Flow;
 import java.util.function.Function;
 import static pbl6.ctsv.shared.ca.CaProviderDtos.*;
 
-/** CA DUT v1 adapter. No lifecycle/delete methods and no automatic retry of side-effecting POST. */
+/** CA DUT v1 adapter. Owner25/11 enables renew only; no issue/delete or blind POST retry. */
 public final class CaDutClient implements AutoCloseable {
     private final URI origin;
     private final HttpClient http;
@@ -60,6 +60,30 @@ public final class CaDutClient implements AutoCloseable {
         if(!root.isArray() || root.size()>1000)throw new CaFailure("CA_SCHEMA_INVALID");
         var items=new ArrayList<Template>();for(var n:root)items.add(new Template(uuid(n,"id"),text(n,"name"),bool(n,"is_default")));
         return new Templates(normalized,items);
+    }
+    /** Explicit Admin-confirmed renewal. Submission is pending until CA processes it. */
+    public CertificateRequest renewCertificate(String email,String reason) {
+        var normalized=email(email);
+        if(reason==null||reason.isBlank()||reason.length()>1000)throw new CaFailure("CA_RENEW_INVALID");
+        var reply=post("/api/v1/certificates/requests/",encode(Map.of("request_type","renew","signer_email",normalized,"reason",reason)),"application/json");
+        try{return certificateRequest(data(parse(reply)));}catch(CaFailure e){throw new CaFailure(e.code(),201,true);}
+    }
+    public List<CertificateRequest> certificateRequests(String email,String status) {
+        var normalized=email(email);
+        if(status==null||!Set.of("pending","approved","rejected").contains(status))throw new CaFailure("CA_REQUEST_STATUS_INVALID");
+        return pages("/api/v1/certificates/requests/?user_email="+query(normalized)+"&status="+status+"&request_type=renew",n->{var request=certificateRequest(n);if(!status.equals(request.status()))throw new CaFailure("CA_SCHEMA_INVALID");return request;});
+    }
+    private CertificateRequest certificateRequest(JsonNode n) {
+        String type=text(n,"request_type"),status=text(n,"status");
+        if(!"renew".equals(type)||!Set.of("pending","approved","rejected").contains(status)||!n.path("valid_days").isIntegralNumber()||!n.path("valid_days").canConvertToInt()||n.path("valid_days").asInt()<1||n.path("valid_days").asInt()>3650)throw new CaFailure("CA_SCHEMA_INVALID");
+        return new CertificateRequest(uuid(n,"id"),uuid(n,"user"),safeProviderText(text(n,"user_display")),type,status,
+                n.hasNonNull("common_name")?safeProviderText(n.path("common_name").asText()):"",n.path("valid_days").asInt(),
+                n.hasNonNull("admin_comment")?safeProviderText(n.path("admin_comment").asText()):"",instant(n,"created_at"),n.hasNonNull("processed_at")?instant(n,"processed_at"):null);
+    }
+    private String safeProviderText(String value) {
+        if(value.length()>2000)throw new CaFailure("CA_SCHEMA_INVALID");
+        if(java.util.regex.Pattern.compile("(?i)(bearer\\s|https?://|(?:access[_-]?token|refresh[_-]?token|client[_-]?secret|password)\\s*[:=])").matcher(value).find())return "[Phản hồi đã lược bỏ thông tin nhạy cảm; đối chiếu trực tiếp CA.]";
+        return value;
     }
     private <T> List<T> pages(String route,Function<JsonNode,T> convert) {
         var start=origin.resolve(route);var next=start;var visited=new HashSet<URI>();var result=new ArrayList<T>();
@@ -178,7 +202,20 @@ public final class CaDutClient implements AutoCloseable {
     private CaFailure error(Reply reply,boolean uncertain) {
         // Allowlisted diagnostic only; never echo arbitrary CA errors or URLs/tokens.
         var raw=new String(reply.body,StandardCharsets.UTF_8);
-        return new CaFailure(raw.contains("NoSuchKey")?"CA_STORAGE_NO_SUCH_KEY":"CA_PROVIDER_REJECTED",reply.status,uncertain);
+        String code=raw.contains("NoSuchKey")?"CA_STORAGE_NO_SUCH_KEY":"CA_PROVIDER_REJECTED";
+        if(reply.status==400)try{
+            var root=json.readTree(reply.body);var fields=root.path("errors").isObject()?root.path("errors"):root;
+            if(fields.hasNonNull("category"))code="CA_CATEGORY_INVALID";
+            else if(fields.hasNonNull("certificate_id"))code="CA_CERTIFICATE_INVALID";
+            else if(fields.hasNonNull("document_id"))code="CA_DOCUMENT_NOT_FOUND";
+            else if(fields.hasNonNull("file")){
+                String message=java.text.Normalizer.normalize(fields.path("file").toString(),java.text.Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+                code=message.contains("quá lớn")||message.contains("too large")?"CA_FILE_TOO_LARGE":message.contains("no file")?"CA_PDF_MISSING":"CA_PDF_INVALID";
+            }else if(fields.hasNonNull("pos_x")||fields.hasNonNull("pos_y")||fields.hasNonNull("width")||fields.hasNonNull("height")||fields.hasNonNull("page_number"))code="CA_GEOMETRY_INVALID";
+            else if(root.path("message").asText("").toLowerCase(Locale.ROOT).contains("đang chờ"))code="CA_RENEW_PENDING";
+            else if(fields.hasNonNull("reason"))code="CA_RENEW_REASON_INVALID";
+        }catch(java.io.IOException|RuntimeException ignored){/* Keep the generic fixed code, never raw text. */}
+        return new CaFailure(code,reply.status,uncertain);
     }
     private byte[] encode(Object value){try{return json.writeValueAsBytes(value);}catch(IOException e){throw new CaFailure("CA_REQUEST_INVALID");}}
     private JsonNode parse(Reply reply){if(!reply.type.toLowerCase(Locale.ROOT).contains("json"))throw new CaFailure("CA_SCHEMA_INVALID",reply.status,false);try{return json.readTree(reply.body);}catch(IOException e){throw new CaFailure("CA_SCHEMA_INVALID",reply.status,false);}}

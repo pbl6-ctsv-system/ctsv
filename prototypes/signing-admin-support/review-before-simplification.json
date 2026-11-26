@@ -1,0 +1,560 @@
+{
+  "mode": "PROTOTYPE_SIMULATION_ONLY",
+  "origin": "http://127.0.0.1:5182",
+  "steps": [
+    {
+      "step": 1,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Danh sách sự cố ký số",
+      "action": "Admin mở Xử lý sự cố ký số. Sáu loại lỗi, không có phân công nhiều Admin.",
+      "file": "screenshots/01-danh-sach-su-co-ky-so.png"
+    },
+    {
+      "step": 2,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Chi tiết NoSuchKey và thông tin thao tác",
+      "action": "Nhấn Xem xử lý: thấy role, tài khoản, văn bản, API, lỗi và thời gian.",
+      "file": "screenshots/02-chi-tiet-nosuchkey-va-thong-tin-thao-tac.png"
+    },
+    {
+      "step": 3,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Bắt đầu xử lý NoSuchKey",
+      "action": "Admin bấm Bắt đầu xử lý. Chỉ đổi trạng thái phiếu, không gửi ký.",
+      "file": "screenshots/03-bat-dau-xu-ly-nosuchkey.png"
+    },
+    {
+      "step": 4,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Nội dung sao chép gửi CA hoặc kỹ thuật",
+      "action": "Có vai trò, tài khoản, tài liệu, phiên bản, API, thời gian và lỗi. Không tự kết luận bên chịu trách nhiệm.",
+      "file": "screenshots/04-noi-dung-sao-chep-gui-ca-hoac-ky-thuat.png"
+    },
+    {
+      "step": 5,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Đã sao chép thông tin hỗ trợ",
+      "action": "Admin có thể dán nội dung sang email hoặc ứng dụng trao đổi bên ngoài.",
+      "file": "screenshots/05-da-sao-chep-thong-tin-ho-tro.png"
+    },
+    {
+      "step": 6,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Nhập ghi chú liên hệ CA",
+      "action": "Ghi nội dung xử lý và tham chiếu trao đổi; không cần chat tích hợp.",
+      "file": "screenshots/06-nhap-ghi-chu-lien-he-ca.png"
+    },
+    {
+      "step": 7,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Ghi chú và lịch sử đã lưu",
+      "action": "Phiếu vẫn Đang xử lý. Lưu ghi chú không tự làm văn bản ký xong.",
+      "file": "screenshots/07-ghi-chu-va-lich-su-da-luu.png"
+    },
+    {
+      "step": 8,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "CA chưa khắc phục vẫn giữ chờ",
+      "action": "Kiểm tra lại khi CA vẫn lỗi. Không cho ký lại hoặc ép hoàn tất.",
+      "file": "screenshots/08-ca-chua-khac-phuc-van-giu-cho.png"
+    },
+    {
+      "step": 9,
+      "group": "02 · Góc nhìn người ký",
+      "title": "Chuyên viên chỉ thấy Cần xử lý thêm",
+      "action": "CV thấy thông báo chờ quản trị và tiến trình, không thấy lỗi kỹ thuật hoặc nút phục hồi.",
+      "file": "screenshots/09-chuyen-vien-chi-thay-can-xu-ly-them.png"
+    },
+    {
+      "step": 10,
+      "group": "02 · Góc nhìn người ký",
+      "title": "Danh sách tài liệu của Phó phòng",
+      "action": "Phó phòng chỉ có danh sách tài liệu, không có menu quản trị.",
+      "file": "screenshots/10-danh-sach-tai-lieu-cua-pho-phong.png"
+    },
+    {
+      "step": 11,
+      "group": "02 · Góc nhìn người ký",
+      "title": "Phó phòng chờ Admin hỗ trợ",
+      "action": "Không hiển thị mã lỗi Cloudinary/SQL cho người ký.",
+      "file": "screenshots/11-pho-phong-cho-admin-ho-tro.png"
+    },
+    {
+      "step": 12,
+      "group": "02 · Góc nhìn người ký",
+      "title": "Phó Hiệu trưởng xem bước trước đang chờ",
+      "action": "PHT xem trạng thái, chưa được ký khi bước trước chưa có PDF lưu đủ.",
+      "file": "screenshots/12-pho-hieu-truong-xem-buoc-truoc-dang-cho.png"
+    },
+    {
+      "step": 13,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "CA đã khắc phục đủ điều kiện nhận lại PDF",
+      "action": "Chọn kịch bản mô phỏng Dịch vụ đã khắc phục rồi bấm Kiểm tra lại.",
+      "file": "screenshots/13-ca-da-khac-phuc-du-dieu-kien-nhan-lai-pdf.png"
+    },
+    {
+      "step": 14,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Xác nhận phục hồi PDF không ký lại",
+      "action": "Hộp xác nhận chỉ tiếp tục tải kiểm lưu của lượt ký cũ.",
+      "file": "screenshots/14-xac-nhan-phuc-hoi-pdf-khong-ky-lai.png"
+    },
+    {
+      "step": 15,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Đang phục hồi PDF mô phỏng",
+      "action": "Có loading rõ, chặn bấm trùng trong thao tác phục hồi.",
+      "file": "screenshots/15-dang-phuc-hoi-pdf-mo-phong.png"
+    },
+    {
+      "step": 16,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "NoSuchKey đã phục hồi đúng kết quả",
+      "action": "PDF đã lưu đủ, tự kết thúc phiếu; không có nút đánh dấu ký xong tùy ý.",
+      "file": "screenshots/16-nosuchkey-da-phuc-hoi-dung-ket-qua.png"
+    },
+    {
+      "step": 17,
+      "group": "02 · Góc nhìn người ký",
+      "title": "Chuyên viên thấy đã chuyển chờ PHT",
+      "action": "Người ký gốc nhận tiến trình sau Admin phục hồi. Không tự ký bước tiếp theo.",
+      "file": "screenshots/17-chuyen-vien-thay-da-chuyen-cho-pht.png"
+    },
+    {
+      "step": 18,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Lỗi Cloudinary PDF còn trên server",
+      "action": "Admin phân biệt bản chờ trên server với Cloudinary và SQL chưa hoàn tất.",
+      "file": "screenshots/18-loi-cloudinary-pdf-con-tren-server.png"
+    },
+    {
+      "step": 19,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Được phép xóa dù chưa lưu đủ",
+      "action": "Hộp xác nhận nêu rủi ro; nút Xóa vẫn được phép theo cơ chế linh hoạt. Chưa xóa ở bước này.",
+      "file": "screenshots/19-duoc-phep-xoa-du-chua-luu-du.png"
+    },
+    {
+      "step": 20,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Tiếp tục lưu PDF có sẵn trên server",
+      "action": "Không yêu cầu chuyên viên tải lại hoặc tạo chữ ký mới.",
+      "file": "screenshots/20-tiep-tuc-luu-pdf-co-san-tren-server.png"
+    },
+    {
+      "step": 21,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Cloudinary SQL thành công vẫn giữ bản chờ",
+      "action": "File từng lỗi không bị tự dọn sau khi phục hồi.",
+      "file": "screenshots/21-cloudinary-sql-thanh-cong-van-giu-ban-cho.png"
+    },
+    {
+      "step": 22,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Danh sách PDF trên ổ đĩa server",
+      "action": "Có file chờ lưu, file đã lưu đủ và file cần đối chiếu; Admin tự quản lý.",
+      "file": "screenshots/22-danh-sach-pdf-tren-o-dia-server.png"
+    },
+    {
+      "step": 23,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Xác nhận dọn bản chờ đã lưu đủ",
+      "action": "Chỉ xóa bản trên server, không xóa bản Cloudinary hoặc lịch sử.",
+      "file": "screenshots/23-xac-nhan-don-ban-cho-da-luu-du.png"
+    },
+    {
+      "step": 24,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Đã dọn bản chờ giữ nguyên kết quả ký",
+      "action": "Dòng bản chờ được bỏ khỏi danh sách đang giữ, bản ký Cloudinary/SQL vẫn còn.",
+      "file": "screenshots/24-da-don-ban-cho-giu-nguyen-ket-qua-ky.png"
+    },
+    {
+      "step": 25,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "SQL lỗi sau khi Cloudinary đã có PDF",
+      "action": "Admin thấy Cloudinary đã lưu, SQL chưa ghi đủ và bản server vẫn còn.",
+      "file": "screenshots/25-sql-loi-sau-khi-cloudinary-da-co-pdf.png"
+    },
+    {
+      "step": 26,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Xác nhận chỉ hoàn thiện phần SQL",
+      "action": "Thông tin chỉ rõ tiếp tục liên kết và trạng thái SQL, không ký hoặc upload trùng.",
+      "file": "screenshots/26-xac-nhan-chi-hoan-thien-phan-sql.png"
+    },
+    {
+      "step": 27,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Đã hoàn thiện SQL kết quả được bảo toàn",
+      "action": "Phiếu tự kết thúc theo kết quả; bản server từng lỗi tiếp tục được giữ.",
+      "file": "screenshots/27-da-hoan-thien-sql-ket-qua-duoc-bao-toan.png"
+    },
+    {
+      "step": 28,
+      "group": "03 · Cloudinary SQL và PDF lưu chờ",
+      "title": "Hash không khớp không được bỏ qua",
+      "action": "Không quy ngay lỗi cho CA hay CTSV, không có nút bỏ qua hash; giữ file để đối chiếu.",
+      "file": "screenshots/28-hash-khong-khop-khong-duoc-bo-qua.png"
+    },
+    {
+      "step": 29,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Danh sách chứng thư và hạn giả lập",
+      "action": "Hai email TEST, một dòng cho mỗi email; có chứng thư sắp hết hạn và hết hạn để review.",
+      "file": "screenshots/29-danh-sach-chung-thu-va-han-gia-lap.png"
+    },
+    {
+      "step": 30,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Chi tiết chứng thư còn chín ngày",
+      "action": "Thấy chủ chứng thư, cách dùng, ngày hết hạn và lần kiểm. Cảnh báo không tự chặn ký.",
+      "file": "screenshots/30-chi-tiet-chung-thu-con-chin-ngay.png"
+    },
+    {
+      "step": 31,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Kiểm tra lại không tự gia hạn",
+      "action": "Kịch bản CA chưa cập nhật: hạn vẫn như cũ.",
+      "file": "screenshots/31-kiem-tra-lai-khong-tu-gia-han.png"
+    },
+    {
+      "step": 32,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Hướng dẫn gia hạn đầy đủ các bước",
+      "action": "Nêu rõ liên hệ hoặc gửi đề nghị, chờ CA duyệt, đọc lại cert; không tự cấp hạn.",
+      "file": "screenshots/32-huong-dan-gia-han-day-du-cac-buoc.png"
+    },
+    {
+      "step": 33,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Ghi nhận đã liên hệ CA về chứng thư",
+      "action": "Ghi chú không làm chứng thư hợp lệ hoặc thay hạn.",
+      "file": "screenshots/33-ghi-nhan-da-lien-he-ca-ve-chung-thu.png"
+    },
+    {
+      "step": 34,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Lịch sử liên hệ chứng thư",
+      "action": "Thông tin liên hệ được lưu và ngày hết hạn vẫn giữ nguyên.",
+      "file": "screenshots/34-lich-su-lien-he-chung-thu.png"
+    },
+    {
+      "step": 35,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Gửi đề nghị gia hạn từ CTSV",
+      "action": "Dialog mô phỏng cho thấy cert cũ, hạn hiện tại, lý do và tác động khi CA duyệt.",
+      "file": "screenshots/35-gui-de-nghi-gia-han-tu-ctsv.png"
+    },
+    {
+      "step": 36,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Đang gửi đề nghị gia hạn mô phỏng",
+      "action": "Nút được khóa trong khi tiếp nhận, không có API thật.",
+      "file": "screenshots/36-dang-gui-de-nghi-gia-han-mo-phong.png"
+    },
+    {
+      "step": 37,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Đã gửi và chờ CA DUT duyệt",
+      "action": "Không đổi ngày hết hạn chỉ vì gửi thành công.",
+      "file": "screenshots/37-da-gui-va-cho-ca-dut-duyet.png"
+    },
+    {
+      "step": 38,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Kiểm tra yêu cầu vẫn đang chờ",
+      "action": "Khi CA chưa duyệt thì giữ pending, không gửi một yêu cầu mới.",
+      "file": "screenshots/38-kiem-tra-yeu-cau-van-dang-cho.png"
+    },
+    {
+      "step": 39,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "CA đã duyệt và có chứng thư mới",
+      "action": "Chỉ kịch bản CA đã cập nhật mới ghi nhận cert mới. Serial cũ có trong lịch sử.",
+      "file": "screenshots/39-ca-da-duyet-va-co-chung-thu-moi.png"
+    },
+    {
+      "step": 40,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Chứng thư đã hết hạn cần xử lý",
+      "action": "Cảnh báo hết hạn dùng dữ liệu mô phỏng, không yêu cầu người ký tự sửa kỹ thuật.",
+      "file": "screenshots/40-chung-thu-da-het-han-can-xu-ly.png"
+    },
+    {
+      "step": 41,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "CA không kết nối được giữ quan sát cũ",
+      "action": "Lần kiểm mới thất bại không tự kết luận chứng thư thay đổi trạng thái.",
+      "file": "screenshots/41-ca-khong-ket-noi-duoc-giu-quan-sat-cu.png"
+    },
+    {
+      "step": 42,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Kiểm tra tất cả cập nhật hai nguồn",
+      "action": "Hai email duy nhất được kiểm lại trong mô phỏng.",
+      "file": "screenshots/42-kiem-tra-tat-ca-cap-nhat-hai-nguon.png"
+    },
+    {
+      "step": 43,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Lỗi 400 category chuyển Admin",
+      "action": "Người ký không nhập category, nên đây là sự cố cần Admin kiểm tra dù HTTP400.",
+      "file": "screenshots/43-loi-400-category-chuyen-admin.png"
+    },
+    {
+      "step": 44,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Mở lại bước ký sau khắc phục cấu hình",
+      "action": "Admin không ký thay. Người được giao phải chọn vùng và xác nhận lại.",
+      "file": "screenshots/44-mo-lai-buoc-ky-sau-khac-phuc-cau-hinh.png"
+    },
+    {
+      "step": 45,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Đã mở bước nhưng chưa có chữ ký mới",
+      "action": "Phiếu đã xử lý, còn tài liệu chờ chính người ký.",
+      "file": "screenshots/45-da-mo-buoc-nhung-chua-co-chu-ky-moi.png"
+    },
+    {
+      "step": 46,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Người ký thấy đã được mở lại",
+      "action": "Không có nút phục hồi kỹ thuật; chuyên viên có thể thực hiện lại bước của mình.",
+      "file": "screenshots/46-nguoi-ky-thay-da-duoc-mo-lai.png"
+    },
+    {
+      "step": 47,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Người ký xác nhận đúng tài liệu và vùng",
+      "action": "Đây chỉ mô phỏng thao tác ký, không có CA hoặc chữ ký thật.",
+      "file": "screenshots/47-nguoi-ky-xac-nhan-dung-tai-lieu-va-vung.png"
+    },
+    {
+      "step": 48,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Lỗi 400 người dùng sửa được bằng tiếng Việt",
+      "action": "Sai vùng ký: chỉ rõ cần chọn lại vùng trong trang. Không đưa mã lỗi hệ thống vào thông báo.",
+      "file": "screenshots/48-loi-400-nguoi-dung-sua-duoc-bang-tieng-viet.png"
+    },
+    {
+      "step": 49,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Sửa vùng ký và tiếp tục không nhập lại hết",
+      "action": "Thông báo lỗi biến mất sau chọn lại, dữ liệu tài liệu vẫn giữ.",
+      "file": "screenshots/49-sua-vung-ky-va-tiep-tuc-khong-nhap-lai-het.png"
+    },
+    {
+      "step": 50,
+      "group": "05 · Lỗi 400 và mở lại cho người ký",
+      "title": "Đã tiếp nhận ký nền người dùng có thể rời trang",
+      "action": "Mô phỏng nhận yêu cầu; không giả chữ ký đã hoàn tất.",
+      "file": "screenshots/50-da-tiep-nhan-ky-nen-nguoi-dung-co-the-roi-trang.png"
+    },
+    {
+      "step": 51,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Chứng thư đã khắc phục mở lại đúng bước PHT",
+      "action": "Chỉ mở cho đúng người được giao, không sửa chữ ký lịch sử hoặc tự ký.",
+      "file": "screenshots/51-chung-thu-da-khac-phuc-mo-lai-dung-buoc-pht.png"
+    },
+    {
+      "step": 52,
+      "group": "02 · Góc nhìn người ký",
+      "title": "PHT thấy quyền ký lại sau xử lý chứng thư",
+      "action": "Nút cần chọn vùng mới. Không có thông tin kỹ thuật Admin trên trang người ký.",
+      "file": "screenshots/52-pht-thay-quyen-ky-lai-sau-xu-ly-chung-thu.png"
+    },
+    {
+      "step": 53,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Mobile chi tiết sự cố và thao tác",
+      "action": "Khung xử lý và nút chính lên trước; không tràn ngang khi API và tên file dài.",
+      "file": "screenshots/53-mobile-chi-tiet-su-co-va-thao-tac.png"
+    },
+    {
+      "step": 54,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Mobile PDF lưu chờ",
+      "action": "Bảng đổi sang thông tin theo từng file, nút xóa rõ ngữ cảnh.",
+      "file": "screenshots/54-mobile-pdf-luu-cho.png"
+    },
+    {
+      "step": 55,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Lịch sử bản chờ đã xóa",
+      "action": "Admin vẫn tìm được bản đã dọn trong demo; không có nút khôi phục giả.",
+      "file": "screenshots/55-lich-su-ban-cho-da-xoa.png"
+    },
+    {
+      "step": 56,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Mobile quản lý chứng thư",
+      "action": "Thông tin chứng thư và hành động vẫn dễ thao tác.",
+      "file": "screenshots/56-mobile-quan-ly-chung-thu.png"
+    },
+    {
+      "step": 57,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Tìm kiếm không có kết quả",
+      "action": "Empty state có hướng tiếp tục, khác lỗi tải hệ thống.",
+      "file": "screenshots/57-tim-kiem-khong-co-ket-qua.png"
+    },
+    {
+      "step": 58,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Tổng kết các sự cố sau xử lý",
+      "action": "Danh sách phản ánh đúng sự cố đã xử lý và hash vẫn chờ đối chiếu.",
+      "file": "screenshots/58-tong-ket-cac-su-co-sau-xu-ly.png"
+    },
+    {
+      "step": 59,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Admin có thể xóa bản chờ chưa lưu đủ",
+      "action": "Không khóa nút xóa theo Cloudinary hoặc SQL. Có thông báo tác động trước khi xác nhận.",
+      "file": "screenshots/59-admin-co-the-xoa-ban-cho-chua-luu-du.png"
+    },
+    {
+      "step": 60,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Bản chờ bị xóa sự cố vẫn chưa hoàn tất",
+      "action": "Giữ lịch sử và cảnh báo không còn bản trên server. Không tự coi sự cố đã giải quyết.",
+      "file": "screenshots/60-ban-cho-bi-xoa-su-co-van-chua-hoan-tat.png"
+    },
+    {
+      "step": 61,
+      "group": "06 · Mobile và các trạng thái bổ sung",
+      "title": "Tab Đã xử lý chỉ có các sự cố đã khắc phục",
+      "action": "Lọc phiếu sự cố tách khỏi kết quả ký của tài liệu.",
+      "file": "screenshots/61-tab-da-xu-ly-chi-co-cac-su-co-da-khac-phuc.png"
+    },
+    {
+      "step": 62,
+      "group": "01 · Sự cố và liên hệ CA",
+      "title": "Chẩn đoán tài liệu và biên nhận đúng lượt",
+      "action": "Mở phần chi tiết kỹ thuật: mã văn bản, phiên bản, CA document và receipt; không có thông tin bí mật.",
+      "file": "screenshots/62-chan-doan-tai-lieu-va-bien-nhan-dung-luot.png"
+    },
+    {
+      "step": 63,
+      "group": "04 · Quản lý chứng thư và gia hạn",
+      "title": "Chi tiết kỹ thuật công khai của chứng thư",
+      "action": "Mở phần serial và truy vấn status active; không có private key hoặc mật khẩu.",
+      "file": "screenshots/63-chi-tiet-ky-thuat-cong-khai-cua-chung-thu.png"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Admin tìm được sự cố và thấy đúng ngữ cảnh",
+      "result": "PASS"
+    },
+    {
+      "name": "Sao chép đủ ngữ cảnh sự cố, không cần nhập ID thủ công",
+      "result": "PASS"
+    },
+    {
+      "name": "NoSuchKey giữ biên nhận và không mở bước ký khi CA chưa khắc phục",
+      "result": "PASS"
+    },
+    {
+      "name": "CV PP PHT không thấy chẩn đoán và thao tác Admin",
+      "result": "PASS"
+    },
+    {
+      "name": "Phục hồi receipt thành công chuyển bước, giữ PDF chờ Admin xóa",
+      "result": "PASS"
+    },
+    {
+      "name": "Không khóa Admin xóa theo trạng thái Cloudinary hoặc SQL",
+      "result": "PASS"
+    },
+    {
+      "name": "PDF từng lỗi vẫn giữ sau khi Cloudinary và SQL hoàn tất",
+      "result": "PASS"
+    },
+    {
+      "name": "Xóa bản chờ không thay đổi kết quả ký và lịch sử",
+      "result": "PASS"
+    },
+    {
+      "name": "SQL sau upload phục hồi đúng phần còn thiếu",
+      "result": "PASS"
+    },
+    {
+      "name": "Hash không đạt giữ chờ hỗ trợ, không giả hoàn tất",
+      "result": "PASS"
+    },
+    {
+      "name": "Kiểm tra lại chứng thư không tự tăng thời hạn",
+      "result": "PASS"
+    },
+    {
+      "name": "Gia hạn pending không đổi hạn hoặc tạo yêu cầu trùng",
+      "result": "PASS"
+    },
+    {
+      "name": "Chứng thư mới chỉ có sau kết quả CA và lần kiểm lại",
+      "result": "PASS"
+    },
+    {
+      "name": "Lỗi kết nối không bị hiểu thành hết hạn hoặc đã gia hạn",
+      "result": "PASS"
+    },
+    {
+      "name": "Kiểm tra tất cả cập nhật đúng tập người ký",
+      "result": "PASS"
+    },
+    {
+      "name": "Lỗi400 có hướng sửa và tiếp tục được, accepted không bị ghi thành completed",
+      "result": "PASS"
+    },
+    {
+      "name": "Khắc phục chứng thư trả đúng người ký, không tự ký",
+      "result": "PASS"
+    },
+    {
+      "name": "Mobile390 không tràn ngang ở ba màn Admin",
+      "result": "PASS"
+    },
+    {
+      "name": "Tìm kiếm sửa được và refresh giữ trạng thái mô phỏng",
+      "result": "PASS"
+    },
+    {
+      "name": "Xóa bản chưa lưu đủ được phép và không giả kết quả thành công",
+      "result": "PASS"
+    },
+    {
+      "name": "Count và bộ lọc phiếu khớp trạng thái sau xử lý",
+      "result": "PASS"
+    },
+    {
+      "name": "Mobile đã rà lại: thông tin lỗi đứng trước thao tác, trường API dễ đọc",
+      "result": "PASS"
+    },
+    {
+      "name": "Các phần chi tiết mở được và không cần nhập thông tin kỹ thuật",
+      "result": "PASS"
+    },
+    {
+      "name": "Gallery mở từng ảnh và điều hướng theo trình tự",
+      "result": "PASS"
+    },
+    {
+      "name": "Đặt lại demo chỉ đổi dữ liệu prototype, không xóa storage khác",
+      "result": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "failures": [
+    {
+      "phase": "users",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-action=\"recover\"][data-id=\"SC-004\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button disabled class=\"wide\" type=\"button\" data-id=\"SC-004\" data-action=\"recover\">Cho phép người ký thực hiện lại</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.act (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:15:204)\n    at Module.users (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough-steps.mjs?run=5:111:141)\n    at async run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:149)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:432",
+      "resolved": true,
+      "classification": "SCRIPT_SCENARIO_SETUP",
+      "resolution": "Script còn ở kịch bản vùng sai khi quay lại chứng thư. Chuyển đúng kịch bản Dịch vụ đã khắc phục, chạy usersFinish trong cùng browser context đạt. Không force-click hoặc thay expected."
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "mode": "PROTOTYPE_SIMULATION_ONLY",
+  "revision": 2,
+  "origin": "http://127.0.0.1:5182",
+  "steps": [
+    {
+      "step": 1,
+      "group": "01 · Danh sách và thông tin sự cố",
+      "title": "Danh sách sự cố giữ nguyên bố cục",
+      "action": "Giữ bảng, bộ lọc trạng thái và tìm kiếm mà owner đã duyệt.",
+      "file": "screenshots/r2-01-danh-sach-su-co-giu-nguyen-bo-cuc.png"
+    },
+    {
+      "step": 2,
+      "group": "01 · Danh sách và thông tin sự cố",
+      "title": "Chi tiết gọn ba phần và hai nút",
+      "action": "Chỉ còn thông tin sự cố, ghi chú, lịch sử; Bắt đầu xử lý và Sao chép.",
+      "file": "screenshots/r2-02-chi-tiet-gon-ba-phan-va-hai-nut.png"
+    },
+    {
+      "step": 3,
+      "group": "01 · Danh sách và thông tin sự cố",
+      "title": "Thông tin kỹ thuật cần gửi CA",
+      "action": "Mở chi tiết mã tài liệu, phiên bản và biên nhận để Admin trao đổi bên ngoài.",
+      "file": "screenshots/r2-03-thong-tin-ky-thuat-can-gui-ca.png"
+    },
+    {
+      "step": 4,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Bắt đầu đổi ngay sang Kết thúc xử lý",
+      "action": "Ghi trạng thái Đang xử lý và thời điểm vào lịch sử.",
+      "file": "screenshots/r2-04-bat-dau-doi-ngay-sang-ket-thuc-xu-ly.png"
+    },
+    {
+      "step": 5,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Sao chép thông tin hỗ trợ",
+      "action": "Thông tin đủ người thao tác tài liệu API lỗi và thời điểm; Admin gửi bằng ứng dụng khác.",
+      "file": "screenshots/r2-05-sao-chep-thong-tin-ho-tro.png"
+    },
+    {
+      "step": 6,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Nhập ghi chú xử lý bên ngoài",
+      "action": "Không bắt nhập thông số khôi phục hoặc thực hiện thao tác kỹ thuật trong UI.",
+      "file": "screenshots/r2-06-nhap-ghi-chu-xu-ly-ben-ngoai.png"
+    },
+    {
+      "step": 7,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Lưu ghi chú kèm lịch sử",
+      "action": "Giữ nội dung ghi chú người ghi và thời điểm; phiếu vẫn Đang xử lý.",
+      "file": "screenshots/r2-07-luu-ghi-chu-kem-lich-su.png"
+    },
+    {
+      "step": 8,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Kết thúc xử lý chỉ đóng phiếu",
+      "action": "Đã xử lý, có thời gian kết thúc; thông tin lỗi gốc vẫn giữ để tra cứu.",
+      "file": "screenshots/r2-08-ket-thuc-xu-ly-chi-dong-phieu.png"
+    },
+    {
+      "step": 9,
+      "group": "02 · Bắt đầu ghi chú và kết thúc",
+      "title": "Tra cứu sự cố đã kết thúc",
+      "action": "Sự cố chuyển sang mục Đã xử lý, vẫn mở lại xem thông tin và lịch sử.",
+      "file": "screenshots/r2-09-tra-cuu-su-co-da-ket-thuc.png"
+    },
+    {
+      "step": 10,
+      "group": "03 · Trạng thái tài liệu độc lập",
+      "title": "Đóng phiếu không tự làm tài liệu ký xong",
+      "action": "Kết quả ký và PDF lấy từ dữ liệu thực tế; nút Kết thúc chỉ ghi nhận xử lý của Admin.",
+      "file": "screenshots/r2-10-dong-phieu-khong-tu-lam-tai-lieu-ky-xong.png"
+    },
+    {
+      "step": 11,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Thông tin lỗi Lưu Cloudinary",
+      "action": "Cùng bố cục thông tin ghi chú lịch sử; không có công cụ phục hồi theo từng loại lỗi.",
+      "file": "screenshots/r2-11-thong-tin-loi-luu-cloudinary.png"
+    },
+    {
+      "step": 12,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Thông tin lỗi Ghi kết quả SQL",
+      "action": "Cùng bố cục thông tin ghi chú lịch sử; không có công cụ phục hồi theo từng loại lỗi.",
+      "file": "screenshots/r2-12-thong-tin-loi-ghi-ket-qua-sql.png"
+    },
+    {
+      "step": 13,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Thông tin lỗi Kiểm tra chứng thư",
+      "action": "Cùng bố cục thông tin ghi chú lịch sử; không có công cụ phục hồi theo từng loại lỗi.",
+      "file": "screenshots/r2-13-thong-tin-loi-kiem-tra-chung-thu.png"
+    },
+    {
+      "step": 14,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Lỗi400 cũng chỉ Bắt đầu và Kết thúc",
+      "action": "Cùng bố cục thông tin ghi chú lịch sử; không có công cụ phục hồi theo từng loại lỗi.",
+      "file": "screenshots/r2-14-loi400-cung-chi-bat-dau-va-ket-thuc.png"
+    },
+    {
+      "step": 15,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Lỗi400 đang xử lý",
+      "action": "Không có nút mở lại bước ký hoặc sửa tham số; Admin xử lý bên ngoài rồi kết thúc.",
+      "file": "screenshots/r2-15-loi400-dang-xu-ly.png"
+    },
+    {
+      "step": 16,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Kết thúc lỗi400",
+      "action": "Chỉ ghi nhận phiếu Đã xử lý, không tự gọi upload ký hay thay đổi dữ liệu tài liệu.",
+      "file": "screenshots/r2-16-ket-thuc-loi400.png"
+    },
+    {
+      "step": 17,
+      "group": "04 · Cùng một cách xử lý mọi sự cố",
+      "title": "Thông tin lỗi Kiểm tra PDF kết quả",
+      "action": "Cùng bố cục thông tin ghi chú lịch sử; không có công cụ phục hồi theo từng loại lỗi.",
+      "file": "screenshots/r2-17-thong-tin-loi-kiem-tra-pdf-ket-qua.png"
+    },
+    {
+      "step": 18,
+      "group": "05 · Mobile",
+      "title": "Mobile thông tin sự cố và thao tác",
+      "action": "Thông tin lỗi đứng trước thao tác, có đầy đủ ghi chú và lịch sử bên dưới.",
+      "file": "screenshots/r2-18-mobile-thong-tin-su-co-va-thao-tac.png"
+    },
+    {
+      "step": 19,
+      "group": "05 · Mobile",
+      "title": "Mobile nút Kết thúc dễ tìm",
+      "action": "Sau khi bắt đầu chỉ còn Kết thúc xử lý và Sao chép ở khung hành động.",
+      "file": "screenshots/r2-19-mobile-nut-ket-thuc-de-tim.png"
+    },
+    {
+      "step": 20,
+      "group": "05 · Mobile",
+      "title": "Mobile đã kết thúc vẫn giữ lịch sử",
+      "action": "Không thêm bước kiểm tra hoặc hộp nhập bắt buộc.",
+      "file": "screenshots/r2-20-mobile-da-ket-thuc-van-giu-lich-su.png"
+    },
+    {
+      "step": 21,
+      "group": "06 · Chứng thư giữ nguyên",
+      "title": "Danh sách chứng thư không thay đổi",
+      "action": "Giữ các chức năng kiểm tra và gửi yêu cầu gia hạn đã trao đổi.",
+      "file": "screenshots/r2-21-danh-sach-chung-thu-khong-thay-doi.png"
+    },
+    {
+      "step": 22,
+      "group": "06 · Chứng thư giữ nguyên",
+      "title": "Xác nhận gửi đề nghị renew",
+      "action": "Chứng thư vẫn có luồng gửi đề nghị gia hạn chờ CA duyệt; lần này chỉ mô phỏng.",
+      "file": "screenshots/r2-22-xac-nhan-gui-de-nghi-renew.png"
+    },
+    {
+      "step": 23,
+      "group": "06 · Chứng thư giữ nguyên",
+      "title": "Đã gửi đề nghị chờ CA duyệt",
+      "action": "Ngày hết hạn chưa đổi; không có API CA thật được gọi.",
+      "file": "screenshots/r2-23-da-gui-de-nghi-cho-ca-duyet.png"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Danh sách giữ cột và sáu sự cố mô phỏng",
+      "result": "PASS"
+    },
+    {
+      "name": "Chi tiết bỏ tiến độ ký PDF và toàn bộ nút phục hồi riêng",
+      "result": "PASS"
+    },
+    {
+      "name": "Bắt đầu chuyển trạng thái và ghi lịch sử một lần",
+      "result": "PASS"
+    },
+    {
+      "name": "Sao chép vào clipboard đủ ngữ cảnh và biên nhận gốc",
+      "result": "PASS"
+    },
+    {
+      "name": "Ghi chú trạng thái và lịch sử giữ sau refresh",
+      "result": "PASS"
+    },
+    {
+      "name": "Kết thúc lưu phiếu và thời điểm không tự đổi ký Cloudinary SQL",
+      "result": "PASS"
+    },
+    {
+      "name": "Bộ lọc danh sách cập nhật sau kết thúc",
+      "result": "PASS"
+    },
+    {
+      "name": "Góc nhìn người ký không bị giả hoàn tất khi chỉ đóng phiếu",
+      "result": "PASS"
+    },
+    {
+      "name": "Cloudinary SQL chứng thư hash và400 dùng cùng giao diện đơn giản",
+      "result": "PASS"
+    },
+    {
+      "name": "Kết thúc sự cố không tự sửa dữ liệu PDF hoặc mở lại ký",
+      "result": "PASS"
+    },
+    {
+      "name": "Mobile bắt đầu kết thúc và không tràn ngang",
+      "result": "PASS"
+    },
+    {
+      "name": "Chứng thư renew mô phỏng vẫn gửi chờ và không tự gia hạn",
+      "result": "PASS"
+    },
+    {
+      "name": "Gallery mới mở ảnh và đi tới lui đúng trình tự",
+      "result": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "failures": [
+    {
+      "phase": "incidents",
+      "message": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'YÊU CẦU HỖ TRỢ KÝ SỐ — SC-001 [DỮ LIỆU MÔ PHỎNG]\\r\\n' +\n+   'Văn bản: Biên bản xét MGHP · Học kỳ I\\r\\n' +\n+   'Mã / phiên bản: BB-MGHP-2026-01 / v1\\r\\n' +\n+   'Đợt / học kỳ: Đợt 1 · Học kỳ I 2026–2027\\r\\n' +\n+   'Người thao tác: Nguyễn Minh Anh\\r\\n' +\n+   'Vai trò: Chuyên viên MGHP\\r\\n' +\n+   'Tài khoản CTSV: chuyenvien.demo\\r\\n' +\n+   'Thời điểm (Việt Nam): 14:05 25/11/26\\r\\n' +\n+   'Bước gặp lỗi: Tải PDF sau ký\\r\\n' +\n+   'API / tác vụ: GET /api/v1/documents/DEMO-DOC-001/view-file/\\r\\n' +\n+   'HTTP / kết quả kiểm tra: 404\\r\\n' +\n+   'Mã lỗi: NoSuchKey\\r\\n' +\n+   'Nội dung: CA đã báo ký thành công. Chưa tải được PDF kết quả từ kho tệp của CA.\\r\\n' +\n+   'CA báo ký: Thành công\\r\\n' +\n+   'PDF: tải chưa được; Cloudinary chưa lưu; SQL chưa ghi đủ\\r\\n' +\n+   'Tài liệu CA: DEMO-DOC-001\\r\\n' +\n+   'Biên nhận: DEMO-SIGN-001\\r\\n' +\n+   'Bên cần xử lý: Admin xác minh, chưa tự quy trách nhiệm.\\r\\n' +\n+   'Đề nghị kiểm tra: Khôi phục đúng PDF đã ký / bước lưu còn thiếu, không ký lại.\\r\\n' +\n- 'YÊU CẦU HỖ TRỢ KÝ SỐ — SC-001 [DỮ LIỆU MÔ PHỎNG]\\n' +\n-   'Văn bản: Biên bản xét MGHP · Học kỳ I\\n' +\n-   'Mã / phiên bản: BB-MGHP-2026-01 / v1\\n' +\n-   'Đợt / học kỳ: Đợt 1 · Học kỳ I 2026–2027\\n' +\n-   'Người thao tác: Nguyễn Minh Anh\\n' +\n-   'Vai trò: Chuyên viên MGHP\\n' +\n-   'Tài khoản CTSV: chuyenvien.demo\\n' +\n-   'Thời điểm (Việt Nam): 14:05 25/11/26\\n' +\n-   'Bước gặp lỗi: Tải PDF sau ký\\n' +\n-   'API / tác vụ: GET /api/v1/documents/DEMO-DOC-001/view-file/\\n' +\n-   'HTTP / kết quả kiểm tra: 404\\n' +\n-   'Mã lỗi: NoSuchKey\\n' +\n-   'Nội dung: CA đã báo ký thành công. Chưa tải được PDF kết quả từ kho tệp của CA.\\n' +\n-   'CA báo ký: Thành công\\n' +\n-   'PDF: tải chưa được; Cloudinary chưa lưu; SQL chưa ghi đủ\\n' +\n-   'Tài liệu CA: DEMO-DOC-001\\n' +\n-   'Biên nhận: DEMO-SIGN-001\\n' +\n-   'Bên cần xử lý: Admin xác minh, chưa tự quy trách nhiệm.\\n' +\n-   'Đề nghị kiểm tra: Khôi phục đúng PDF đã ký / bước lưu còn thiếu, không ký lại.\\n' +\n    'Không bao gồm token, mật khẩu hoặc URL có quyền.'\n\n    at Module.incidents (file:///D:/7rd_semester/pbl6_src/ctsv/prototypes/signing-admin-support/review-simplified-steps.mjs?run=2:37:11)\n    at async run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:155)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:780",
+      "resolved": true,
+      "classification": "SCRIPT",
+      "resolution": "Windows clipboard CRLF normalized; incidentsFinish passed."
+    },
+    {
+      "phase": "variants",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Xử lý sự cố ký số', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"\" type=\"button\" aria-current=\"page\" data-action=\"page-incidents\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    57 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.openIncident (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:16:102)\n    at Module.variants (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\review-simplified-steps.mjs?run=3:69:11)\n    at run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:172)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:780",
+      "resolved": true,
+      "classification": "SCRIPT",
+      "resolution": "Queued phase was blocked by clipboard dialog after the script assertion; same context resumed, dialog closed and this phase rerun successfully."
+    },
+    {
+      "phase": "mobile",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Xử lý sự cố ký số', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"\" type=\"button\" aria-current=\"page\" data-action=\"page-incidents\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  14 × retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\n    at Object.openIncident (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:16:102)\n    at Module.mobile (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\review-simplified-steps.mjs?run=4:84:61)\n    at async run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:155)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:780",
+      "resolved": true,
+      "classification": "SCRIPT",
+      "resolution": "Queued phase was blocked by clipboard dialog after the script assertion; same context resumed, dialog closed and this phase rerun successfully."
+    },
+    {
+      "phase": "certificates",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Quản lý chứng thư', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"\" type=\"button\" aria-current=\"false\" data-action=\"page-certificates\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  13 × retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <p class=\"dialog-sub\">Admin có thể sao chép và gửi cho CA hoặc kỹ thuật…</p> from <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <dialog open=\"\" id=\"dialog\" aria-labelledby=\"dialog-title\">…</dialog> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\n    at Module.certificates (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\review-simplified-steps.mjs?run=5:97:71)\n    at run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:172)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:780",
+      "resolved": true,
+      "classification": "SCRIPT",
+      "resolution": "Queued phase was blocked by clipboard dialog after the script assertion; same context resumed, dialog closed and this phase rerun successfully."
+    },
+    {
+      "phase": "gallery",
+      "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Ảnh tiếp', exact: true })\u001b[22m\n\n    at Module.gallery (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\review-simplified-steps.mjs?run=12:126:62)\n    at async run (D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:22:155)\n    at async D:\\7rd_semester\\pbl6_src\\ctsv\\prototypes\\signing-admin-support\\walkthrough.cjs:29:780",
+      "resolved": true,
+      "classification": "SCRIPT",
+      "resolution": "Scoped controls to observed unique image-next/image-prev IDs; galleryFinish passed."
+    }
+  ],
+  "previousAttempt": {
+    "file": "review-r2-first-attempt.json",
+    "classification": "SCRIPT_SELECTOR",
+    "resolution": "Scoped left-column headings to div.stack instead of also matching aside.stack; inspect passed."
+  }
+}

@@ -19,7 +19,7 @@ async(page)=>{
   assert(root.body.code==='RLUI-20261122-'+kind,'Only operate on the marked fixture');
   if(root.body.status==='submitted')await approve(fixture.root);
   root=await x.api('GET','/ho-so/'+fixture.root);
-  if(root.body.workflowStatus==='approved_v2'||root.body.workflowStatus==='hard_copy_failed')continue;
+  if(['approved','rejected'].includes(root.body.hardCopyStatus))continue;
   await p.goto(origin+'/mghp/danh-gia?ho-so='+fixture.root);
   await p.getByRole('button',{name:/^(Bắt đầu|Tiếp tục) đối chiếu$/}).click();
   await p.getByRole('heading',{name:'Đối chiếu thông tin sinh viên và Đào tạo',exact:true}).waitFor();
@@ -57,9 +57,9 @@ async(page)=>{
   const confirmed=p.waitForResponse(r=>r.url().includes('/danh-gia/')&&r.url().endsWith('/xac-nhan'));
   await p.getByRole('button',{name:kind==='DAT'?'Duyệt bản cứng':'Xác nhận từ chối',exact:true}).click();
   assert((await confirmed).status()===200,'Confirm must commit successfully');
-  const expected=kind==='DAT'?'approved_v2':'hard_copy_failed';
-  await p.getByText(kind==='DAT'?'Đã duyệt V2 — bản cứng':'Đã từ chối bản cứng',{exact:true}).first().waitFor();
-  root=await x.api('GET','/ho-so/'+fixture.root);assert(root.body.workflowStatus===expected,'Persisted workflow must match UI');
+  const expected=kind==='DAT'?'approved':'rejected';
+  await p.getByText(kind==='DAT'?'Đã duyệt bản cứng — V2':'Đã từ chối bản cứng',{exact:true}).first().waitFor();
+  root=await x.api('GET','/ho-so/'+fixture.root);assert(root.body.hardCopyStatus===expected,'Persisted paper result must match UI');
   if(kind==='FAIL')assert(await p.getByRole('button',{name:'Lập lần đối chiếu tiếp theo',exact:true}).count()===0,'Failure is terminal');
   pass('RL-UI-CONFIRM-'+kind);await p.screenshot({path:out+'/review-'+kind.toLowerCase()+'.png',fullPage:true});
  }

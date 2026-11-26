@@ -125,7 +125,8 @@ export function StaffSupplement({client,application,rootTag,refresh,onOverview}:
  });}
  return <section className={styles.taskGroup} aria-label="Yêu cầu bổ sung chuyên viên" aria-busy={actions.busy}>
   <h3>Yêu cầu sinh viên bổ sung</h3>{actions.error&&<Alert>{actions.error}</Alert>}{actions.message&&<p className={styles.success} role="status">{actions.message}</p>}
-  {(!hasActive||(nextFrom&&data?.data.status==='responded'))&&['submitted','processing','supplementing','supplement_responded'].includes(application.status??'')&&<form id={'next-supplement-'+application.id} className={styles.form} onSubmit={send}>
+  {application.intakeSealed&&<p>Đợt đã chốt hồ sơ online. Chỉ xem nội dung và lịch sử bổ sung.</p>}
+  {!application.intakeSealed&&(!hasActive||(nextFrom&&data?.data.status==='responded'))&&['pending','supplementing','supplement_responded'].includes(application.onlineStatus??'')&&<form id={'next-supplement-'+application.id} className={styles.form} onSubmit={send}>
    {nextFrom&&<p className={styles.requestNote}>Gửi yêu cầu tiếp theo sẽ kết thúc lần trước với kết quả chưa đáp ứng, giữ nguyên phản hồi và lịch sử rồi mở lần bổ sung mới.</p>}
    <label>Hạn bổ sung · giờ Việt Nam<input required type="datetime-local" value={deadline} onChange={e=>setDeadline(e.currentTarget.value)}/></label>
    <label>Nội dung yêu cầu bổ sung<textarea required maxLength={4000} rows={4} value={reason} onChange={e=>setReason(e.currentTarget.value)} placeholder="Nêu rõ thông tin hoặc giấy tờ sinh viên cần bổ sung, sửa lại"/></label>
@@ -135,17 +136,17 @@ export function StaffSupplement({client,application,rootTag,refresh,onOverview}:
   {values.length>0?<RequestChoices values={values} selected={wanted} busy={actions.busy} onSelect={setSelected}/>:<p>Chưa có yêu cầu bổ sung nào được gửi.</p>}
   {data&&<section className={styles.panel}><Info value={data.data}/>
    {data.data.status==='responded'&&<p><button type="button" onClick={onOverview}>Xem bản bổ sung và kiểm tra PDF</button></p>}
-   {data.data.status==='responded'&&data.data.items.length>0&&data.data.items.every(i=>i.type==='general')&&<div className={styles.actions}>
+   {!application.intakeSealed&&data.data.status==='responded'&&data.data.items.length>0&&data.data.items.every(i=>i.type==='general')&&<div className={styles.actions}>
     <button type="button" disabled={actions.busy} onClick={()=>void completeGeneral()}>Đã đáp ứng yêu cầu</button>
     <button type="button" disabled={actions.busy||!!nextFrom} onClick={()=>{setNextFrom(data.data.id);setReason('');setDeadline(suggestedDeadline());}}>Yêu cầu bổ sung tiếp</button>
    </div>}
-   {['open','responded','expired'].includes(data.data.status)&&<details className={styles.disclosure}><summary>Điều chỉnh yêu cầu đang xử lý</summary>
+   {!application.intakeSealed&&['open','responded','expired'].includes(data.data.status)&&<details className={styles.disclosure}><summary>Điều chỉnh yêu cầu đang xử lý</summary>
     <form className={styles.form} onSubmit={e=>{e.preventDefault();void mutate(requests+data.data.id+'/han-nop','PUT',{deadline:vietnamInstant(newDeadline),reason:changeReason});}}>
      <label>Hạn bổ sung mới<input required type="datetime-local" value={newDeadline} onChange={e=>setNewDeadline(e.currentTarget.value)}/></label><label>Lý do điều chỉnh<textarea required maxLength={4000} value={changeReason} onChange={e=>setChangeReason(e.currentTarget.value)}/></label>
      <div className={styles.actions}><button disabled={actions.busy}>Gia hạn bổ sung</button><button type="button" className="danger" disabled={actions.busy||!changeReason.trim()} onClick={()=>void mutate(requests+data.data.id+'/huy','POST',{reason:changeReason})}>Hủy yêu cầu bổ sung</button></div>
     </form>
    </details>}
-   {data.data.status==='responded'&&data.data.items.some(i=>i.type!=='general')&&<LegacyReview client={client} value={data} application={application} onUpdated={async()=>{await Promise.all([open(data.data.id),refresh()]);}}/>}
+   {!application.intakeSealed&&data.data.status==='responded'&&data.data.items.some(i=>i.type!=='general')&&<LegacyReview client={client} value={data} application={application} onUpdated={async()=>{await Promise.all([open(data.data.id),refresh()]);}}/>}
   </section>}
  </section>;
 }
