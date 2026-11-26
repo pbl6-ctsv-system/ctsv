@@ -9,4 +9,6 @@ public interface SigningProvider {
  Uploaded upload(CaPdfPreflight.Input input,String title,UUID category);
  Receipt sign(UUID document,UUID certificate,String email,String name,CaPdfPreflight.Box box);
  byte[] download(UUID document);
+ default CertificateRequest renewCertificate(String email,String reason){throw new pbl6.ctsv.shared.ca.CaFailure("CA_NOT_CONFIGURED");}
+ default java.util.List<CertificateRequest> certificateRequests(String email,String status){throw new pbl6.ctsv.shared.ca.CaFailure("CA_NOT_CONFIGURED");}
 }

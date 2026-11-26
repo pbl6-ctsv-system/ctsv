@@ -44,7 +44,7 @@ class SigningDocuments {
  ApplicationReads.Detail view(long id,long user){
   var v=r.find(DocumentVersion.class,id);access.requireRead(user,id);var f=files.describe(v.fileId);
   var request=r.request(id);
-  var b=map("id",v.id,"documentId",v.documentId,"version",v.revision,"title",v.title,"datasetSha256",v.dataset,"createdAt",v.createdAt,"signingRequestId",request==null?null:request.id,"signingStatus",request==null?null:request.state,
+  var b=map("id",v.id,"documentId",v.documentId,"version",v.revision,"title",v.title,"datasetSha256",v.dataset,"createdAt",v.createdAt,"signingRequestId",request==null?null:request.id,"signingStatus",request==null?null:SigningSupportRules.publicStatus(request.state),
    "file",map("id",f.id(),"fileName",f.name(),"contentType","application/pdf","size",""+f.size(),"sha256",f.sha256(),"state",f.ready()?"ready":"pending"));
   b.put("documentType",r.find(Document.class,v.documentId).type);
   boolean current="current".equals(r.link(id).state);

@@ -38,6 +38,13 @@ test('a CA success or a pending storage step never claims signed completion',()=
  assert.equal(canSign({allowedActions:[],status:'prepared'}),false);
  assert.equal(canSign({allowedActions:['sign'],status:'failed'}),false);
 });
+test('technical failures show support label and never invite a signer to recover or repeat',()=>{
+ for(const status of ['needs_support','failed','unknown']){
+  assert.equal(signingLabel({status}),'Cần xử lý thêm');
+  assert.match(signingPhase({status,phase:'support'}),/quản trị/);
+  assert.equal(canSign({status,allowedActions:[]}),false);
+ }
+});
 test('geometry is converted through PDF viewport including rotation, scale and crop offsets',()=>{
  const viewport={convertToPdfPoint:(x,y)=>[20+y/2,30+x/2]};
  assert.deepEqual(geometryFromPixels(viewport,2,{x:100,y:80,width:200,height:60}),{page:2,x:60,y:80,width:30,height:100});

@@ -9,6 +9,8 @@ export const navigationItems=Object.freeze([
  {id:'roles',label:'Phân quyền MGHP',feature:'foundation',view:'roles',path:'/quan-tri/phan-quyen-mghp',group:'business-access',allow:['ctsvRoleAdmin']},
  {id:'auth',label:'Quản trị tài khoản',feature:'auth',view:'auth',path:'/quan-tri/tai-khoan',group:'auth',allow:['auth.accounts.manage']},
  {id:'auth-rbac',label:'Danh mục quyền Auth',feature:'auth',view:'rbac',path:'/quan-tri/danh-muc-quyen',group:'auth',allow:['auth.rbac.read']},
+ {id:'signing-support',label:'Xử lý sự cố ký số',feature:'mghp',view:'signing-support',path:'/quan-tri/ky-so/su-co',group:'signing-admin',allow:['mghpSigningAdmin']},
+ {id:'signing-certificates',label:'Quản lý chứng thư',feature:'mghp',view:'signing-certificates',path:'/quan-tri/ky-so/chung-thu',group:'signing-admin',allow:['mghpSigningAdmin']},
  {id:'mghp-policies',label:'Chính sách MGHP',feature:'mghp',view:'policies',path:'/mghp/chinh-sach',group:'policy',allow:['mghpSpecialist']},
  {id:'mghp-rounds',label:'Đợt xét MGHP',feature:'mghp',view:'rounds',studentView:'public-rounds',path:'/mghp/dot-xet',group:'intake',allow:['student','mghpSpecialist']},
  {id:'mghp-applications',label:'Hồ sơ của tôi',feature:'mghp',view:'applications',path:'/mghp/ho-so',group:'intake',allow:['student']},
@@ -23,7 +25,7 @@ export const navigationItems=Object.freeze([
 
 /**
  * @param {{code:string,active:boolean}[]} functions
- * @param {{student:boolean,mghpSpecialist:boolean,ctsvRoleAdmin:boolean,mghpSigning?:boolean,shcnFacultyRead?:boolean,shcnRoundRead?:boolean}|null} access
+ * @param {{student?:boolean,mghpSpecialist?:boolean,ctsvRoleAdmin?:boolean,mghpSigning?:boolean,mghpSigningAdmin?:boolean,shcnFacultyRead?:boolean,shcnRoundRead?:boolean}|null} access
  * @param {{student:boolean,specialist:boolean}|null} [scholarship]
  */
 export function visibleNavigation(functions,access,scholarship=null) {
@@ -37,6 +39,7 @@ export function visibleNavigation(functions,access,scholarship=null) {
  if(access?.mghpSpecialist===true)capabilities.add('mghpSpecialist');
  if(access?.ctsvRoleAdmin===true)capabilities.add('ctsvRoleAdmin');
  if(access?.mghpSigning===true)capabilities.add('mghpSigning');
+ if(access?.mghpSigningAdmin===true)capabilities.add('mghpSigningAdmin');
  if(access?.shcnRoundRead===true)capabilities.add('shcnRoundRead');
  if(access?.shcnFacultyRead===true)capabilities.add('shcnFacultyRead');
  if(access)capabilities.add('ctsvIdentity');
@@ -69,6 +72,7 @@ const sections=[
  {id:'admin',label:'Quản trị',kind:'dropdown',groups:[
   {id:'auth',label:'Tài khoản và quyền hệ thống'},
   {id:'business-access',label:'Quyền nghiệp vụ'},
+  {id:'signing-admin',label:'Ký số MGHP'},
  ]},
 ];
 

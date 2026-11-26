@@ -12,6 +12,8 @@ public final class CaProviderDtos {
     public record Template(UUID id, String name, boolean isDefault) {}
     public record Certificates(String email, List<Certificate> items) { public Certificates {items=List.copyOf(items);} }
     public record Templates(String email, List<Template> items) { public Templates {items=List.copyOf(items);} }
+    public record CertificateRequest(UUID id,UUID user,String userDisplay,String requestType,String status,
+                                     String commonName,int validDays,String adminComment,Instant createdAt,Instant processedAt) {}
     public record Uploaded(UUID id,String fileHash,UUID category,int currentVersion,String status,boolean signed) {}
     public record Receipt(UUID id, UUID document, UUID certificate, String certificateSerial,
                           String signerEmail, String signerName, String documentHash, String signedPdfHash,

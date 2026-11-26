@@ -51,7 +51,10 @@ class ApplicationReads {
         return list(actor,round,semester,status,page,size,false);
     }
     Object list(Identity actor,Long round,Long semester,String status,int page,int size,boolean hardCopy) {
-        var result=workflow.page(actor.studentId(),round,semester,status,page,size,hardCopy);
+        return list(actor,round,semester,status,page,size,hardCopy?"hard-copy":null);
+    }
+    Object list(Identity actor,Long round,Long semester,String status,int page,int size,String stage) {
+        var result=workflow.page(actor.studentId(),round,semester,status,page,size,stage);
         var items=result.facts().stream().map(facts->{
             var a=repo.find(Application.class,((Number)facts.get("id")).longValue());
             var dto=summary(a);dto.putAll(workflow.fields(facts,actor.studentId()!=null));
@@ -75,8 +78,7 @@ class ApplicationReads {
         return detail(root,false);
     }
     Detail detail(Application root,boolean student) {
-        var response=summary(root);
-        response.putAll(workflow.fields(root.id,student));
+        var response=applicationSummary(root,student);
         var versions=repo.versions(root.id).stream().map(v -> {
             var dto=version(v);
             dto.put("documents",documents(v.id));
@@ -100,6 +102,13 @@ class ApplicationReads {
             .filter(e->Set.of("approve_application","reject_application").contains(e.action==null?"":e.action))
             .map(e->map("id",e.id,"result",e.current,"reason",e.reason,"at",e.createdAt)).toList());
         return new Detail(response,tag(root,response));
+    }
+
+    Map<String,Object> applicationSummary(Application root,boolean student) {
+        repo.flush();
+        var response=summary(root);
+        response.putAll(workflow.fields(root.id,student));
+        return response;
     }
 
     List<Map<String,Object>> documents(long versionId) {

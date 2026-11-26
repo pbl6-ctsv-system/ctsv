@@ -214,7 +214,7 @@ class StageHandoffHttpIT {
   String path=start();var f=source(path);approve(f);seal(path,true,read(context(path,true)).tag()).expect(200);String e=assess(f,"dat");
   var c=read(context(path,false));assertThat(c.json().path("eligibleCount").asInt()).isEqualTo(1);
   seal(path,false,c.tag()).expect(200);
-  assertThat(read("/api/ctsv/mghp/ho-so/"+f.root).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  assertThat(read("/api/ctsv/mghp/ho-so/"+f.root).json().path("status").asText()).isEqualTo("approved");
   send("POST",e+"/phien-ban",Map.of("reason","Attempt reopen"),cvToken,read(e).tag()).expect(409);
   assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dbo.mghp_quyet_dinh WHERE dot_xet_id=?",Integer.class,roundId(path))).isZero();
  }
@@ -277,7 +277,7 @@ class StageHandoffHttpIT {
   String current="/api/ctsv/mghp/phien-ban-quyet-dinh/"+recorded.json().path("id").asText();
   var locked=send("POST",current+"/xac-nhan",Map.of("reason","SYNTHETIC lock"),cvToken,recorded.tag()).expect(200);
   assertThat(locked.json().path("status").asText()).isEqualTo("locked");
-  assertThat(read("/api/ctsv/mghp/ho-so/"+f.root).json().path("workflowStatus").asText()).isEqualTo("selected");
-  assertThat(send("GET","/api/ctsv/mghp/ho-so/"+f.root,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  assertThat(read("/api/ctsv/mghp/ho-so/"+f.root).json().path("councilResult").asText()).isEqualTo("selected");
+  assertThat(send("GET","/api/ctsv/mghp/ho-so/"+f.root,null,svToken,null).expect(200).json().path("councilResult").isNull()).isTrue();
  }
 }

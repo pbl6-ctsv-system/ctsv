@@ -7,6 +7,7 @@ import org.flywaydb.core.Flyway;
 /** Fail-closed target guard. Never creates, cleans, drops or falls back to DEV. */
 public final class SigningDatabase {
  public static DataSource source()throws Exception{
+  if(Boolean.getBoolean("signing.support.test.enabled"))return SigningSupportDatabase.source();
   if(!Boolean.getBoolean("p11.test.enabled"))throw new IllegalStateException("P11 test opt-in required");
   String port=System.getenv("P00_SQL_PORT");if(port==null||!port.matches("[1-9][0-9]{0,4}")||Integer.parseInt(port)>65535)throw new IllegalStateException("Verified port required");
   var props=new Properties();props.setProperty("integratedSecurity","true");props.setProperty("encrypt","true");props.setProperty("trustServerCertificate","true");

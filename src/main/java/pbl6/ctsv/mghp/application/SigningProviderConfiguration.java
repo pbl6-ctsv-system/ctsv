@@ -15,5 +15,7 @@ class SigningProviderConfiguration {
   public Uploaded upload(CaPdfPreflight.Input in,String title,UUID category){return client().upload(in,title,category);}
   public Receipt sign(UUID doc,UUID cert,String email,String name,CaPdfPreflight.Box box){return client().sign(doc,cert,email,name,box);}
   public byte[] download(UUID doc){return client().download(doc);}
+  public CertificateRequest renewCertificate(String email,String reason){return client().renewCertificate(email,reason);}
+  public java.util.List<CertificateRequest> certificateRequests(String email,String status){return client().certificateRequests(email,status);}
  };}
 }

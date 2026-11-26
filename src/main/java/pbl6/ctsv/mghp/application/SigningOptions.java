@@ -21,4 +21,11 @@ class SigningOptions {
   }catch(IllegalArgumentException e){throw new IntakeProblem(503,"SIGNING_CONFIGURATION_REQUIRED","request");}
  }
  Signer signer(String key,String role){long user=Long.parseLong(value(key+".user-id"));String email=pbl6.ctsv.shared.ca.CaDutClient.email(value(key+".email"));if(user<1)throw new IllegalArgumentException();return new Signer(user,role,email,value(key+".authority-reference"));}
+ Map<String,List<String>> monitoredSigners(){
+  var grouped=new LinkedHashMap<String,List<String>>();
+  for(boolean minutes:List.of(true,false))for(var signer:plan(minutes).signers()){
+   var uses=grouped.computeIfAbsent(signer.email(),key->new ArrayList<>());if(!uses.contains(signer.role()))uses.add(signer.role());
+  }
+  return grouped;
+ }
 }

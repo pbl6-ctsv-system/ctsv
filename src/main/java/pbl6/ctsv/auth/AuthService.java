@@ -142,6 +142,10 @@ final class AuthService implements AuthAccess {
         return requireAccountAccess(principal,mappedAccountId,true);
     }
 
+    @Override public String accountLabel(Principal principal){
+        return transaction(()->{var account=db.account(principal.accountId(),false);return account==null?principal.accountId().toString():account.username();});
+    }
+
     @Override public State requireAcceptedWorkAccess(Principal accepted,UUID mappedAccountId){
         return requireAccountAccess(accepted,mappedAccountId,false);
     }

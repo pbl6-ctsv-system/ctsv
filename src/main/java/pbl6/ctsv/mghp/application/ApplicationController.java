@@ -53,7 +53,7 @@ class ApplicationController {
         var principal=principal(request);
         query(request,"roundId","semesterId","status","page","size","stage");
         String stage=request.getParameter("stage");
-        if(stage!=null&&!"hard-copy".equals(stage))throw invalid("stage");
+        if(stage!=null&&!Set.of("online","hard-copy").contains(stage))throw invalid("stage");
         String raw=request.getParameter("roundId");
         Long round=raw==null?null:id(raw,"roundId");
         String term=request.getParameter("semesterId");
@@ -63,7 +63,7 @@ class ApplicationController {
         int size=page(request.getParameter("size"),"size",20,1,100);
         boolean staff=tx.execute(s -> access.authorize(principal,false,null).studentId()==null);
         if(stage!=null&&!staff)throw new IntakeProblem(403,"FORBIDDEN","stage");
-        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,semester,state,page,size,stage!=null)));
+        return ok(tx.execute(s -> reads.list(access.authorize(principal,staff,staff?"mghp_chuyen_vien":null),round,semester,state,page,size,stage)));
     }
 
     @GetMapping("/mghp/ho-so/{idHoSo}")
@@ -229,7 +229,10 @@ class ApplicationController {
 
     @PostMapping("/mghp/ho-so/{idHoSo}/rut")
     ResponseEntity<?> withdraw(@PathVariable String idHoSo,HttpServletRequest request) throws IOException {
-        return transition(request,idHoSo,false);
+        var received=writes.received();var principal=principal(request);
+        var input=shape(body(request),List.of("reason"));
+        String reason=text(input.get("reason"),"reason",4000,true);
+        return ok(tx.execute(s -> writes.withdraw(student(principal,false),id(idHoSo,"idHoSo"),request.getHeader("If-Match"),reason,received)));
     }
 
     @PostMapping("/mghp/ho-so/{idHoSo}/ket-luan")
@@ -246,16 +249,8 @@ class ApplicationController {
 
     @PostMapping("/mghp/ho-so/{idHoSo}/mo-lai")
     ResponseEntity<?> reopen(@PathVariable String idHoSo,HttpServletRequest request) throws IOException {
-        return transition(request,idHoSo,true);
-    }
-
-    private ResponseEntity<?> transition(HttpServletRequest request,String id,boolean reopen) throws IOException {
-        var received=writes.received();
         var principal=principal(request);
-        var input=shape(body(request),List.of("reason"));
-        String reason=text(input.get("reason"),"reason",4000,true);
-        return ok(tx.execute(s -> writes.transition(reopen?access.authorize(principal,true,"mghp_chuyen_vien"):student(principal,false),
-            id(id,"idHoSo"),request.getHeader("If-Match"),reason,reopen,received)));
+        return ok(tx.execute(s->{reads.scoped(specialist(principal),id(idHoSo,"idHoSo"));throw new IntakeProblem(410,"APPLICATION_REOPEN_RETIRED","request");}));
     }
 
     @GetMapping("/toi/thong-bao")

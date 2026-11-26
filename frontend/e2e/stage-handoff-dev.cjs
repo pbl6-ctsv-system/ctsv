@@ -66,7 +66,7 @@ async function approve(person){
  await page.getByRole('button',{name:'Duyệt hồ sơ online',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Duyệt hồ sơ online này?',exact:true});
  const posted=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/ctsv/mghp/ho-so/'+person.applicationId+'/ket-luan');
  await dialog.getByRole('button',{name:'Xác nhận kết luận',exact:true}).click();assert.equal((await posted).status(),200);await dialog.waitFor({state:'hidden'});
- const after=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);assert.equal(after.workflowStatus,'approved_v1');assert.equal(after.evaluationAllowed,false);
+ const after=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);assert.equal(after.onlineStatus,'approved');assert.equal(after.status,'processing');assert.equal(after.evaluationAllowed,false);
  await page.getByRole('button',{name:'Về danh sách',exact:true}).click();
 }
 async function online(){
@@ -87,7 +87,7 @@ async function online(){
  await page.screenshot({path:path.join(out,'04-paper-inbox.png'),fullPage:true});
 }
 async function assess(person,passPaper){
- const state=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);if(['approved_v2','hard_copy_failed','awaiting_council'].includes(state.workflowStatus))return;
+ const state=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);if(['approved','rejected'].includes(state.hardCopyStatus))return;
  await filters('/mghp/danh-gia');await page.getByRole('row').filter({hasText:person.studentCode}).getByRole('button',{name:'Xem đối chiếu',exact:true}).click();
  await page.getByRole('button',{name:/^(Bắt đầu|Tiếp tục) đối chiếu$/}).click();await page.getByRole('heading',{name:'Kết quả từng tiêu chí',exact:true}).waitFor();
  if(passPaper&&!evidence.cases.some(c=>c.id==='UI06-incomplete-review-error-after-scroll')){
@@ -119,7 +119,7 @@ async function assess(person,passPaper){
  }else{await page.getByRole('button',{name:'Từ chối bản cứng',exact:true}).click();await page.getByRole('textbox',{name:'Lý do',exact:true}).fill('SYNTHETIC: bản cứng không đáp ứng, kiểm thử kết thúc hồ sơ.');}
  const confirmed=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/xac-nhan')&&new URL(r.url()).pathname.includes('/danh-gia/'));
  await page.getByRole('button',{name:passPaper?'Duyệt bản cứng':'Xác nhận từ chối',exact:true}).click();assert.equal((await confirmed).status(),200);
- const actual=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);assert.equal(actual.workflowStatus,passPaper?'approved_v2':'hard_copy_failed');pass(passPaper?'UI07-paper-approval-persisted':'UI08-paper-refusal-terminal');
+ const actual=await apiGet('/api/ctsv/mghp/ho-so/'+person.applicationId);assert.equal(actual.hardCopyStatus,passPaper?'approved':'rejected');assert.equal(actual.onlineStatus,'approved');pass(passPaper?'UI07-paper-approval-persisted':'UI08-paper-refusal-terminal');
 }
 async function paper(){
  await filters('/mghp/danh-gia');
@@ -130,7 +130,7 @@ async function paper(){
  await dialog.getByRole('button',{name:'Xác nhận chốt',exact:true}).click();assert.equal((await committed).status(),200);await panel.getByText('Đã chốt · chỉ xem',{exact:true}).waitFor();
  assert.equal(await panel.getByRole('button',{name:'Xuất Excel',exact:true}).isDisabled(),true);pass('UI09-paper-seal-and-export-placeholder');
  await page.reload();await page.getByRole('combobox',{name:'Học kỳ',exact:true}).selectOption(''+fixture.semesterId);await page.getByRole('combobox',{name:'Đợt xét',exact:true}).selectOption(''+fixture.roundId);
- await page.getByRole('row').filter({hasText:fixture.applications[0].studentCode}).getByText('Chờ Hội đồng',{exact:true}).waitFor();
+ await page.getByRole('row').filter({hasText:fixture.applications[0].studentCode}).getByText('Đã duyệt bản cứng — V2',{exact:true}).waitFor();
  await page.screenshot({path:path.join(out,'06-paper-sealed.png'),fullPage:true});pass('UI10-review-closure-refresh-and-status');
 }
 async function security(){

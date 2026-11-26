@@ -307,8 +307,8 @@ class DecisionHttpIT {
   var head=read("/api/ctsv/mghp/phien-ban-quyet-dinh/"+d.path("id").asText());
   var after=send("POST",vp(head)+"/ket-luan-hop",meeting(),cvToken,head.tag()).expect(201);
   send("POST",vp(after)+"/xac-nhan",Map.of("reason","Chốt mức cao nhất"),cvToken,after.tag()).expect(200);
-  assertThat(read("/api/ctsv/mghp/ho-so/"+high.root).json().path("workflowStatus").asText()).isEqualTo("selected");
-  assertThat(read("/api/ctsv/mghp/ho-so/"+lower.root).json().path("workflowStatus").asText()).isEqualTo("not_selected");
+  assertThat(read("/api/ctsv/mghp/ho-so/"+high.root).json().path("councilResult").asText()).isEqualTo("selected");
+  assertThat(read("/api/ctsv/mghp/ho-so/"+lower.root).json().path("councilResult").asText()).isEqualTo("not_selected");
  }
  @Test void documentMetadataAndEtagStayBoundToTheirOwnVersion()throws Exception{
   var d=draft(prepared());var after=send("POST",vp(d)+"/ket-luan-hop",meeting(),cvToken,d.tag()).expect(201);
@@ -365,24 +365,25 @@ class DecisionHttpIT {
  @Test void reviewLifecycleApprovedProgressAndDraftDecisionIsNotOfficial()throws Exception {
   String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);
   approveOnline(f);String app="/api/ctsv/mghp/ho-so/"+f.root;
-  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v1");
-  assess(f,"2026-10-31");assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v2");
-  var filtered=read("/api/ctsv/mghp/ho-so?roundId="+round.substring(round.lastIndexOf('/')+1)+"&status=approved_v2&size=1").json();
+  assertThat(read(app).json().path("onlineStatus").asText()).isEqualTo("approved");
+  assertThat(read(app).json().path("status").asText()).isEqualTo("processing");
+  assess(f,"2026-10-31");assertThat(read(app).json().path("hardCopyStatus").asText()).isEqualTo("approved");
+  var filtered=read("/api/ctsv/mghp/ho-so?roundId="+round.substring(round.lastIndexOf('/')+1)+"&status=approved&size=1").json();
   assertThat(filtered.path("totalElements").asInt()).isEqualTo(1);assertThat(filtered.path("items").get(0).path("id").asText()).isEqualTo(""+f.root);
-  closeReview(round);assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  closeReview(round);assertThat(read(app).json().path("status").asText()).isEqualTo("approved");
   var d=send("POST","/api/ctsv/mghp/quyet-dinh",decision(round),cvToken,null).expect(201);
-  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  assertThat(read(app).json().path("councilResult").isNull()).isTrue();
   var after=send("POST",vp(d)+"/ket-luan-hop",meeting(),cvToken,d.tag()).expect(201);
   String before=read(app).tag();send("POST",vp(after)+"/xac-nhan",Map.of("reason","Xác nhận kết quả Hội đồng"),cvToken,after.tag()).expect(200);
-  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("selected");assertThat(read(app).tag()).isNotEqualTo(before);
-  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("awaiting_council");
+  assertThat(read(app).json().path("councilResult").asText()).isEqualTo("selected");assertThat(read(app).tag()).isNotEqualTo(before);
+  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("councilResult").isNull()).isTrue();
   String list="/api/ctsv/mghp/ho-so?roundId="+round.substring(round.lastIndexOf('/')+1);
-  assertThat(send("GET",list+"&status=selected",null,svToken,null).expect(200).json().path("totalElements").asInt()).isZero();
-  assertThat(send("GET",list+"&status=awaiting_council",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
+  send("GET",list+"&status=selected",null,svToken,null).expect(400);
+  assertThat(send("GET",list+"&status=approved",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
   // SQL-only publication fixture tests the read predicate; not a P12 publication integration claim.
   jdbc.update("INSERT dbo.mghp_cong_bo(phien_ban_qd_id,ma_cong_bo,thoi_diem_cong_bo,sha256_tap_du_lieu) VALUES(?,?,?,?)",after.json().path("id").asLong(),"RL-PUB-"+UUID.randomUUID(),NOW.atOffset(ZoneOffset.UTC),after.json().path("datasetSha256").asText());
-  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("workflowStatus").asText()).isEqualTo("selected");
-  assertThat(send("GET",list+"&status=selected",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
+  assertThat(send("GET",app,null,svToken,null).expect(200).json().path("councilResult").asText()).isEqualTo("selected");
+  assertThat(send("GET",list+"&status=approved",null,svToken,null).expect(200).json().path("totalElements").asInt()).isEqualTo(1);
  }
  @Test void reviewLifecycleApprovalDoesNotRequireReason()throws Exception {
   String round=create();send("POST",round+"/mo",null,cvToken,read(round).tag()).expect(200);var f=source(round);approveOnline(f);
@@ -395,7 +396,7 @@ class DecisionHttpIT {
   body.withArray("eligiblePeriods").addObject().put("from","2026-09-01").put("to","2026-10-31").put("evidence","Nguồn đã xác minh");
   var e=send("POST","/api/ctsv/mghp/danh-gia",body,cvToken,null).expect(201);String path="/api/ctsv/mghp/danh-gia/"+e.json().path("id").asText();
   send("POST",path+"/xac-nhan",JSON.createObjectNode().putNull("reason"),cvToken,e.tag()).expect(200);
-  assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("approved_v2");
+  assertThat(read(app).json().path("hardCopyStatus").asText()).isEqualTo("approved");
   assertThat(read(path).json().path("reason").isNull()).isTrue();
  }
  @Test void reviewLifecycleHardCopyFailureIsTerminal()throws Exception {
@@ -407,7 +408,7 @@ class DecisionHttpIT {
   send("POST",path+"/xac-nhan",JSON.createObjectNode().putNull("reason"),cvToken,e.tag()).expect(400);
   assertThat(read(path).json().path("status").asText()).isEqualTo("draft");
   send("POST",path+"/xac-nhan",Map.of("reason","Kết thúc hồ sơ bản cứng không đáp ứng"),cvToken,e.tag()).expect(200);
-  String app="/api/ctsv/mghp/ho-so/"+f.root;assertThat(read(app).json().path("workflowStatus").asText()).isEqualTo("hard_copy_failed");
+  String app="/api/ctsv/mghp/ho-so/"+f.root;assertThat(read(app).json().path("hardCopyStatus").asText()).isEqualTo("rejected");
   assertThat(read(app).json().path("evaluationAllowed").asBoolean()).isFalse();
   send("POST",path+"/phien-ban",Map.of("reason","Không được đối chiếu lại"),cvToken,read(path).tag()).expect(409);
   send("POST","/api/ctsv/mghp/giay-to-da-nop/"+f.doc+"/xac-nhan-ban-cung",JSON.createObjectNode().put("received",true).putNull("note"),cvToken,read(app).tag()).expect(409);
