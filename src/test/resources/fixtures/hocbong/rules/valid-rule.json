@@ -1,0 +1,15 @@
+{
+  "legalBasis":"SYNTHETIC — Quy định KKHT",
+  "effectiveFrom":"2026-01-01",
+  "effectiveTo":null,
+  "conditions":{"academicAverageMin":"7.00","conductScoreMin":65,"firstAttemptGradeMin":"5.00","withinStandardDuration":true,"progressRatioMin":"1.0000000000"},
+  "levels":{
+    "A":{"academicAverageMin":"9.00","conductScoreMin":90,"tuitionMultiplier":"1.5000"},
+    "B":{"academicAverageMin":"8.00","conductScoreMin":80,"tuitionMultiplier":"1.2000"},
+    "C":{"academicAverageMin":"7.00","conductScoreMin":65,"tuitionMultiplier":"1.0000"}
+  },
+  "priority":{"levelOrder":["A","B","C"],"rankingOrder":["ACADEMIC_AVERAGE_DESC","CONDUCT_SCORE_DESC"],"fallback":"HIGHEST_ELIGIBLE"},
+  "tuitionBasis":{"formula":"ACTUAL_PAID_FIRST_ATTEMPT_CREDIT_RATIO","rounding":{"stage":"FINAL_AMOUNT","scale":0,"mode":"HALF_UP"}},
+  "tiePolicy":{"mode":"COUNCIL_WHEN_BOTH_SCORES_EQUAL"},
+  "lastSlot":{"minimumRemainderRatio":"0.5000000000","comparison":"GT","amountMode":"REMAINING_FUND"}
+}

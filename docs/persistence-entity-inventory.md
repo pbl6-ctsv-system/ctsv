@@ -1,5 +1,15 @@
 # Entity – bảng – FK – module
 
+## Học bổng T03.3 — phiên quy tắc, 26/11/2026
+
+| Module / Entity | Bảng / migration | FK / bảo vệ |
+|---|---|---|
+| Học bổng / `hocbong.kkht.configuration.rules.entity.RuleVersion` | `dbo.kkht_phien_ban_quy_tac`, V34;15cột gồm5JSON cấu hình typed tại API, phiên nghiệp vụ, hiệu lực, trạng thái/first-use và rowversion | `kkht_dot_xet.quy_tac_id` thêm FK/index tới root này; giữ FK scalar trong `ScholarshipRound`, không cascade hoặc trả Entity qua API |
+
+RuleVersion dùng JPA/Repository trong transaction chung; SQL applock/row lock giữ cấp version và ETag, trigger ghi first-use thật từ đợt và bảo vệ lịch sử. `da_su_dung_luc`/rowversion đọc-only ở Entity; bỏ liên kết đợt không mở lại phiên đã dùng. JSON được trả qua DTO whitelist, ID/decimal string canonical; không dùng Entity hoặc JSON tùy ý làm DTO. Binder ngày SQL DATE dùng lại type HB hiện có cho đủ miền0001–9999. Không thay mapping Foundation/MGHP/DRL/SHCN hoặc V1–V32.
+
+Kiểm thực thi T03.3: Hibernate validate + schema/FK/check/trigger/concurrency/rollback trên DB test HB riêng; launcher DEV validate và HTTP thật. Migration Học bổng đổi V33→V34 theo owner26/11/2026 để giữ V33 SHCN trên main; giữ nguyên SQL/checksum. Chi tiết/report/lệnh và trạng thái kiểm lại sau đổi số tại tài liệu local `my_docs/plans/T03_3_HANDOVER.md`; không diễn giải kết quả này thành nghiệm thu engine T05/T06.
+
 > **Delta P10 22/11:** `DecisionEntities` map sáu bảng hiện hữu: Root→mghp_quyet_dinh, Version→mghp_phien_ban_qd, Minutes→mghp_bien_ban, Candidate→mghp_ung_vien_phien_ban_qd, Line→mghp_dong_qd, GrantedPeriod→mghp_khoang_huong. FK scalar, không cascade/xuyên module hoặc trả Entity ra API. V22 thêm fence/header/source snapshot/unique; V23 append-only children. Hibernate validate đã chạy trên SQL P10 và DEV V23. Không thay 24 resource/7 bảng P05 trong inventory lịch sử phía dưới.
 
 Nguồn: migrations CTSV V1–V8; không thay schema. 24 resource + 7 bảng hỗ trợ Foundation; 7 bảng P05. Auth 8 bảng và bảng kỹ thuật sync giữ JDBC.
