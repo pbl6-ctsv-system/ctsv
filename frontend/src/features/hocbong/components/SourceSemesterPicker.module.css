@@ -1,0 +1,17 @@
+.combobox{position:relative;display:grid;gap:var(--space-2);width:100%;max-width:640px;min-width:0}
+.combobox>label{font-size:14px;font-weight:600}
+.control{position:relative;min-width:0}
+.control>input{box-sizing:border-box;width:100%;min-width:0}
+.control>input:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+.dropdown{position:absolute;top:calc(100% + var(--space-1));inset-inline:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-control-border);border-radius:var(--radius-control);box-shadow:var(--shadow-card);overflow:hidden}
+.dropdown .message{margin:0;padding:var(--space-3);font-size:13px;overflow-wrap:anywhere}
+.message:has(button){display:grid;gap:var(--space-2)}
+.options{max-height:280px;overflow-y:auto;overscroll-behavior:contain}
+.option{display:grid;gap:var(--space-1);padding:var(--space-3);border-top:1px solid var(--color-border);cursor:pointer;overflow-wrap:anywhere}
+.optionName{font-size:14px;font-weight:600}
+.option[aria-selected=true]{background:var(--color-secondary-bg)}
+.option[aria-disabled=true]{cursor:not-allowed;color:var(--color-text-muted)}
+.option[aria-disabled=false]:is(:hover,[data-active=true]){background:var(--color-secondary-bg);box-shadow:inset 3px 0 var(--color-primary)}
+.paging{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-2);border-top:1px solid var(--color-border);font-size:13px}
+.paging button{padding:var(--space-2);font-size:13px}
+@media(max-width:650px){.combobox{max-width:none}.paging span{flex:1 1 100%;text-align:center;order:-1}}
