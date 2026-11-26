@@ -59,7 +59,52 @@
 .classAssignments td:nth-child(4){width:24%;min-width:170px}
 .classAssignments textarea{width:100%;box-sizing:border-box}
 .muted{color:var(--color-text-muted)}
+.referenceWarning{color:var(--color-warning,#8a5700)}
 .table .referenceWarning{color:var(--color-warning)}
+
+/* TASK-TK-02: PDF export, administrative metadata editor, signing & specialist submission */
+.topBar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.rowActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.exportBox{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin:24px 0;padding:18px 20px;border:1px solid var(--color-border,#dae5de);border-radius:12px;background:var(--color-surface,#fff)}
+.exportBox h2{margin:0 0 6px;font-size:18px}
+.exportBox p{margin:4px 0}
+.successBanner{margin:12px 0;padding:12px 16px;border-left:4px solid var(--color-success,#086ca8);border-radius:6px;background:var(--color-surface,#fff);color:var(--color-text,#18322f)}
+.testBanner{margin:8px 0;padding:10px 12px;border-left:4px solid var(--color-warning,#8a5700);border-radius:6px;background:var(--color-surface-muted,#f7faf8);color:var(--color-text,#18322f);font-size:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--color-border,#dae5de);margin:16px 0;padding-bottom:8px}
+.tabs button{font:inherit;padding:8px 14px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--color-text-muted,#657773);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--color-primary,#086ca8);color:#fff;font-weight:600}
+.tabs button:focus-visible{outline:2px solid var(--color-focus,#086ca8);outline-offset:2px}
+.signingGrid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(320px,1fr);gap:20px;align-items:start;margin:16px 0}
+.pdfColumn{min-width:0;display:flex;flex-direction:column;gap:12px}
+.sideColumn{min-width:0;display:flex;flex-direction:column;gap:16px}
+.sideCard{padding:16px;border:1px solid var(--color-border,#dae5de);border-radius:12px;background:var(--color-surface,#fff);min-width:0}
+.sideCard h2,.sideCard h3{margin:0 0 8px;font-size:18px}
+.cardSummary{cursor:pointer;font-weight:600;list-style:revert;padding:4px 0}
+.metaForm{margin-top:12px}
+.readonlyMeta{display:grid;gap:8px;padding:10px 12px;border-radius:8px;background:var(--color-surface-muted,#f7faf8);border:1px solid var(--color-border,#dae5de);margin:8px 0 12px}
+.readonlyMeta span{display:block;font-size:13px;color:var(--color-text-muted,#657773)}
+.readonlyMeta strong{display:block;word-break:break-word}
+.fieldError{color:var(--color-error-text,#8d392a);font-size:13px}
+.metaSummary{display:grid;grid-template-columns:minmax(110px,auto) minmax(0,1fr);gap:6px 12px;margin:12px 0;font-size:14px}
+.metaSummary dt{color:var(--color-text-muted,#657773)}
+.metaSummary dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.signActionBox{margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border,#dae5de);display:flex;flex-direction:column;gap:10px}
+.reconcileForm{margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border,#dae5de)}
+.versionSwitch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--color-border,#dae5de);border-radius:8px;background:var(--color-surface,#fff)}
+.versionSwitch button{font:inherit;padding:6px 12px;border:1px solid var(--color-control-border,#b9cec5);border-radius:6px;background:var(--color-surface-muted,#f7faf8);color:var(--color-text,#18322f);cursor:pointer}
+.versionSwitch button[aria-pressed="true"]{background:var(--color-primary,#086ca8);border-color:var(--color-primary,#086ca8);color:#fff;font-weight:600}
+.historyList{list-style:none;margin:12px 0;padding:0}
+.historyList li{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--color-border,#dae5de)}
+.historyList small{display:block;color:var(--color-text-muted,#657773);margin-top:4px}
+.historyList p{margin:6px 0 0}
+@media(max-width:960px){
+ .signingGrid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:650px){
+ .exportBox{align-items:stretch}
+ .exportBox button,.signActionBox button{width:100%}
+ .metaSummary{grid-template-columns:minmax(0,1fr)}
+}
 @media(max-width:650px){
  .industryFilters{grid-template-columns:minmax(0,1fr);gap:0}
  .classAssignments{min-width:0}

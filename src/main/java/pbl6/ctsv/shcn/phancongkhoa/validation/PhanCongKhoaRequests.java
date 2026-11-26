@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
 import org.springframework.http.*;
+import pbl6.ctsv.shared.ca.CaPdfPreflight;
+import pbl6.ctsv.shcn.phancongkhoa.dto.PhanCongKhoaDtos.NoiDungHanhChinhDTO;
 import pbl6.ctsv.shcn.phancongkhoa.repository.PhanCongKhoaRepository.DongNhap;
 import pbl6.ctsv.shcn.phancongkhoa.exception.PhanCongKhoaFailure;
 import static pbl6.ctsv.shcn.phancongkhoa.exception.PhanCongKhoaFailure.invalid;
@@ -19,6 +21,26 @@ public final class PhanCongKhoaRequests {
     public record LuuNhap(byte[] expectedVersion,OffsetDateTime hieuLucTu,OffsetDateTime hieuLucDen,
                           String lyDoDieuChinh,List<DongNhap> cacPhanCong){
         public LuuNhap{expectedVersion=expectedVersion.clone();cacPhanCong=List.copyOf(cacPhanCong);}
+        @Override public byte[] expectedVersion(){return expectedVersion.clone();}
+    }
+    public record XuatPdf(byte[] expectedVersion,NoiDungHanhChinhDTO noiDungHanhChinh){
+        public XuatPdf{expectedVersion=expectedVersion.clone();}
+        @Override public byte[] expectedVersion(){return expectedVersion.clone();}
+    }
+    public record CapNhatNoiDungPdf(byte[] expectedVersion,NoiDungHanhChinhDTO noiDungHanhChinh){
+        public CapNhatNoiDungPdf{expectedVersion=expectedVersion.clone();}
+        @Override public byte[] expectedVersion(){return expectedVersion.clone();}
+    }
+    public record KySo(byte[] expectedVersion,CaPdfPreflight.Box geometry){
+        public KySo{expectedVersion=expectedVersion.clone();}
+        @Override public byte[] expectedVersion(){return expectedVersion.clone();}
+    }
+    public record DoiSoatKy(byte[] expectedVersion,String reason){
+        public DoiSoatKy{expectedVersion=expectedVersion.clone();}
+        @Override public byte[] expectedVersion(){return expectedVersion.clone();}
+    }
+    public record HuyDeSua(byte[] expectedVersion,String lyDoHuy){
+        public HuyDeSua{expectedVersion=expectedVersion.clone();}
         @Override public byte[] expectedVersion(){return expectedVersion.clone();}
     }
     private final ObjectMapper json;
@@ -45,6 +67,77 @@ public final class PhanCongKhoaRequests {
     }
     public byte[] xoa(JsonNode n){
         shape(n,"",Set.of("expectedVersion"));return version(n.get("expectedVersion"));
+    }
+    public byte[] guiChuyenVien(JsonNode n){
+        shape(n,"",Set.of("expectedVersion"));return version(n.get("expectedVersion"));
+    }
+    public XuatPdf xuatPdf(JsonNode n){
+        shapeOptional(n,"",Set.of("expectedVersion"),Set.of("noiDungHanhChinh"));
+        NoiDungHanhChinhDTO meta=n.has("noiDungHanhChinh")&&!n.get("noiDungHanhChinh").isNull()
+            ?noiDungHanhChinh(n.get("noiDungHanhChinh"),"noiDungHanhChinh"):null;
+        return new XuatPdf(version(n.get("expectedVersion")),meta);
+    }
+    public CapNhatNoiDungPdf capNhatNoiDungPdf(JsonNode n){
+        shape(n,"",Set.of("expectedVersion","noiDungHanhChinh"));
+        return new CapNhatNoiDungPdf(version(n.get("expectedVersion")),noiDungHanhChinh(n.get("noiDungHanhChinh"),"noiDungHanhChinh"));
+    }
+    public KySo kySo(JsonNode n){
+        shape(n,"",Set.of("expectedVersion","geometry"));
+        var g=n.get("geometry");shape(g,"geometry",Set.of("page","x","y","width","height"));
+        int page=integer(g.get("page"),"geometry.page",1,10000);
+        double x=finiteDouble(g.get("x"),"geometry.x",false);
+        double y=finiteDouble(g.get("y"),"geometry.y",false);
+        double width=finiteDouble(g.get("width"),"geometry.width",true);
+        double height=finiteDouble(g.get("height"),"geometry.height",true);
+        return new KySo(version(n.get("expectedVersion")),new CaPdfPreflight.Box(page,x,y,width,height));
+    }
+    public DoiSoatKy doiSoatKy(JsonNode n){
+        shape(n,"",Set.of("expectedVersion","reason"));
+        String reason=text(n.get("reason"),"reason",4000,false,false);
+        if(reason.isBlank())throw invalid("reason");
+        return new DoiSoatKy(version(n.get("expectedVersion")),reason.strip());
+    }
+    public HuyDeSua huyDeSua(JsonNode n){
+        shapeOptional(n,"",Set.of("expectedVersion"),Set.of("lyDoHuy"));
+        String reason=n.has("lyDoHuy")?text(n.get("lyDoHuy"),"lyDoHuy",4000,true,true):null;
+        if(reason!=null&&reason.isBlank())reason=null;
+        return new HuyDeSua(version(n.get("expectedVersion")),reason);
+    }
+    private NoiDungHanhChinhDTO noiDungHanhChinh(JsonNode n,String prefix){
+        shape(n,prefix,Set.of("kinhGui","canCu","loiDan","diaDanhNgayThang","hoTenNguoiKy","ghiChuChanTrang"));
+        String kinhGui=requiredTrimmed(n.get("kinhGui"),prefix+".kinhGui",200);
+        String canCu=optionalTrimmed(n.get("canCu"),prefix+".canCu",500);
+        String loiDan=requiredTrimmed(n.get("loiDan"),prefix+".loiDan",1000);
+        String diaDanh=requiredTrimmed(n.get("diaDanhNgayThang"),prefix+".diaDanhNgayThang",150);
+        String hoTen=optionalTrimmed(n.get("hoTenNguoiKy"),prefix+".hoTenNguoiKy",150);
+        String ghiChu=optionalTrimmed(n.get("ghiChuChanTrang"),prefix+".ghiChuChanTrang",500);
+        return new NoiDungHanhChinhDTO(kinhGui,canCu,loiDan,diaDanh,hoTen,ghiChu);
+    }
+    private String requiredTrimmed(JsonNode n,String field,int max){
+        String v=text(n,field,max,false,false).strip();
+        if(v.isEmpty())throw invalid(field);
+        return v;
+    }
+    private String optionalTrimmed(JsonNode n,String field,int max){
+        if(n==null)throw invalid(field);
+        if(n.isNull())return "";
+        String v=text(n,field,max,false,true).strip();
+        return v;
+    }
+    private static double finiteDouble(JsonNode n,String field,boolean strictlyPositive){
+        if(n==null||!n.isNumber()||!Double.isFinite(n.doubleValue()))throw invalid(field);
+        double v=n.doubleValue();
+        if(strictlyPositive?v<=0d:v<0d)throw invalid(field);
+        return v;
+    }
+    private static void shapeOptional(JsonNode n,String prefix,Set<String> required,Set<String> optional){
+        if(n==null||!n.isObject())throw invalid(prefix.isEmpty()?"body":prefix);
+        var names=n.fieldNames();
+        while(names.hasNext()){
+            String name=names.next();
+            if(!required.contains(name)&&!optional.contains(name))throw invalid(prefix.isEmpty()?name:prefix+"."+name);
+        }
+        for(String field:required)if(!n.has(field))throw invalid(prefix.isEmpty()?field:prefix+"."+field);
     }
     public TaoNhap tao(JsonNode n){
         shape(n,"",Set.of("maKhoa","namHoc","phienBanDuKien","maDanhSachTruoc","hieuLucTu","hieuLucDen","lyDoDieuChinh"));

@@ -1,6 +1,6 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([ValidateSet('check-package','seed','upgrade','accounts','smoke','start','status')][string]$Action='status',
+param([ValidateSet('check-package','seed','upgrade','accounts','repair-access','smoke','start','status')][string]$Action='status',
       [string]$ProjectRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../..')),
       [switch]$UpgradeBootstrap)
 $ErrorActionPreference='Stop'
@@ -174,10 +174,10 @@ function Accounts($c,$sis,$catalog){
  foreach($name in @('dev.giangvien','dev.truongkhoa')){
   $key=if($name -eq 'dev.giangvien'){'StaffGV'}else{'StaffHead'}
   # Reuse only a matching verified synthetic link if a previous run stopped after Auth committed.
-  $found=@(Rows $c 'SELECT CONVERT(varchar(36),ID) id FROM dbo.TaiKhoan WHERE TenDangNhap=@p0' @($name))
+  $found=@(Rows $c 'SELECT LOWER(CONVERT(varchar(36),ID)) id FROM dbo.TaiKhoan WHERE TenDangNhap=@p0' @($name))
   if($found.Count -gt 1){throw 'Ambiguous account'}
-  if($found.Count -eq 0){$created=Request 'POST' '/api/xac-thuc/tai-khoan' $adminToken @{username=$name;password=$password;profileLinks=@(@{sourceSystem='SIS_MOCK';profileType='staff';sourceId=[string]$sis[$key]})};Expect $created 201 "Create $name";$account=[string]$created.Body.accountId}
-  else{$account=[string]$found[0].id}
+  if($found.Count -eq 0){$created=Request 'POST' '/api/xac-thuc/tai-khoan' $adminToken @{username=$name;password=$password;profileLinks=@(@{sourceSystem='SIS_MOCK';profileType='staff';sourceId=[string]$sis[$key]})};Expect $created 201 "Create $name";$account=([string]$created.Body.accountId).ToLowerInvariant()}
+  else{$account=([string]$found[0].id).ToLowerInvariant()}
   $current=Request 'GET' "/api/xac-thuc/tai-khoan/$account" $adminToken;Expect $current 200 "Read $name"
   $matching=@($current.Body.profileLinks|Where-Object {$_.sourceSystem -eq 'SIS_MOCK' -and $_.profileType -eq 'staff' -and $_.sourceId -eq [string]$sis[$key]})
   if($matching.Count -ne 1 -or @($current.Body.profileLinks).Count -ne 1){throw "Account source link conflicts; no takeover: $name"}
@@ -225,6 +225,55 @@ function Ensure-AuthBusinessRoles($c,$sis,$catalog,$accounts){
  }
  In-TaskTransaction $c {Save-Ledger $c 'shcn_dev_auth_roles_v1' $record};$adminToken=$null
 }
+function Repair-AuthBusinessRoles($c,$sis,$catalog,$accounts){
+ if(-not $accounts){throw 'Run accounts first'}
+ $password=Open-DevSecret $taskConfig.Accounts.admin.Password;$adminToken=Login 'dev.admin' $password;$password=$null
+ try{
+  $roleInfo=Request 'GET' '/api/xac-thuc/phan-quyen' $adminToken;Expect $roleInfo 200 'Read Auth roles'
+  foreach($name in @('dev.giangvien','dev.truongkhoa')){
+   $item=$accounts[$name];if(-not $item.Account){throw "Owned account identity missing: $name"}
+   $accountId=([string]$item.Account).ToLowerInvariant();$item.Account=$accountId
+   $expected=if($name -eq 'dev.truongkhoa'){'shcn_truong_khoa'}else{'shcn_giang_vien'}
+   $role=@($roleInfo.Body.roles|Where-Object code -eq $expected);if($role.Count -ne 1){throw "Business role unavailable: $expected"}
+   $current=Request 'GET' "/api/xac-thuc/tai-khoan/$accountId" $adminToken;Expect $current 200 "Read $name"
+   if(@($current.Body.roles|Where-Object code -CEQ $expected).Count -eq 0){$grant=Request 'PUT' "/api/xac-thuc/tai-khoan/$accountId/vai-tro/$($role[0].id)" $adminToken $null @{'If-Match'=$current.ETag};Expect $grant 200 "Repair business role $name"}
+   $identityRows=@(Rows $c 'SELECT nguoi_dung_id,ma_chu_the_dang_nhap FROM dbo.dinh_danh_dang_nhap WHERE ma_nha_cung_cap COLLATE Latin1_General_100_BIN2=@p0 AND LOWER(ma_chu_the_dang_nhap)=@p1 AND thoi_diem_xac_minh IS NOT NULL' @($taskIssuer,$accountId))
+   if($identityRows.Count -ne 1){throw "Foundation identity missing: $name"}
+   $user=[long]$identityRows[0].nguoi_dung_id
+   if(([string]$identityRows[0].ma_chu_the_dang_nhap) -cne $accountId){
+    Exec $c 'UPDATE dbo.dinh_danh_dang_nhap SET ma_chu_the_dang_nhap=@p0 WHERE nguoi_dung_id=@p1 AND ma_nha_cung_cap COLLATE Latin1_General_100_BIN2=@p2 AND LOWER(ma_chu_the_dang_nhap)=@p0' @($accountId,$user,$taskIssuer)
+    Exec $c "INSERT dbo.nhat_ky_thao_tac(su_kien_id,loai_chu_the_thao_tac,nguoi_dung_id,hanh_dong,loai_doi_tuong,doi_tuong_id,ly_do,thoi_diem_tao) VALUES(@p0,N'user',@p1,N'SHCN_DEV_IDENTITY_CASE_REPAIRED',N'dinh_danh_dang_nhap',@p2,N'Normalize DEV subject UUID to lowercase for BIN2 lookup',TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))" @([guid]::NewGuid().ToString(),$user,[string]$user)
+   }
+   $count=Scalar $c "SELECT COUNT(*) FROM dbo.phan_quyen_nguoi_dung p JOIN dbo.vai_tro r ON r.id=p.vai_tro_id WHERE p.nguoi_dung_id=@p0 AND r.ma=@p1 AND r.dang_hoat_dong=1 AND p.ma_phan_he=N'SHCN' AND p.don_vi_id=@p2 AND (p.hieu_luc_tu IS NULL OR p.hieu_luc_tu<=SYSUTCDATETIME()) AND (p.hieu_luc_den IS NULL OR p.hieu_luc_den>SYSUTCDATETIME())" @($user,$expected,$catalog.FacultyA)
+   if([int]$count -gt 1){throw "Ambiguous DEV scope: $name"}
+   if([int]$count -eq 0){
+    $roleId=Scalar $c 'SELECT id FROM dbo.vai_tro WHERE ma=@p0 AND dang_hoat_dong=1' @($expected)
+    $grantId=Insert $c "INSERT dbo.phan_quyen_nguoi_dung(nguoi_dung_id,vai_tro_id,ma_phan_he,don_vi_id,bao_gom_don_vi_con,hieu_luc_tu) VALUES(@p0,@p1,N'SHCN',@p2,0,'2020-01-01')" @($user,$roleId,$catalog.FacultyA)
+    Exec $c "INSERT dbo.nhat_ky_thao_tac(su_kien_id,loai_chu_the_thao_tac,nguoi_dung_id,hanh_dong,loai_doi_tuong,doi_tuong_id,ly_do,thoi_diem_tao) VALUES(@p0,N'user',@p1,N'SHCN_DEV_SCOPE_REPAIRED',N'phan_quyen_nguoi_dung',@p2,N'Explicit local DEV access repair requested by owner',TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))" @([guid]::NewGuid().ToString(),$user,[string]$grantId)
+   }
+   # SHCN's read adapter also verifies the legacy Auth bridge. Repair only missing
+   # DEV-owned rows; this does not alter migration files or seed business data.
+   $legacyRole=Scalar $c 'SELECT ID FROM dbo.VaiTro WHERE MaVaiTro=@p0 AND TrangThai=1' @($expected)
+   if(-not $legacyRole){throw "Legacy business role unavailable: $expected"}
+   Exec $c 'IF NOT EXISTS(SELECT 1 FROM dbo.TaiKhoan_VaiTro WHERE TaiKhoanID=@p0 AND VaiTroID=@p1) INSERT dbo.TaiKhoan_VaiTro(TaiKhoanID,VaiTroID) VALUES(@p0,@p1)' @([guid]$accountId,$legacyRole)
+   if($expected -eq 'shcn_truong_khoa'){
+    foreach($capability in @('shcn.phanCongKhoa.read','shcn.phanCongKhoa.prepare')){
+     $functionId=Scalar $c 'SELECT ID FROM dbo.ChucNang WHERE MaChucNang=@p0 AND TrangThai=1' @($capability)
+     if(-not $functionId){throw "SHCN capability unavailable: $capability"}
+     Exec $c 'IF NOT EXISTS(SELECT 1 FROM dbo.VaiTro_ChucNang WHERE VaiTroID=@p0 AND ChucNangID=@p1) INSERT dbo.VaiTro_ChucNang(VaiTroID,ChucNangID) VALUES(@p0,@p1)' @($legacyRole,$functionId)
+    }
+   }
+  }
+  Exec $c 'EXEC sys.sp_updateextendedproperty @name=@p0,@value=@p1' @('shcn_dev_identities_v1',($accounts|ConvertTo-Json -Depth 6 -Compress))
+  $repairRecord=([ordered]@{Migration='15';Accounts=@{ 'dev.giangvien'=$accounts['dev.giangvien'].Account; 'dev.truongkhoa'=$accounts['dev.truongkhoa'].Account }})|ConvertTo-Json -Compress
+  Exec $c 'EXEC sys.sp_updateextendedproperty @name=@p0,@value=@p1' @('shcn_dev_auth_roles_v1',$repairRecord)
+ }finally{$adminToken=$null}
+}
+function Reconcile-RepairPackageRecord($c){
+ $record=Ledger $c 'shcn_dev_seed_package_v1'
+ if(-not $record -or $record.PackageId -cne $taskPackage.Manifest.packageId -or $record.Version -cne $taskPackage.Manifest.version -or $record.SourceCode -cne $taskPackage.Manifest.sourceCode){throw 'Existing DEV package identity/version/source is not compatible; no automatic upgrade'}
+ Exec $c 'EXEC sys.sp_updateextendedproperty @name=@p0,@value=@p1' @('shcn_dev_seed_package_v1',([ordered]@{PackageId=$taskPackage.Manifest.packageId;Version=$taskPackage.Manifest.version;ManifestSHA256=$taskPackage.ManifestSHA256;SourceCode=$taskPackage.Manifest.sourceCode;ReconciledAtUtc=[datetime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress))
+}
 function Smoke($c,$catalog,$accounts){
  $password=Open-DevSecret $taskConfig.Accounts.admin.Password
  $head=Login 'dev.truongkhoa' $password;$lecturer=Login 'dev.giangvien' $password;$admin=Login 'dev.admin' $password;$password=$null
@@ -270,11 +319,15 @@ try{
   Upgrade-PackageVersion $sisDb;Upgrade-PackageVersion $ctsvDb;Save-Settings
   Write-Output 'Seed upgraded explicitly to 1.1.0; Auth business roles assigned through API, scopes/passwords/drafts preserved.';return
  }
- Assert-PackageVersion $sisDb ($Action -eq 'seed');Assert-PackageVersion $ctsvDb ($Action -eq 'seed')
+ if($Action -eq 'repair-access'){
+  $sisRecord=Ledger $sisDb 'shcn_dev_seed_package_v1';$ctsvRecord=Ledger $ctsvDb 'shcn_dev_seed_package_v1'
+  if(-not $sisRecord -or -not $ctsvRecord -or $sisRecord.PackageId -cne $taskPackage.Manifest.packageId -or $ctsvRecord.PackageId -cne $taskPackage.Manifest.packageId -or $sisRecord.Version -cne $taskPackage.Manifest.version -or $ctsvRecord.Version -cne $taskPackage.Manifest.version){throw 'Existing DEV package identity/version is not compatible; no automatic upgrade'}
+ }else{Assert-PackageVersion $sisDb ($Action -eq 'seed');Assert-PackageVersion $ctsvDb ($Action -eq 'seed')}
  if($Action -eq 'seed'){$sis=Seed-Sis $sisDb;$catalog=Seed-Ctsv $ctsvDb $sis $sisDb;Record-PackageVersion $sisDb;Record-PackageVersion $ctsvDb;Save-Settings;Write-Output "Owned synthetic SHCN catalog ready, seed version $($taskPackage.Manifest.version); existing accounts unchanged."}
  else{
   $sis=Ledger $sisDb 'shcn_dev_catalog_v1';$catalog=Ledger $ctsvDb 'shcn_dev_catalog_v1';if(-not $sis -or -not $catalog){throw 'Run guarded seed first'}
   if($Action -eq 'accounts'){$accounts=Accounts $ctsvDb $sis $catalog;Ensure-AuthBusinessRoles $ctsvDb $sis $catalog $accounts;Save-Evidence 'DEV_ACCOUNTS.json' $accounts;Write-Output 'DEV lecturer/head Auth roles and Foundation scopes ready; passwords unchanged on repeat.'}
+  elseif($Action -eq 'repair-access'){$accounts=Ledger $ctsvDb 'shcn_dev_identities_v1';Repair-AuthBusinessRoles $ctsvDb $sis $catalog $accounts;Reconcile-RepairPackageRecord $sisDb;Reconcile-RepairPackageRecord $ctsvDb;Save-Evidence 'DEV_ACCESS_REPAIR.json' $accounts;Write-Output 'Explicit local DEV SHCN role/scope repair completed; package metadata reconciled; no migration or seed.'}
   elseif($Action -eq 'smoke'){$accounts=Ledger $ctsvDb 'shcn_dev_identities_v1';if(-not $accounts){throw 'Run accounts first'};Smoke $ctsvDb $catalog $accounts}
   else{[ordered]@{Package=(Ledger $ctsvDb 'shcn_dev_seed_package_v1');SisPackage=(Ledger $sisDb 'shcn_dev_seed_package_v1');Source=$taskSource;Sis=$sis;Ctsv=$catalog;Accounts=(Ledger $ctsvDb 'shcn_dev_identities_v1');Draft=(Ledger $ctsvDb 'shcn_dev_draft_v1');LocalEvidenceDirectory=$taskEvidence}|ConvertTo-Json -Depth 7}
  }

@@ -7,6 +7,13 @@ import pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure;
 import static pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure.invalid;
 
 public final class MauRequests {
+ public Draft configuration(JsonNode n){
+  shape(n,Set.of("tenMau","muc"),"mauBienBan");
+  var copy=((com.fasterxml.jackson.databind.node.ObjectNode)n).deepCopy();copy.put("expectedVersion","AAAAAAAAAAA=");
+  try{var input=parse(copy);return new Draft(input.tenMau(),input.muc());}
+  catch(DotFailure e){if(e.code().equals("VALIDATION_ERROR")&&!e.errors().isEmpty())throw invalid("mauBienBan."+e.errors().getFirst().field());throw e;}
+ }
+ public void validate(Draft draft){checkText(draft.tenMau(),"mauBienBan.tenMau",200);validateConfiguration(draft.muc());}
  public Input parse(JsonNode n){
   shape(n,Set.of("expectedVersion","tenMau","muc"),"");String token=text(n.get("expectedVersion"),"expectedVersion",12);byte[] version;
   try{version=Base64.getDecoder().decode(token);if(version.length!=8||!Base64.getEncoder().encodeToString(version).equals(token))throw invalid("expectedVersion");}catch(IllegalArgumentException e){throw invalid("expectedVersion");}

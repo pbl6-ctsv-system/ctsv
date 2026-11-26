@@ -43,10 +43,10 @@ public final class DotRequests {
             var field="khungTietChoPhep["+i+"]";var row=ranges.get(i);shape(row,Set.of("tietDau","tietCuoi"),field);
             int a=integer(row.get("tietDau"),field+".tietDau"),b=integer(row.get("tietCuoi"),field+".tietCuoi");if(a>b)throw invalid(field+".tietCuoi");items.add(new KhoangTiet(a,b));
         }
-        return new CauHinh(code,name,from,until,items,instant(n.get("hanChotDangKyLich")),audiences(n));
+        return new CauHinh(code,name,from,until,items,instant(n.get("hanChotDangKyLich")),audiences(n),n.has("mauBienBan")?new MauRequests().configuration(n.get("mauBienBan")):null);
     }
     private void configShape(JsonNode n,Set<String> required){
-        var all=new HashSet<>(required);if(n!=null&&n.has("doiTuongApDung"))all.add("doiTuongApDung");shape(n,all,"");
+        var all=new HashSet<>(required);if(n!=null&&n.has("mauBienBan"))all.add("mauBienBan");if(n!=null&&n.has("doiTuongApDung"))all.add("doiTuongApDung");shape(n,all,"");
     }
     private List<DoiTuong> audiences(JsonNode n){
         if(!n.has("doiTuongApDung"))return null;

@@ -27,12 +27,11 @@ export function RoundStudents({api,semester,classroom,back}:{api:RoundsApi;semes
   return()=>abort.abort();
  },[api,semester,classroom.ma,q,page,retry]);
  return <section aria-label={'Sinh viên lớp '+classroom.ten}><Button variant="secondary" onClick={back}>← Các lớp</Button><h3>Sinh viên lớp {classroom.ten}</h3>
-  <p>Thành viên được đối chiếu theo học kỳ đang chọn, sau tách nhóm lớp rèn luyện.</p>
   <Search subject="mã hoặc tên SV" value={text} change={setText} submit={()=>{setQ(text.trim());setPage(0);}} busy={busy}/>
   {busy&&<p role="status">Đang tải sinh viên…</p>}{error&&<><LookupError message={error}/><Button variant="secondary" onClick={()=>setRetry(v=>v+1)}>Thử lại danh sách SV</Button></>}
-  {data&&!busy&&!error&&<><p>{data.totalElements} sinh viên phù hợp · Trạng thái cần xác minh không được coi là đủ căn cứ gửi thông báo.</p>
+  {data&&!busy&&!error&&<><p>{data.totalElements} sinh viên phù hợp</p>
    <div className={styles.table}><table><thead><tr><th>Mã SV</th><th>Họ tên</th><th>Lớp trong kỳ</th><th>Căn cứ</th><th>Xác minh</th></tr></thead><tbody>
-    {data.items.map(s=><tr key={s.id}><td>{s.maSinhVien}</td><td>{s.hoTen}</td><td>{s.tenLop}</td><td>{s.canCu==='PHAN_LOP_REN_LUYEN_DUNG_KY'?'Phân lớp rèn luyện đúng kỳ':'Học vụ đúng kỳ'}{s.canCuLop==='LOP_HIEN_TAI_NGUON'&&<small className={styles.lookupHint}>Lớp theo hồ sơ hiện tại; chưa xác nhận lịch sử lớp.</small>}</td><td><span className={styles.badge}>{s.duCanCuNguon&&s.trangThaiXacMinh==='DU_CAN_CU_NGUON'?'Đủ căn cứ đối chiếu nguồn':'Cần xác minh'}</span></td></tr>)}
+    {data.items.map(s=><tr key={s.id}><td>{s.maSinhVien}</td><td>{s.hoTen}</td><td>{s.tenLop}</td><td>{s.canCu==='PHAN_LOP_REN_LUYEN_DUNG_KY'?'Phân lớp rèn luyện đúng kỳ':'Học vụ đúng kỳ'}</td><td><span className={styles.badge}>{s.duCanCuNguon&&s.trangThaiXacMinh==='DU_CAN_CU_NGUON'?'Đủ căn cứ đối chiếu nguồn':'Cần xác minh'}</span></td></tr>)}
     {!data.items.length&&<tr><td colSpan={5}>Không có sinh viên phù hợp bộ lọc.</td></tr>}
    </tbody></table></div><Pager page={page} total={data.totalElements} change={setPage}/></>}
  </section>;

@@ -45,3 +45,6 @@ test('template reads carry cancellation and save uses singleton PUT with root to
 test('oversized template write fails locally without any HTTP request',async()=>{
  const c=client(),api=roundsApi(c);await assert.rejects(api.templates.save('7',{tenMau:'x'.repeat(1048577),muc:[],expectedVersion:'AAAAAAAAAAE='}),/1 MiB/);assert.equal(c.calls.length,0);
 });
+
+test('template catalog before creation uses authenticated cancellable GET and no round id',async()=>{const c=client(),abort=new AbortController();await roundsApi(c).templates.catalog(abort.signal);assert.equal(c.calls[0].path,'/api/shcn/tra-cuu/cau-truc-mau-bien-ban');assert.equal(c.calls[0].options.signal,abort.signal);assert.equal(c.calls.length,1);});
+test('combined round save sends one POST with nested template and root PATCH keeps only outer version',async()=>{const c=client(),api=roundsApi(c);const body={tenDot:'Đợt',mauBienBan:{tenMau:'Mẫu',muc:[]}};await api.create(body);assert.equal(c.calls.length,1);assert.equal(c.calls[0].options.method,'POST');assert.deepEqual(JSON.parse(c.calls[0].options.body),body);await api.update('7',{...body,expectedVersion:'AAAAAAAAAAE='});assert.equal(c.calls.length,2);const sent=JSON.parse(c.calls[1].options.body);assert.equal(sent.expectedVersion,'AAAAAAAAAAE=');assert.equal(sent.mauBienBan.expectedVersion,undefined);});
