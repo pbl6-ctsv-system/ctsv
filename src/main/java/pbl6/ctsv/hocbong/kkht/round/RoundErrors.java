@@ -26,8 +26,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import pbl6.ctsv.auth.AuthFailure;
 import pbl6.ctsv.foundation.api.FoundationAccess;
 import pbl6.ctsv.hocbong.kkht.configuration.combination.CombinationController;
+import pbl6.ctsv.hocbong.kkht.configuration.rules.RuleController;
 
-@RestControllerAdvice(assignableTypes = {RoundController.class, CombinationController.class})
+@RestControllerAdvice(assignableTypes = {RoundController.class, CombinationController.class, RuleController.class})
 @ConditionalOnProperty(name = "ctsv.foundation.enabled", havingValue = "true")
 public class RoundErrors {
     @ExceptionHandler(RoundFailure.class)
@@ -59,6 +60,9 @@ public class RoundErrors {
             }
             if (cause instanceof SQLException sql && sql.getErrorCode() == 51940) {
                 return problem(409, "COMBINATION_OVERLAP", "effectiveFrom", request, HttpHeaders.EMPTY);
+            }
+            if (cause instanceof SQLException sql && sql.getErrorCode() == 51950) {
+                return problem(409, "RULE_VERSION_IN_USE", "request", request, HttpHeaders.EMPTY);
             }
         }
         return problem(500, "INTERNAL_ERROR", "request", request, HttpHeaders.EMPTY);
