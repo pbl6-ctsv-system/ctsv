@@ -1,0 +1,35 @@
+package pbl6.ctsv.shcn.dotsinhhoat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import java.util.*;
+import org.junit.jupiter.api.*;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.node.*;
+import pbl6.ctsv.shcn.dotsinhhoat.dto.DotDtos.*;
+import pbl6.ctsv.shcn.dotsinhhoat.dto.MauDtos.*;
+import pbl6.ctsv.shcn.dotsinhhoat.entity.*;
+import pbl6.ctsv.shcn.dotsinhhoat.repository.*;
+import pbl6.ctsv.shcn.dotsinhhoat.service.*;
+import pbl6.ctsv.shcn.dotsinhhoat.validation.*;
+import pbl6.ctsv.shcn.dotsinhhoat.exception.DotFailure;
+class RoundTemplateSaveTest {
+ final DotServiceTest f=new DotServiceTest();final MauRepository templates=mock(MauRepository.class);
+ final MauService mau=new MauService(f.repository,templates,new MauRequests(),f.clock);
+ final DotService service=new DotService(f.manager,f.access,f.reference,f.repository,f.clock,mau);
+ CauHinh combined(){var c=f.input;return new CauHinh(c.maHocKy(),c.tenDot(),c.khungNgayBatDau(),c.khungNgayKetThuc(),c.khungTietChoPhep(),c.hanChotDangKyLich(),c.doiTuongApDung(),new Draft("Mẫu chung",TemplateDictionary.defaults()));}
+ @BeforeEach void setup(){f.setup();when(f.repository.find(7,false)).thenReturn(f.root());when(f.repository.find(7,true)).thenReturn(f.root());when(f.repository.create(any(),any(),any())).thenReturn(f.root());when(f.repository.update(anyLong(),any(),any(),anyBoolean(),any())).thenReturn(f.root());}
+ void create(CauHinh c){service.execute(f.principal,DotService.Action.PREPARE,a->service.create(a,c));}
+ @Test void createsRootAudienceAndTemplateInOneTransactionWithoutSecondCas(){create(combined());assertEquals(1,f.manager.commits);var order=inOrder(f.repository,templates);order.verify(f.repository).create(any(),any(),any());order.verify(f.repository).replaceAudiences(eq(7L),any(),any());order.verify(templates).save(eq(7L),any(),eq(f.principal.accountId().toString()),any());order.verify(f.repository).audit(31L,"SHCN_TEMPLATE_CREATE",7L);order.verify(f.repository).audit(31L,"SHCN_DOT_CREATE_DRAFT",7L);verify(templates,never()).compareAndTouch(anyLong(),any(),any());}
+ @Test void childFailureRollsBackWholeTransactionAndNoSuccessAudit(){doThrow(new IllegalStateException("child fixture")).when(templates).save(anyLong(),any(),any(),any());assertThrows(IllegalStateException.class,()->create(combined()));assertEquals(0,f.manager.commits);assertEquals(1,f.manager.rollbacks);verify(f.repository,never()).audit(anyLong(),any(),anyLong());}
+ @Test void stalePatchDoesNotWriteAnyChild(){assertEquals("VERSION_CONFLICT",assertThrows(DotFailure.class,()->service.execute(f.principal,DotService.Action.PREPARE,a->service.update(a,7,new SuaDot(new byte[8],combined())))).code());verifyNoInteractions(templates);verify(f.repository,never()).update(anyLong(),any(),any(),anyBoolean(),any());}
+ @Test void patchUsesOneRootCasThenWritesTemplateAndReturnsFreshRoot(){var out=service.execute(f.principal,DotService.Action.PREPARE,a->service.update(a,7,new SuaDot(f.token,combined()))).value();assertEquals("AAAAAAAAAAE=",out.version());verify(f.repository).update(eq(7L),eq(f.token),any(),eq(false),any());verify(templates).save(eq(7L),any(),any(),any());verify(templates,never()).compareAndTouch(anyLong(),any(),any());assertEquals(1,f.manager.commits);}
+ @Test void omittedTemplatePreservesOldBehavior(){create(f.input);verifyNoInteractions(templates);}
+ @Test void readOnlyAndClosedCannotWriteCombinedConfiguration(){when(f.reference.permissions(f.identity)).thenReturn(new Quyen(true,false,true));assertEquals("FORBIDDEN",assertThrows(DotFailure.class,()->create(combined())).code());verifyNoInteractions(templates);}
+ @Test void lockedTemplateRejectsAndRollsBackRootPatch(){var m=mock(MauBienBan.class);when(m.state()).thenReturn("DA_KHOA");when(templates.find(7)).thenReturn(m);assertEquals("STATE_CONFLICT",assertThrows(DotFailure.class,()->service.execute(f.principal,DotService.Action.PREPARE,a->service.update(a,7,new SuaDot(f.token,combined())))).code());assertEquals(1,f.manager.rollbacks);verify(templates,never()).save(anyLong(),any(),any(),any());}
+ @Test void parsesNestedConfigurationAndRejectsNullUnknownAndNestedVersion(){var mapper=new ObjectMapper().findAndRegisterModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);var parser=new DotRequests(mapper);var n=(ObjectNode)mapper.valueToTree(f.input);n.remove("mauBienBan");var m=mapper.createObjectNode().put("tenMau","Mẫu trước khi có đợt");var rows=m.putArray("muc");for(var section:TemplateDictionary.defaults()){var row=(ObjectNode)mapper.valueToTree(section);row.remove("laMucHeThong");rows.add(row);}n.set("mauBienBan",m);assertEquals(5,parser.create(n).mauBienBan().muc().size());m.put("expectedVersion","AAAAAAAAAAE=");assertThrows(DotFailure.class,()->parser.create(n));n.putNull("mauBienBan");assertThrows(DotFailure.class,()->parser.create(n));n.remove("mauBienBan");assertNull(parser.create(n).mauBienBan());}
+ String wire(){var mapper=new ObjectMapper().findAndRegisterModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);var n=(ObjectNode)mapper.valueToTree(combined());for(var row:n.path("mauBienBan").path("muc"))((ObjectNode)row).remove("laMucHeThong");return n.toString();}
+ org.springframework.test.web.servlet.MockMvc http(){var auth=mock(pbl6.ctsv.auth.AuthAccess.class);when(auth.verifyAccessToken("fixture")).thenReturn(f.principal);return org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new pbl6.ctsv.shcn.dotsinhhoat.controller.DotController(auth,service,new DotRequests(new ObjectMapper()))).setControllerAdvice(new pbl6.ctsv.shcn.dotsinhhoat.controller.DotErrors()).build();}
+ @Test void postHttpCreatesCombinedConfigurationAndReturnsFreshRound()throws Exception{http().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(wire())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.id").value("7")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.version").value("AAAAAAAAAAE="));verify(templates).save(eq(7L),any(),any(),any());assertEquals(1,f.manager.commits);}
+ @Test void postHttpChildFailureDoesNotReturn201OrAuditSuccess()throws Exception{doThrow(new IllegalStateException("child fixture")).when(templates).save(anyLong(),any(),any(),any());http().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/shcn/dot-sinh-hoat").header("Authorization","Bearer fixture").contentType("application/json").content(wire())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isInternalServerError());assertEquals(1,f.manager.rollbacks);assertEquals(0,f.manager.commits);verify(f.repository,never()).audit(anyLong(),any(),anyLong());}
+
+}

@@ -44,3 +44,47 @@ export function rankYearOptions(query,known=[],anchorYear=new Date().getFullYear
  const score=v=>!key?3:v.toLocaleLowerCase('vi')===key?0:v.toLocaleLowerCase('vi').startsWith(key)?1:v.toLocaleLowerCase('vi').includes(key)?2:3;
  return values.sort((a,b)=>score(a)-score(b));
 }
+
+export function listActionLabel(row,faculty){
+ if(!row||!faculty)return 'Xem';
+ if(row.trangThai==='NHAP'&&faculty.duocLapNhap)return 'Mở soạn';
+ if(row.trangThai==='CHO_KY'&&faculty.duocKySo)return 'Mở ký số';
+ if(row.trangThai==='DA_KY'&&faculty.duocGuiChuyenVien)return 'Xem & Gửi CTSV';
+ return 'Xem';
+}
+
+export function exportReadiness(draft,base,faculty,dirty){
+ const assignedCount=base?.cacPhanCong?.length??base?.soLop??0;
+ const requiredCount=typeof faculty?.soLopHoatDong==='number'?faculty.soLopHoatDong:null;
+ const hasInvalidReference=(draft?.cacPhanCong??[]).some(
+  r=>!r.lopHienTai?.coTheChon||!r.giangVienHienTai?.coTheChon
+ );
+ if(!faculty?.duocKySo){
+  return {ready:false,assignedCount,requiredCount,missingCount:0,hasInvalidReference,blockingReason:'Tài khoản chưa được cấp quyền xuất PDF và ký số tại khoa này.'};
+ }
+ if(dirty){
+  return {ready:false,assignedCount,requiredCount,missingCount:0,hasInvalidReference,blockingReason:'Có thay đổi chưa lưu. Hãy bấm "Lưu nháp" trước khi chốt và xuất PDF.'};
+ }
+ if(hasInvalidReference){
+  return {ready:false,assignedCount,requiredCount,missingCount:0,hasInvalidReference,blockingReason:'Còn lớp hoặc giảng viên có cảnh báo tham chiếu không hợp lệ. Hãy kiểm tra và lưu lại trước khi xuất PDF.'};
+ }
+ if(requiredCount!==null){
+  if(requiredCount===0){
+   return {ready:false,assignedCount,requiredCount,missingCount:0,hasInvalidReference,blockingReason:'Khoa hiện chưa có lớp đang hoạt động đủ điều kiện phân công.'};
+  }
+  const missingCount=Math.max(0,requiredCount-assignedCount);
+  if(missingCount>0){
+   return {
+    ready:false,
+    assignedCount,
+    requiredCount,
+    missingCount,
+    hasInvalidReference,
+    blockingReason:`Đã phân công ${assignedCount} / ${requiredCount} lớp đang hoạt động của khoa — còn thiếu ${missingCount} lớp chưa gán GVCN.`
+   };
+  }
+ }else if(assignedCount===0){
+  return {ready:false,assignedCount,requiredCount:null,missingCount:0,hasInvalidReference,blockingReason:'Danh sách nháp đang trống. Cần phân công đủ 100% lớp đang hoạt động của khoa trước khi xuất PDF.'};
+ }
+ return {ready:true,assignedCount,requiredCount,missingCount:0,hasInvalidReference,blockingReason:''};
+}

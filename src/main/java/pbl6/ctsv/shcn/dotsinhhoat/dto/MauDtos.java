@@ -13,6 +13,7 @@ public final class MauDtos {
  public record DanhMuc(List<String> kieuDuLieu,List<Nguon> nguonHeThong,List<Muc> mucHeThong){
   public DanhMuc{kieuDuLieu=List.copyOf(kieuDuLieu);nguonHeThong=List.copyOf(nguonHeThong);mucHeThong=List.copyOf(mucHeThong);}
  }
+ public record Draft(String tenMau,List<Muc> muc){public Draft{muc=List.copyOf(muc);}}
  public record Input(byte[] expectedVersion,String tenMau,List<Muc> muc){
   public Input{expectedVersion=expectedVersion.clone();muc=List.copyOf(muc);}
   @Override public byte[] expectedVersion(){return expectedVersion.clone();}

@@ -26,3 +26,11 @@ export function validateTemplate(value,dictionary){
  const body=templateInput(value,'AAAAAAAAAAE=');if(new TextEncoder().encode(JSON.stringify(body)).length>1048576)fail('muc','Cấu hình vượt giới hạn 1 MiB.');return value;
 }
 export function templateError(error){const messages={SYSTEM_SECTION_IMMUTABLE:'Không được thay đổi hoặc xóa các mục cố định.',VERSION_CONFLICT:'Mẫu hoặc đợt đã được cập nhật ở nơi khác. Hãy đọc bản mới để đối chiếu.',STATE_CONFLICT:'Đợt hoặc mẫu không còn cho phép chỉnh sửa.',FORBIDDEN:'Bạn không còn quyền sửa mẫu biên bản.',NOT_FOUND:'Không tìm thấy đợt SHCN.',VALIDATION_ERROR:'Kiểm tra các mục và trường được báo lỗi.',DEPENDENCY_UNAVAILABLE:'Chưa truy cập được dữ liệu mẫu. Hãy thử đọc lại.',INTERNAL_ERROR:'Chưa xác định kết quả lưu mẫu. Hãy đọc bản mới để đối chiếu.'};return messages[error?.code]??error?.message??'Chưa thể xử lý mẫu biên bản.';}
+
+export function templateConfiguration(value){const {expectedVersion,...configuration}=templateInput(value,'');return configuration;}
+
+// A single section-level choice controls content requirements; existing field metadata is retained.
+export function setSectionRequired(section,required){
+ if(['DIEM_DANH','KIEN_NGHI_SV','KIEN_NGHI_GV'].includes(section.maMuc))return section;
+ return {...section,batBuoc:required,cauHinhTruong:section.cauHinhTruong.map(field=>({...field,batBuoc:required}))};
+}

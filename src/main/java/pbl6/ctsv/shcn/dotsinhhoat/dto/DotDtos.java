@@ -7,8 +7,9 @@ public final class DotDtos {
     private DotDtos(){}
     public record KhoangTiet(int tietDau,int tietCuoi){}
     public record CauHinh(String maHocKy,String tenDot,LocalDate khungNgayBatDau,LocalDate khungNgayKetThuc,
-                         List<KhoangTiet> khungTietChoPhep,OffsetDateTime hanChotDangKyLich,List<DoiTuong> doiTuongApDung){
+                         List<KhoangTiet> khungTietChoPhep,OffsetDateTime hanChotDangKyLich,List<DoiTuong> doiTuongApDung,MauDtos.Draft mauBienBan){
         public CauHinh{khungTietChoPhep=List.copyOf(khungTietChoPhep);doiTuongApDung=doiTuongApDung==null?null:List.copyOf(doiTuongApDung);}
+        public CauHinh(String ky,String ten,LocalDate tu,LocalDate den,List<KhoangTiet> tiet,OffsetDateTime han,List<DoiTuong> nhom){this(ky,ten,tu,den,tiet,han,nhom,null);}
         public CauHinh(String ky,String ten,LocalDate tu,LocalDate den,List<KhoangTiet> tiet,OffsetDateTime han){this(ky,ten,tu,den,tiet,han,null);}
     }
     public record DoiTuong(String loaiDoiTuong,String maDoiTuong,String hinhThucChoPhep,

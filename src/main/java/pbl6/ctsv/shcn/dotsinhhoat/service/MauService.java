@@ -17,6 +17,13 @@ public final class MauService {
   if(template!=null){try{validator.validateConfiguration(items);}catch(DotFailure e){throw new IllegalStateException("Stored template is not valid",e);}}
   return new MauDTO(template==null?null:template.id().toString(),Long.toString(dot),Base64.getEncoder().encodeToString(root.getPhienBanGhi()),template!=null,actor.permissions().prepare()&&writable(root)&&(template==null||!template.state().equals("DA_KHOA")),template==null?null:template.name(),template==null?null:template.state(),items,TemplateDictionary.CATALOG);
  }
+ // Caller already created/locked and versioned the root inside DotService.execute.
+ public void saveWithRound(long dot,Draft draft,DotService.Actor actor){
+  DotService.writable(dots.find(dot,false));validator.validate(draft);
+  var existing=templates.find(dot);if(existing!=null&&existing.state().equals("DA_KHOA"))throw new DotFailure(409,"STATE_CONFLICT");
+  templates.save(dot,new Input(new byte[8],draft.tenMau(),draft.muc()),actor.identity().principal().accountId().toString(),OffsetDateTime.now(clock));
+  dots.audit(actor.identity().userId(),existing==null?"SHCN_TEMPLATE_CREATE":"SHCN_TEMPLATE_UPDATE",dot);
+ }
  public MauDTO save(long dot,Input input,DotService.Actor actor){
   var root=dots.find(dot,true);if(!Arrays.equals(root.getPhienBanGhi(),input.expectedVersion()))throw new DotFailure(409,"VERSION_CONFLICT");DotService.writable(root);
   var existing=templates.find(dot);if(existing!=null&&existing.state().equals("DA_KHOA"))throw new DotFailure(409,"STATE_CONFLICT");validator.validate(input);

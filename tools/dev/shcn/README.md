@@ -24,6 +24,10 @@ pwsh -File .\tools\dev\shcn\dev-shcn.ps1 start
 
 pwsh -File .\tools\dev\shcn\dev-shcn.ps1 accounts
 pwsh -File .\tools\dev\shcn\dev-shcn.ps1 smoke
+
+# Chỉ dùng khi tài khoản DEV vẫn tồn tại nhưng quyền/phạm vi SHCN bị mất hoặc bị reset.
+# Không migrate, không seed; khôi phục role nghiệp vụ và phạm vi khoa đã sở hữu.
+pwsh -File .\tools\dev\shcn\dev-shcn.ps1 repair-access
 pwsh -File .\tools\dev\shcn\dev-shcn.ps1 status
 ```
 

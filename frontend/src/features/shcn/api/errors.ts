@@ -1,5 +1,36 @@
 export function assignmentError(error:unknown):string {
  const e=error as {code?:string;message?:string};
- const messages:Record<string,string>={VERSION_CONFLICT:'Dữ liệu đã thay đổi. Hãy tải lại trước khi thực hiện.',VALIDATION_ERROR:'Kiểm tra lại các trường được đánh dấu.',FORBIDDEN:'Bạn không có quyền thực hiện thao tác này.',NOT_FOUND:'Không tìm thấy dữ liệu hoặc bạn không có quyền truy cập.',DEPENDENCY_UNAVAILABLE:'Chưa tải hoặc kiểm tra được dữ liệu phục vụ phân công. Hãy thử lại sau.',SHCN_KHONG_CON_LA_NHAP:'Danh sách không còn là bản nháp để chỉnh sửa.',SHCN_PHIEN_BAN_KHONG_HOP_LE:'Phiên bản dự kiến đã thay đổi. Hãy đối soát danh sách trước khi tạo tiếp.',SHCN_NGUON_KE_THUA_KHONG_HOP_LE:'Bản nguồn chưa đủ điều kiện kế thừa.',SHCN_HET_MIEN_PHIEN_BAN:'Chưa thể tạo thêm phiên bản. Vui lòng liên hệ quản trị.',SHCN_CAN_REVIEW_GIOI_HAN:'Danh sách nguồn vượt giới hạn xử lý hiện tại.',PAYLOAD_TOO_LARGE:'Nội dung gửi vượt giới hạn hiện tại.',UNSUPPORTED_MEDIA_TYPE:'Chưa gửi được dữ liệu đúng định dạng.',INTERNAL_ERROR:'Chưa xử lý được yêu cầu. Hãy đối soát trước khi thử lại.',UNAUTHENTICATED:'Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.',TOKEN_REVOKED:'Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.'};
+ const messages:Record<string,string>={
+  VERSION_CONFLICT:'Dữ liệu đã thay đổi ở tab hoặc phiên khác. Hãy đọc lại dữ liệu mới nhất trước khi tiếp tục.',
+  VALIDATION_ERROR:'Kiểm tra lại các trường được đánh dấu hoặc vùng chữ ký đã chọn.',
+  FORBIDDEN:'Bạn không có quyền thực hiện thao tác này.',
+  NOT_FOUND:'Không tìm thấy dữ liệu hoặc bạn không có quyền truy cập.',
+  DEPENDENCY_UNAVAILABLE:'Dịch vụ dữ liệu, lưu trữ PDF hoặc ký số tạm thời chưa sẵn sàng. Hãy thử lại sau.',
+  SIGNING_CONFIGURATION_REQUIRED:'Chưa cấu hình dịch vụ ký số SHCN trên môi trường hiện tại. Vui lòng kiểm tra cấu hình backend.',
+  SHCN_KHONG_CON_LA_NHAP:'Danh sách không còn là bản nháp để chỉnh sửa.',
+  SHCN_DANH_SACH_LOP_KHOA_TRONG:'Khoa hiện chưa có lớp đang hoạt động đủ điều kiện để xuất PDF phân công.',
+  SHCN_CHUA_DU_100_PHAN_TRAM_LOP:'Cần phân công đủ 100% lớp đang hoạt động của khoa trước khi chốt và xuất PDF.',
+  SHCN_THAM_CHIEU_KHONG_CON_HOP_LE:'Có lớp hoặc giảng viên không còn hợp lệ. Hãy kiểm tra và cập nhật lại trước khi tiếp tục.',
+  SHCN_KHONG_O_TRANG_THAI_CHO_KY:'Danh sách không còn ở trạng thái Chờ ký.',
+  SHCN_CHUA_CO_HO_SO_KY:'Chưa tìm thấy hồ sơ PDF chờ ký cho danh sách này. Hãy đọc lại trạng thái.',
+  SHCN_KHONG_THE_SUA_PDF:'Bản PDF đã chuyển sang bước xử lý ký nên không thể sửa chữ hành chính.',
+  SHCN_DANG_XU_LY_KY_SO:'Yêu cầu ký số đang được xử lý hoặc cần đối soát nên chưa thể hủy chờ ký.',
+  SHCN_CHUA_KY_SO:'Danh sách cần được Trưởng khoa ký số hoàn tất trước khi gửi chuyên viên CTSV.',
+  SHCN_TEP_KY_CHUA_SAN_SANG:'Tệp PDF đã ký số chưa sẵn sàng hoặc chưa xác thực toàn vẹn tại CTSV.',
+  SHCN_PDF_VUOT_GIOI_HAN:'Tệp PDF sinh ra vượt giới hạn dung lượng 10 MB.',
+  SIGNING_NOT_READY:'Hồ sơ ký số chưa sẵn sàng hoặc đã thay đổi. Hãy bấm Đọc lại trạng thái.',
+  SIGNING_STEP_NOT_READY:'Bước ký của Trưởng khoa hiện không ở trạng thái chờ xác nhận.',
+  RECONCILIATION_UNAVAILABLE:'Hiện chưa có lượt ký đủ điều kiện để đối soát/phục hồi tự động.',
+  FILE_NOT_READY:'Tệp PDF chưa sẵn sàng trong kho lưu trữ CTSV. Hãy thử đọc lại sau ít giây.',
+  SHCN_PHIEN_BAN_KHONG_HOP_LE:'Phiên bản dự kiến đã thay đổi. Hãy đối soát danh sách trước khi tạo tiếp.',
+  SHCN_NGUON_KE_THUA_KHONG_HOP_LE:'Bản nguồn chưa đủ điều kiện kế thừa.',
+  SHCN_HET_MIEN_PHIEN_BAN:'Chưa thể tạo thêm phiên bản. Vui lòng liên hệ quản trị.',
+  SHCN_CAN_REVIEW_GIOI_HAN:'Danh sách nguồn vượt giới hạn xử lý hiện tại.',
+  PAYLOAD_TOO_LARGE:'Nội dung gửi vượt giới hạn hiện tại.',
+  UNSUPPORTED_MEDIA_TYPE:'Chưa gửi được dữ liệu đúng định dạng.',
+  INTERNAL_ERROR:'Chưa xử lý được yêu cầu. Hãy đối soát trước khi thử lại.',
+  UNAUTHENTICATED:'Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.',
+  TOKEN_REVOKED:'Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.',
+ };
  return e.code?messages[e.code]??'Chưa xử lý được yêu cầu. Vui lòng kiểm tra và thử lại.':e.message??'Kết nối bị gián đoạn. Chưa xác nhận được kết quả.';
 }

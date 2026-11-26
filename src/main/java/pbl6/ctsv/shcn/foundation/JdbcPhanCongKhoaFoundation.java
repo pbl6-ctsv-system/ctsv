@@ -23,11 +23,13 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
 
     @Override public Actor quyen(FoundationAccess.Identity identity){
         transaction();
-        record Grant(boolean read,boolean prepare,Long unit,boolean children){}
+        record Grant(boolean read,boolean prepare,boolean sign,boolean submit,Long unit,boolean children){}
         var grants=jdbc.query("""
             SELECT p.don_vi_id,p.bao_gom_don_vi_con,
               MAX(CASE WHEN c.MaChucNang=N'shcn.phanCongKhoa.read' THEN 1 ELSE 0 END) can_read,
-              MAX(CASE WHEN c.MaChucNang=N'shcn.phanCongKhoa.prepare' THEN 1 ELSE 0 END) can_prepare
+              MAX(CASE WHEN c.MaChucNang=N'shcn.phanCongKhoa.prepare' THEN 1 ELSE 0 END) can_prepare,
+              MAX(CASE WHEN c.MaChucNang=N'shcn.phanCongKhoa.sign' THEN 1 ELSE 0 END) can_sign,
+              MAX(CASE WHEN c.MaChucNang=N'shcn.phanCongKhoa.submit' THEN 1 ELSE 0 END) can_submit
             FROM dbo.phan_quyen_nguoi_dung p WITH(UPDLOCK,HOLDLOCK)
             JOIN dbo.vai_tro r ON r.id=p.vai_tro_id
             JOIN dbo.VaiTro ar WITH(HOLDLOCK) ON ar.MaVaiTro=r.ma COLLATE Latin1_General_100_BIN2
@@ -36,22 +38,24 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
             JOIN dbo.ChucNang c WITH(HOLDLOCK) ON c.ID=e.ChucNangID
             WHERE p.nguoi_dung_id=? AND av.TaiKhoanID=? AND p.ma_phan_he=N'SHCN'
               AND r.dang_hoat_dong=1 AND ar.TrangThai=1 AND c.TrangThai=1
-              AND c.MaChucNang IN(N'shcn.phanCongKhoa.read',N'shcn.phanCongKhoa.prepare')
+              AND c.MaChucNang IN(N'shcn.phanCongKhoa.read',N'shcn.phanCongKhoa.prepare',N'shcn.phanCongKhoa.sign',N'shcn.phanCongKhoa.submit')
               AND (p.hieu_luc_tu IS NULL OR p.hieu_luc_tu<=TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
               AND (p.hieu_luc_den IS NULL OR p.hieu_luc_den>TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
             GROUP BY p.id,p.don_vi_id,p.bao_gom_don_vi_con
-            """,(r,n)->new Grant(r.getBoolean("can_read"),r.getBoolean("can_prepare"),r.getObject("don_vi_id",Long.class),r.getBoolean("bao_gom_don_vi_con")),identity.userId(),identity.principal().accountId().toString());
-        boolean read=false,prepare=false;var scopes=new TreeMap<Long,boolean[]>();
+            """,(r,n)->new Grant(r.getBoolean("can_read"),r.getBoolean("can_prepare"),r.getBoolean("can_sign"),r.getBoolean("can_submit"),r.getObject("don_vi_id",Long.class),r.getBoolean("bao_gom_don_vi_con")),identity.userId(),identity.principal().accountId().toString());
+        boolean read=false,prepare=false,sign=false,submit=false;var scopes=new TreeMap<Long,boolean[]>();
         for(var grant:grants){
-            boolean w=grant.prepare(),r=w||grant.read();
-            read|=r;prepare|=w;if(!r||grant.unit()==null)continue;
+            boolean w=grant.prepare(),sg=grant.sign(),sb=grant.submit(),r=w||sg||sb||grant.read();
+            read|=r;prepare|=w;sign|=sg;submit|=sb;if(!r||grant.unit()==null)continue;
             for(long unit:expanded(grant.unit(),grant.children())){
-                var flags=scopes.computeIfAbsent(unit,key->new boolean[2]);flags[0]=true;flags[1]|=w;
+                var flags=scopes.computeIfAbsent(unit,key->new boolean[4]);
+                flags[0]=true;flags[1]|=w;flags[2]|=sg;flags[3]|=sb;
             }
         }
         var faculties=new ArrayList<Khoa>();
-        scopes.forEach((id,flags)->faculties.addAll(jdbc.query("SELECT id,ma,ten,dang_hoat_dong FROM dbo.don_vi WHERE id=?",(r,n)->new Khoa(r.getLong(1),r.getString(2),r.getString(3),flags[0],flags[1],r.getBoolean(4)),id)));
-        return new Actor(identity.userId(),identity.principal().accountId().toString(),read,prepare,faculties);
+        scopes.forEach((id,flags)->faculties.addAll(jdbc.query("SELECT id,ma,ten,dang_hoat_dong FROM dbo.don_vi WHERE id=?",
+            (r,n)->new Khoa(r.getLong(1),r.getString(2),r.getString(3),flags[0],flags[1],flags[2],flags[3],r.getBoolean(4)),id)));
+        return new Actor(identity.userId(),identity.principal().accountId().toString(),read,prepare,sign,submit,faculties);
     }
     private Set<Long> expanded(long root,boolean children){
         var seen=new LinkedHashSet<Long>();seen.add(root);if(!children)return seen;
@@ -65,11 +69,24 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
         }
         return seen;
     }
+    private OptionalLong optionalSource(){
+        if(settings.sourceCode()==null||settings.sourceCode().isBlank())return OptionalLong.empty();
+        var ids=jdbc.query("SELECT id FROM dbo.he_thong_ngoai WHERE ma=? AND dang_hoat_dong=1",(r,n)->r.getLong(1),settings.sourceCode());
+        return ids.size()==1?OptionalLong.of(ids.getFirst()):OptionalLong.empty();
+    }
+    private Integer countSelectableClasses(Khoa khoa,OptionalLong src){
+        if(src.isEmpty()||!khoa.dangHoatDong())return null;
+        var rows=jdbc.query(classSelect()+classFrom()+" ORDER BY l.id",(r,n)->classRow(r,khoa),khoa.id(),src.getAsLong());
+        return Math.toIntExact(rows.stream().filter(LopDTO::coTheChon).count());
+    }
     @Override public PhamViDTO phamVi(Actor actor){
+        transaction();
         var counts=new HashMap<String,Integer>();actor.khoa().forEach(k->counts.merge(k.ma(),1,Integer::sum));
+        OptionalLong src=actor.khoa().isEmpty()?OptionalLong.empty():optionalSource();
         return new PhamViDTO(actor.khoa().stream().map(k->{
             String reason=!k.dangHoatDong()?"KHONG_DU_DIEU_KIEN":counts.get(k.ma())>1?"CHUA_XAC_MINH_ANH_XA":!maLuuDuoc(k.ma())?"MA_KHONG_PHU_HOP_SHCN":null;
-            return new KhoaDTO(Long.toString(k.id()),k.ma(),k.ten(),k.doc(),k.lap(),reason==null,reason);
+            Integer activeClasses=reason==null?countSelectableClasses(k,src):null;
+            return new KhoaDTO(Long.toString(k.id()),k.ma(),k.ten(),k.doc(),k.lap(),k.kySo(),k.guiChuyenVien(),activeClasses,reason==null,reason);
         }).toList());
     }
     @Override public boolean maLuuDuoc(String value){
@@ -118,6 +135,10 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
         var rows=jdbc.query(classSelect()+from+" ORDER BY l.id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",(r,n)->classRow(r,khoa),args.toArray());
         return new Page<>(rows,query.page(),query.size(),total);
     }
+    @Override public List<LopDTO> tatCaLopHoatDong(Khoa khoa){
+        long src=source();
+        return jdbc.query(classSelect()+classFrom()+" ORDER BY l.id",(r,n)->classRow(r,khoa),khoa.id(),src);
+    }
     @Override public Map<String,LopDTO> lopTheoMa(Khoa khoa,Collection<String> codes){
         if(codes.isEmpty())return Map.of();long src=source();var rows=new ArrayList<LopDTO>();
         for(var part:parts(codes)){
@@ -145,9 +166,10 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
     @Override public Page<GiangVienDTO> giangVien(Khoa khoa,PageQuery query){
         String code=staffCode();long src=source();String from=staffFrom(code)+" AND "+search(code,"c.ho_ten");var args=staffArgs(khoa,src);args.add(query.q());args.add(query.q());args.add(query.q());
         long total=jdbc.queryForObject("SELECT COUNT_BIG(*)"+from,Long.class,args.toArray());args.add(query.offset());args.add(query.size());
-        var rows=jdbc.query(staffSelect(code)+from+" ORDER BY c.id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",(r,n)->staffRow(r,khoa),args.toArray());
+        var rows=jdbc.query(staffSelect(code)+from+" ORDER BY c.id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",(r,n)->classRowStaff(r,khoa),args.toArray());
         return new Page<>(rows,query.page(),query.size(),total);
     }
+    private GiangVienDTO classRowStaff(ResultSet r,Khoa khoa)throws SQLException{return staffRow(r,khoa);}
     @Override public Map<String,GiangVienDTO> giangVienTheoMa(Khoa khoa,Collection<String> codes){
         if(codes.isEmpty())return Map.of();String code=staffCode();long src=source();var rows=new ArrayList<GiangVienDTO>();
         for(var part:parts(codes)){
@@ -155,6 +177,29 @@ public final class JdbcPhanCongKhoaFoundation implements PhanCongKhoaFoundationP
             rows.addAll(jdbc.query(staffSelect(code)+staffFrom(code)+" AND "+code+" IN ("+marks(part.size())+")",(r,n)->staffRow(r,khoa),args.toArray()));
         }
         return unique(rows,GiangVienDTO::maGiaoVien);
+    }
+    @Override public Optional<NguoiDungKhoa> nguoiDung(long userId){
+        transaction();
+        return jdbc.query("SELECT id,ho_ten,dia_chi_email FROM dbo.nguoi_dung WHERE id=? AND dang_hoat_dong=1",
+            (r,n)->new NguoiDungKhoa(r.getLong(1),r.getString(2),r.getString(3)),userId).stream().findFirst();
+    }
+    @Override public boolean laChuyenVienDocNguon(FoundationAccess.Identity identity){
+        transaction();
+        Integer count=jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM dbo.phan_quyen_nguoi_dung p WITH(HOLDLOCK)
+            JOIN dbo.vai_tro r ON r.id=p.vai_tro_id
+            JOIN dbo.VaiTro ar WITH(HOLDLOCK) ON ar.MaVaiTro=r.ma COLLATE Latin1_General_100_BIN2
+            JOIN dbo.TaiKhoan_VaiTro av WITH(HOLDLOCK) ON av.VaiTroID=ar.ID
+            JOIN dbo.VaiTro_ChucNang e WITH(HOLDLOCK) ON e.VaiTroID=ar.ID
+            JOIN dbo.ChucNang c WITH(HOLDLOCK) ON c.ID=e.ChucNangID
+            WHERE p.nguoi_dung_id=? AND av.TaiKhoanID=? AND p.ma_phan_he=N'SHCN' AND p.don_vi_id IS NULL
+              AND r.dang_hoat_dong=1 AND ar.TrangThai=1 AND c.TrangThai=1
+              AND c.MaChucNang IN(N'shcn.dot.read',N'shcn.dot.prepare',N'shcn.reference.read')
+              AND (p.hieu_luc_tu IS NULL OR p.hieu_luc_tu<=TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
+              AND (p.hieu_luc_den IS NULL OR p.hieu_luc_den>TODATETIMEOFFSET(SYSUTCDATETIME(),'+00:00'))
+            """,Integer.class,identity.userId(),identity.principal().accountId().toString());
+        return count!=null&&count>0;
     }
     @Override public boolean trungMaLopTheoCollation(List<String> codes){
         transaction();if(codes.isEmpty())return false;

@@ -18,9 +18,12 @@ public final class DotService {
     public record Actor(FoundationAccess.Identity identity,Quyen permissions){}
     public record Result<T>(T value,boolean canPrepare){}
     public enum Action{READ,PREPARE,REFERENCE}
-    private final TransactionTemplate tx;private final FoundationAccess access;private final DotReference reference;private final DotRepository repository;private final Clock clock;
+    private final TransactionTemplate tx;private final FoundationAccess access;private final DotReference reference;private final DotRepository repository;private final Clock clock;private final MauService templates;
     public DotService(PlatformTransactionManager manager,FoundationAccess access,DotReference reference,DotRepository repository,Clock clock){
-        tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
+        this(manager,access,reference,repository,clock,null);
+    }
+    public DotService(PlatformTransactionManager manager,FoundationAccess access,DotReference reference,DotRepository repository,Clock clock,MauService templates){
+        this.templates=templates;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
         this.access=access;this.reference=reference;this.repository=repository;this.clock=clock;
     }
     public <T> Result<T> execute(AuthAccess.Principal principal,Action action,Function<Actor,T> command){
@@ -40,20 +43,22 @@ public final class DotService {
         return AudiencePreviewResolver.resolve(Long.toString(id),Base64.getEncoder().encodeToString(root.getPhienBanGhi()),configuration,reference.projection(root.getMaHocKy()),query);
     }
     public DotDTO create(Actor actor,CauHinh input){
-        validateAudiences(input,input.doiTuongApDung());reference.requireSemester(input.maHocKy());if(input.doiTuongApDung()!=null)reference.requireAudiences(input.maHocKy(),input.doiTuongApDung());var root=repository.create(input,actor.identity().principal().accountId().toString(),OffsetDateTime.now(clock));
+        validateTemplate(input);validateAudiences(input,input.doiTuongApDung());reference.requireSemester(input.maHocKy());if(input.doiTuongApDung()!=null)reference.requireAudiences(input.maHocKy(),input.doiTuongApDung());var root=repository.create(input,actor.identity().principal().accountId().toString(),OffsetDateTime.now(clock));
         if(input.doiTuongApDung()!=null)repository.replaceAudiences(root.getId(),input.doiTuongApDung(),OffsetDateTime.now(clock));
-        repository.audit(actor.identity().userId(),"SHCN_DOT_CREATE_DRAFT",root.getId());return dto(root);
+        saveTemplate(root.getId(),input,actor);repository.audit(actor.identity().userId(),"SHCN_DOT_CREATE_DRAFT",root.getId());return dto(input.mauBienBan()==null?root:repository.find(root.getId(),false));
     }
     public DotDTO update(Actor actor,long id,SuaDot input){
         var root=repository.find(id,true);if(!Arrays.equals(root.getPhienBanGhi(),input.expectedVersion()))throw new DotFailure(409,"VERSION_CONFLICT");
-        writable(root);reference.requireSemester(input.cauHinh().maHocKy());
+        writable(root);validateTemplate(input.cauHinh());reference.requireSemester(input.cauHinh().maHocKy());
         var c=input.cauHinh();var old=repository.audiences(id);var effective=c.doiTuongApDung()==null?old:c.doiTuongApDung();
         validateAudiences(c,effective);
         boolean groupsChanged=c.doiTuongApDung()!=null&&!old.equals(c.doiTuongApDung());
         reference.requireAudiences(c.maHocKy(),effective);
         boolean reset=groupsChanged||!Objects.equals(root.getMaHocKy(),c.maHocKy())||!Objects.equals(root.getKhungNgayBatDau(),c.khungNgayBatDau())||!Objects.equals(root.getKhungNgayKetThuc(),c.khungNgayKetThuc())||!repository.ranges(root.getKhungTietChoPhep()).equals(c.khungTietChoPhep())||!root.getHanChotDangKyLich().toInstant().equals(c.hanChotDangKyLich().toInstant());
-        var saved=repository.update(id,input.expectedVersion(),c,reset,OffsetDateTime.now(clock));if(c.doiTuongApDung()!=null)repository.replaceAudiences(id,c.doiTuongApDung(),OffsetDateTime.now(clock));repository.audit(actor.identity().userId(),"SHCN_DOT_UPDATE_DRAFT",id);return dto(saved);
+        var saved=repository.update(id,input.expectedVersion(),c,reset,OffsetDateTime.now(clock));if(c.doiTuongApDung()!=null)repository.replaceAudiences(id,c.doiTuongApDung(),OffsetDateTime.now(clock));saveTemplate(id,c,actor);repository.audit(actor.identity().userId(),"SHCN_DOT_UPDATE_DRAFT",id);return dto(c.mauBienBan()==null?saved:repository.find(id,false));
     }
+    private static void validateTemplate(CauHinh c){if(c.mauBienBan()!=null)new pbl6.ctsv.shcn.dotsinhhoat.validation.MauRequests().validate(c.mauBienBan());}
+    private void saveTemplate(long id,CauHinh c,Actor actor){if(c.mauBienBan()!=null){if(templates==null)throw new IllegalStateException("SHCN template service is required");templates.saveWithRound(id,c.mauBienBan(),actor);}}
     private static void validateAudiences(CauHinh input,List<DoiTuong> groups){
         if(groups==null||groups.isEmpty()||groups.size()>1000)throw DotFailure.invalid("doiTuongApDung");
         LocalDate from=null,until=null;var keys=new HashSet<String>();

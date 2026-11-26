@@ -1309,6 +1309,23 @@
           "duocLapNhap": {
             "type": "boolean"
           },
+          "duocKySo": {
+            "type": "boolean"
+          },
+          "duocGuiChuyenVien": {
+            "type": "boolean"
+          },
+          "soLopHoatDong": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "coTheChon": {
             "type": "boolean"
           },
@@ -1329,6 +1346,9 @@
           "tenKhoa",
           "duocDoc",
           "duocLapNhap",
+          "duocKySo",
+          "duocGuiChuyenVien",
+          "soLopHoatDong",
           "coTheChon",
           "lyDoKhongTheChon"
         ]
